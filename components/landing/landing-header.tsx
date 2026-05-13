@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 const NAV_ITEMS = [
   { href: '#services', label: '서비스' },
@@ -14,7 +13,7 @@ export function LandingHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2">
           <span className="inline-block h-7 w-1 rounded-sm bg-brand" aria-hidden />
-          <span className="text-lg font-bold tracking-tight text-zinc-900">예성건설</span>
+          <span className="text-lg font-bold tracking-tight text-zinc-900">(주)예성건축</span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -29,11 +28,6 @@ export function LandingHeader() {
           ))}
         </nav>
 
-        <Link href="/login">
-          <Button variant="outline" size="sm">
-            관리자
-          </Button>
-        </Link>
       </div>
     </header>
   );

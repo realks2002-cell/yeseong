@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import {
   TEMPLATE_SHEET_NAME,
@@ -34,16 +35,28 @@ export type FillInput = {
   yearMonth: string;             // 'YYYY-MM'
   periodStart: Date;
   periodEnd: Date;
-  companyName: string;           // '㈜이루건설'
+  companyName: string;           // '예성건설' — fallback (subcontractorName 없을 때)
+  subcontractorName?: string;    // 협력사명 — "상 호" 셀에 우선 사용
   worksiteName: string;          // '보은현장'
   workers: FillWorker[];
 };
 
 const TEMPLATE_PATH = path.join(process.cwd(), 'public/templates/payroll-template.xlsx');
 
+// 모듈 레벨 buffer 캐시 — Vercel function 워밍 인스턴스 동안 디스크 I/O 1회로 줄임
+let templateBufferPromise: Promise<Buffer> | null = null;
+function getTemplateBuffer(): Promise<Buffer> {
+  if (!templateBufferPromise) {
+    templateBufferPromise = fs.readFile(TEMPLATE_PATH);
+  }
+  return templateBufferPromise;
+}
+
 export async function fillPayrollWorkbook(input: FillInput): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile(TEMPLATE_PATH);
+  const buf = await getTemplateBuffer();
+  // ExcelJS는 ArrayBuffer를 받음 — Buffer는 ArrayBuffer 호환
+  await wb.xlsx.load(buf as unknown as ArrayBuffer);
 
   const sheet = wb.getWorksheet(TEMPLATE_SHEET_NAME);
   if (!sheet) {
@@ -53,7 +66,7 @@ export async function fillPayrollWorkbook(input: FillInput): Promise<Uint8Array>
   // 1. 헤더 영역 채움
   sheet.getCell(HEADER_CELLS.TITLE).value = formatTitle(input.yearMonth);
   sheet.getCell(HEADER_CELLS.PERIOD).value = formatPeriodText(input.periodStart, input.periodEnd);
-  sheet.getCell(HEADER_CELLS.COMPANY).value = input.companyName;
+  sheet.getCell(HEADER_CELLS.COMPANY).value = input.subcontractorName ?? input.companyName;
   sheet.getCell(HEADER_CELLS.WORKSITE).value = input.worksiteName;
 
   // 2. 모든 슬롯 데이터 영역 초기화 (수식 컬럼은 건드리지 않음)

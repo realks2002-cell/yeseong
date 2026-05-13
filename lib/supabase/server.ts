@@ -12,8 +12,14 @@ export async function getServerSupabase() {
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (toSet) => {
-          for (const { name, value, options } of toSet) {
-            cookieStore.set(name, value, options);
+          // Server Component에서는 cookies.set이 throw — middleware가 토큰 갱신 처리
+          // 토큰 만료 시점에 set 호출이 page render를 죽이지 않도록 swallow
+          try {
+            for (const { name, value, options } of toSet) {
+              cookieStore.set(name, value, options);
+            }
+          } catch {
+            // Server Component context: ignore (middleware/route handler에서는 정상 동작)
           }
         },
       },

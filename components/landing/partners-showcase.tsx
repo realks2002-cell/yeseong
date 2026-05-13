@@ -1,9 +1,9 @@
 import { Award } from 'lucide-react';
 
 const PARTNERS = [
-  { name: '포스코건설', logo: '/landing/partners/posco.svg' },
-  { name: '현대엔지니어링', logo: '/landing/partners/hde.svg' },
-  { name: 'CJ건설', logo: '/landing/partners/cj.svg' },
+  { name: '포스코건설', logo: '/11.png', imgClass: 'h-[4.8rem]' },
+  { name: '현대엔지니어링', logo: '/12.png', imgClass: 'h-[4.86rem]' },
+  { name: 'CJ건설', logo: '/13.png', imgClass: 'h-24' },
 ];
 
 export function PartnersShowcase() {
@@ -11,7 +11,7 @@ export function PartnersShowcase() {
     <section id="partners" className="bg-white py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+          <span className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
             <Award className="h-3.5 w-3.5" />
             공동특허 출원
           </span>
@@ -27,12 +27,12 @@ export function PartnersShowcase() {
           {PARTNERS.map((partner) => (
             <div
               key={partner.name}
-              className="flex h-32 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 px-8 transition-all hover:border-zinc-300 hover:bg-white hover:shadow-md"
+              className="flex h-32 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-8 transition-all hover:border-zinc-300 hover:shadow-md"
             >
               <img
                 src={partner.logo}
                 alt={partner.name}
-                className="h-12 w-auto opacity-80 transition-opacity hover:opacity-100"
+                className={`${partner.imgClass} w-auto`}
               />
             </div>
           ))}

@@ -1,12 +1,8 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { isLoggedIn } from '@/lib/mock/session';
+import { redirect } from 'next/navigation';
+import { getServerSupabase } from '@/lib/supabase/server';
 
-export default function MobileGate() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace(isLoggedIn() ? '/m/home' : '/m/signup');
-  }, [router]);
-  return <div className="min-h-svh bg-white" />;
+export default async function MobileGate() {
+  const sb = await getServerSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  redirect(user ? '/m/home' : '/m/signup');
 }

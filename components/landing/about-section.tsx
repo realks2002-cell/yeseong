@@ -1,11 +1,11 @@
-import { Leaf } from 'lucide-react';
+import { FileText, Leaf } from 'lucide-react';
 
 export function AboutSection() {
   return (
-    <section id="about" className="bg-zinc-50 py-20 md:py-28">
+    <section id="about" className="bg-zinc-50 py-[3.15rem] md:py-[4.41rem]">
       <div className="mx-auto grid max-w-6xl gap-12 px-6 md:grid-cols-2 md:items-center md:gap-16">
         <div>
-          <span className="inline-block rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+          <span className="inline-block rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
             About Us
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-zinc-900 md:text-4xl">
@@ -41,20 +41,28 @@ export function AboutSection() {
                 </p>
               </div>
             </div>
+
+            <div className="mt-5 flex justify-center">
+              <a
+                href="/예성건축지명원_26.01.27.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-[0.4rem] rounded-full bg-blue-800 px-[1.2rem] py-[0.6rem] text-xs font-bold text-white transition-all hover:bg-blue-900"
+              >
+                <FileText className="h-[0.8rem] w-[0.8rem]" />
+                회사소개서
+              </a>
+            </div>
           </div>
         </div>
 
         <div className="relative">
-          <div className="aspect-[4/5] overflow-hidden rounded-3xl bg-zinc-200 shadow-xl">
+          <div className="mx-auto aspect-[4/5] w-[88%] overflow-hidden rounded-[5px] bg-zinc-200 shadow-xl">
             <img
-              src="/landing/about.jpg"
+              src="/10.png"
               alt="예성건설 임직원과 사업장"
               className="h-full w-full object-cover"
             />
-          </div>
-          <div className="absolute -bottom-6 -left-6 hidden rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-zinc-200 md:block">
-            <p className="text-3xl font-bold text-brand">2024+</p>
-            <p className="mt-1 text-sm font-medium text-zinc-600">창사 이래 지속 성장</p>
           </div>
         </div>
       </div>

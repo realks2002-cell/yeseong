@@ -7,11 +7,9 @@ export function HeroSection() {
         style={{ backgroundImage: "url('/landing/hero.png')" }}
         aria-hidden
       />
-      <div className="absolute inset-0 bg-brand-dark/55" aria-hidden />
-
-      <div className="relative mx-auto max-w-6xl px-6 py-28 md:py-40">
+      <div className="relative mx-auto max-w-6xl px-6 py-[8.05rem] md:py-[11.5rem]">
         <div className="max-w-3xl">
-          <span className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-1.5 text-sm font-bold text-white">
+          <span className="inline-flex items-center gap-2 rounded-full bg-sky-300 px-4 py-1.5 text-sm font-bold text-white">
             <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
             방수·도장·습식 전문
           </span>

@@ -1,11 +1,18 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const isManager = process.env.CAP_TARGET === 'manager';
+
 const config: CapacitorConfig = {
-  appId: 'com.yeseong.app',
-  appName: '예성건설',
+  appId: isManager ? 'com.yeseong.manager' : 'com.yeseong.app',
+  appName: isManager ? '예성건설 소장' : '예성건설',
   webDir: 'public',
+  android: {
+    path: isManager ? 'android-manager' : 'android',
+  },
   server: {
-    url: 'https://yeseong-nine.vercel.app/m',
+    url: isManager
+      ? 'https://yeseong-nine.vercel.app/m/manager'
+      : 'https://yeseong-nine.vercel.app/m',
     androidScheme: 'https',
   },
 };

@@ -1,22 +1,42 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { MockWorker, PayrollState } from '@/lib/mock/store';
-import { emptyPayrollState } from '@/lib/mock/store';
-import { loadPayroll, savePayroll } from '@/lib/mock/storage';
-import { useWorkers } from '@/lib/mock/use-workers';
 import { daysInMonth, formatYearMonth, shiftMonth } from '@/lib/utils/date';
 import { Button } from '@/components/ui/button';
 import {
   ChevronLeft,
   ChevronRight,
-  Camera,
   Download,
   UserPlus,
   Trash2,
   X,
 } from 'lucide-react';
+
+type Worker = {
+  id: string;
+  employee_code: string | null;
+  name: string;
+  default_trade: string | null;
+  default_wage: number;
+};
+
+type Subcontractor = { id: string; name: string };
+
+type Slot = {
+  id: string;
+  slot_number: number;
+  daily_wage: number;
+  trade: string | null;
+  worker: Worker;
+  subcontractor: Subcontractor | null;
+};
+
+type AttendanceRow = {
+  payroll_worker_id: string;
+  work_date: string;
+  hours: number;
+};
 
 type Props = {
   siteId: string;
@@ -27,101 +47,179 @@ type Props = {
 export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   const router = useRouter();
   const totalDays = daysInMonth(yearMonth);
-  const { workers: allWorkers } = useWorkers();
 
-  const [state, setState] = useState<PayrollState>(() => emptyPayrollState(siteId, yearMonth));
-  const [hydrated, setHydrated] = useState(false);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+  const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    setState(loadPayroll(siteId, yearMonth));
-    setHydrated(true);
+  const load = useCallback(async () => {
+    setError(null);
+    const [r1, r2, r3] = await Promise.all([
+      fetch(`/api/payroll/${siteId}/${yearMonth}`, { cache: 'no-store' }),
+      fetch(`/api/workers`, { cache: 'no-store' }),
+      fetch(`/api/subcontractors`, { cache: 'no-store' }),
+    ]);
+    if (!r1.ok) {
+      setError(`노임대장 로드 실패: ${r1.status}`);
+      return;
+    }
+    if (!r2.ok) {
+      setError(`작업자 마스터 로드 실패: ${r2.status}`);
+      return;
+    }
+    if (!r3.ok) {
+      setError(`협력사 로드 실패: ${r3.status}`);
+      return;
+    }
+    const data = await r1.json();
+    const workersAll = await r2.json();
+    const subs = await r3.json();
+    setSlots(data.slots ?? []);
+    setAttendance(data.attendance ?? []);
+    setAllWorkers(workersAll ?? []);
+    setSubcontractors(subs ?? []);
+    setLoaded(true);
   }, [siteId, yearMonth]);
 
-  useEffect(() => {
-    if (hydrated) savePayroll(state);
-  }, [state, hydrated]);
-
-  const enrolled = useMemo(
-    () => state.enrolledWorkerIds
-      .map(id => allWorkers.find(w => w.id === id))
-      .filter((x): x is MockWorker => !!x),
-    [state.enrolledWorkerIds, allWorkers]
-  );
-
-  const availableWorkers = useMemo(
-    () => allWorkers.filter(w => !state.enrolledWorkerIds.includes(w.id)),
-    [state.enrolledWorkerIds, allWorkers]
-  );
+  useEffect(() => { load(); }, [load]);
 
   const cellMap = useMemo(() => {
     const m = new Map<string, number>();
-    for (const a of state.attendance) m.set(`${a.workerId}:${a.day}`, a.hours);
+    for (const a of attendance) {
+      const day = parseInt(a.work_date.split('-')[2], 10);
+      m.set(`${a.payroll_worker_id}:${day}`, a.hours);
+    }
     return m;
-  }, [state.attendance]);
+  }, [attendance]);
 
-  function setCell(workerId: string, day: number, hours: number | null) {
-    setState(s => {
-      const next = s.attendance.filter(a => !(a.workerId === workerId && a.day === day));
-      if (hours !== null && hours > 0) next.push({ workerId, day, hours });
-      return { ...s, attendance: next };
+  const enrolledWorkerIds = useMemo(() => new Set(slots.map((s) => s.worker.id)), [slots]);
+  const subMap = useMemo(() => new Map(subcontractors.map((s) => [s.id, s.name])), [subcontractors]);
+
+  async function setCell(slotId: string, day: number, hours: number | null) {
+    const newHours = hours ?? 0;
+
+    setAttendance((prev) => {
+      const filtered = prev.filter(
+        (a) => !(a.payroll_worker_id === slotId && parseInt(a.work_date.split('-')[2], 10) === day),
+      );
+      if (newHours > 0) {
+        const dd = String(day).padStart(2, '0');
+        filtered.push({ payroll_worker_id: slotId, work_date: `${yearMonth}-${dd}`, hours: newHours });
+      }
+      return filtered;
     });
+
+    const r = await fetch(`/api/payroll/${siteId}/${yearMonth}/attendance`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payroll_worker_id: slotId, day, hours: newHours }),
+    });
+    if (!r.ok) {
+      alert(`출역 저장 실패: ${(await r.json().catch(() => ({}))).error ?? r.status}`);
+      load();
+    }
   }
 
-  function enrollWorkers(ids: string[]) {
-    setState(s => ({
-      ...s,
-      enrolledWorkerIds: [...s.enrolledWorkerIds, ...ids].slice(0, 26),
-    }));
+  async function patchSlot(slotId: string, patch: { trade?: string | null; daily_wage?: number; subcontractor_id?: string | null }) {
+    setSlots((prev) => prev.map((s) => (s.id === slotId
+      ? {
+          ...s,
+          trade: patch.trade !== undefined ? patch.trade : s.trade,
+          daily_wage: patch.daily_wage !== undefined ? patch.daily_wage : s.daily_wage,
+          subcontractor: patch.subcontractor_id !== undefined
+            ? (patch.subcontractor_id ? { id: patch.subcontractor_id, name: subMap.get(patch.subcontractor_id) ?? '' } : null)
+            : s.subcontractor,
+        }
+      : s)));
+
+    const r = await fetch(`/api/payroll/${siteId}/${yearMonth}/workers/${slotId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!r.ok) {
+      alert(`슬롯 수정 실패: ${(await r.json().catch(() => ({}))).error ?? r.status}`);
+      load();
+    }
+  }
+
+  async function enrollWorker(workerId: string) {
+    const r = await fetch(`/api/payroll/${siteId}/${yearMonth}/workers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ worker_id: workerId }),
+    });
+    if (!r.ok) {
+      alert(`작업자 추가 실패: ${(await r.json().catch(() => ({}))).error ?? r.status}`);
+      return false;
+    }
+    return true;
+  }
+
+  async function enrollWorkers(ids: string[]) {
+    for (const id of ids) {
+      const ok = await enrollWorker(id);
+      if (!ok) break;
+    }
     setShowAddModal(false);
+    load();
   }
 
-  function removeWorker(workerId: string) {
-    if (!confirm('이 작업자를 노임대장에서 제외할까요? 출역 데이터도 삭제됩니다.')) return;
-    setState(s => ({
-      ...s,
-      enrolledWorkerIds: s.enrolledWorkerIds.filter(id => id !== workerId),
-      attendance: s.attendance.filter(a => a.workerId !== workerId),
-    }));
+  async function removeSlot(slotId: string, name: string) {
+    if (!confirm(`"${name}" 작업자를 노임대장에서 제외할까요? 출역도 함께 삭제됩니다.`)) return;
+    const r = await fetch(`/api/payroll/${siteId}/${yearMonth}/workers/${slotId}`, { method: 'DELETE' });
+    if (!r.ok) {
+      alert(`제거 실패: ${(await r.json().catch(() => ({}))).error ?? r.status}`);
+      return;
+    }
+    load();
   }
 
-  async function handleDownload() {
-    if (enrolled.length === 0) {
+  const [downloadBusy, setDownloadBusy] = useState<'download' | 'zip' | null>(null);
+
+  async function fetchAndSave(endpoint: 'download' | 'zip', fallbackName: string) {
+    if (slots.length === 0) {
       alert('작업자를 1명 이상 추가해주세요.');
       return;
     }
-    // 다운로드 API에 현재 작업자 마스터(편집된 상태) + 노임대장 상태를 함께 전송
-    const res = await fetch(`/api/payroll/${siteId}/${yearMonth}/download`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, workers: allWorkers }),
-    });
-    if (!res.ok) {
-      alert(`다운로드 실패: ${res.status}`);
-      return;
+    if (downloadBusy) return;
+    setDownloadBusy(endpoint);
+    try {
+      const res = await fetch(`/api/payroll/${siteId}/${yearMonth}/${endpoint}`);
+      if (!res.ok) {
+        alert(`다운로드 실패: ${res.status} ${await res.text().catch(() => '')}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cd = res.headers.get('content-disposition') ?? '';
+      const m = cd.match(/filename\*?=(?:UTF-8'')?([^;]+)/i);
+      a.download = m ? decodeURIComponent(m[1].replace(/"/g, '')) : fallbackName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloadBusy(null);
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const cd = res.headers.get('content-disposition') ?? '';
-    const m = cd.match(/filename\*?=(?:UTF-8'')?([^;]+)/i);
-    a.download = m ? decodeURIComponent(m[1].replace(/"/g, '')) : `노임대장_${yearMonth}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
   }
+  const handleDownload = () => fetchAndSave('download', `노임대장_${yearMonth}.xlsx`);
+  const handleZipDownload = () => fetchAndSave('zip', `노임대장_${yearMonth}.zip`);
 
   function dayTotalHours(day: number): number {
-    return enrolled.reduce((sum, w) => sum + (cellMap.get(`${w.id}:${day}`) ?? 0), 0);
+    return slots.reduce((sum, s) => sum + (cellMap.get(`${s.id}:${day}`) ?? 0), 0);
   }
 
   return (
     <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
-      {/* 헤더 */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-900">
+        <Link href="/payroll" className="text-sm text-zinc-500 hover:text-zinc-900">
           ← 현장 목록
         </Link>
       </div>
@@ -138,9 +236,7 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold tracking-tight tabular-nums">
-              {formatYearMonth(yearMonth)} 노임대장
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight">{formatYearMonth(yearMonth)}</h1>
             <Button
               size="icon"
               variant="ghost"
@@ -150,34 +246,31 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-xs text-zinc-500 mt-1">
-            작업자 {enrolled.length}명 · 셀 클릭으로 공수 입력 (0.5 / 1 / 1.5 / 2 등)
-          </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Link href={`/payroll/${siteId}/${yearMonth}/upload`}>
-            <Button variant="outline">
-              <Camera className="h-4 w-4" />
-              출역부 사진 업로드
-            </Button>
-          </Link>
-          <Button onClick={handleDownload}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={handleDownload} disabled={!!downloadBusy}>
             <Download className="h-4 w-4" />
-            엑셀 다운로드
+            {downloadBusy === 'download' ? '생성 중...' : '엑셀 1개'}
+          </Button>
+          <Button onClick={handleZipDownload} disabled={!!downloadBusy}>
+            <Download className="h-4 w-4" />
+            {downloadBusy === 'zip' ? '생성 중...' : '협력사별 ZIP'}
           </Button>
         </div>
       </div>
 
-      {/* 그리드 */}
+      {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
         <table className="border-collapse text-sm">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50">
               <th className="sticky left-0 z-10 bg-zinc-50 px-3 py-2 font-medium w-10 text-zinc-600">#</th>
               <th className="sticky left-10 z-10 bg-zinc-50 px-3 py-2 font-medium text-left text-zinc-600 min-w-[100px]">성명</th>
-              <th className="sticky left-[152px] z-10 bg-zinc-50 px-3 py-2 font-medium text-left text-zinc-600 min-w-[64px]">공종</th>
-              {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => (
+              <th className="sticky left-[152px] z-10 bg-zinc-50 px-3 py-2 font-medium text-left text-zinc-600 min-w-[120px]">협력사</th>
+              <th className="px-3 py-2 font-medium text-left text-zinc-600 min-w-[80px]">공종</th>
+              <th className="px-3 py-2 font-medium text-right text-zinc-600 min-w-[100px]">일당</th>
+              {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
                 <th key={d} className="border-l border-zinc-200 px-1.5 py-2 font-medium text-zinc-600 w-10 text-center tabular-nums">{d}</th>
               ))}
               <th className="border-l border-zinc-200 bg-zinc-100 px-3 py-2 font-medium text-zinc-700 w-14 text-center">공수</th>
@@ -186,55 +279,76 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
             </tr>
           </thead>
           <tbody>
-            {enrolled.length === 0 && (
+            {!loaded ? (
+              <tr><td colSpan={6 + totalDays} className="py-12 text-center text-zinc-400">불러오는 중...</td></tr>
+            ) : slots.length === 0 ? (
               <tr>
-                <td colSpan={4 + totalDays} className="py-12 text-center text-zinc-400">
+                <td colSpan={6 + totalDays} className="py-12 text-center text-zinc-400">
                   아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
                 </td>
               </tr>
+            ) : (
+              slots.map((s, idx) => {
+                const sum = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
+                const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`)).filter((v) => v != null && v > 0).length;
+                return (
+                  <tr key={s.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-2 text-zinc-500 tabular-nums">{idx + 1}</td>
+                    <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium">{s.worker.name}</td>
+                    <td className="sticky left-[152px] z-10 bg-white px-1.5 py-1">
+                      <SubcontractorSelect
+                        value={s.subcontractor?.id ?? ''}
+                        options={subcontractors}
+                        onChange={(id) => patchSlot(s.id, { subcontractor_id: id || null })}
+                      />
+                    </td>
+                    <td className="px-1.5 py-1">
+                      <TradeInput
+                        value={s.trade ?? ''}
+                        placeholder={s.worker.default_trade ?? '-'}
+                        onCommit={(v) => patchSlot(s.id, { trade: v.trim() || null })}
+                      />
+                    </td>
+                    <td className="px-1.5 py-1">
+                      <WageInput
+                        value={s.daily_wage}
+                        onCommit={(n) => patchSlot(s.id, { daily_wage: n })}
+                      />
+                    </td>
+                    {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => {
+                      const v = cellMap.get(`${s.id}:${d}`);
+                      return (
+                        <td key={d} className="border-l border-zinc-100 p-0 text-center tabular-nums">
+                          <CellInput
+                            value={v ?? null}
+                            onChange={(n) => setCell(s.id, d, n)}
+                          />
+                        </td>
+                      );
+                    })}
+                    <td className="border-l border-zinc-200 bg-zinc-50 px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
+                    <td className="border-l border-zinc-200 bg-zinc-50 px-2 py-2 text-center tabular-nums text-zinc-600">{days || ''}</td>
+                    <td className="border-l border-zinc-100 px-1 py-2 text-center">
+                      <button
+                        className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => removeSlot(s.id, s.worker.name)}
+                        aria-label="작업자 제거"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
-            {enrolled.map((w, idx) => {
-              const sum = enrolled.length === 0 ? 0 : Array.from({ length: totalDays }, (_, i) => cellMap.get(`${w.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
-              const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${w.id}:${i + 1}`)).filter(v => v != null && v > 0).length;
-              return (
-                <tr key={w.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
-                  <td className="sticky left-0 z-10 bg-white px-3 py-2 text-zinc-500 tabular-nums">{idx + 1}</td>
-                  <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium">{w.name}</td>
-                  <td className="sticky left-[152px] z-10 bg-white px-3 py-2 text-zinc-600 text-xs">{w.defaultTrade ?? '-'}</td>
-                  {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => {
-                    const v = cellMap.get(`${w.id}:${d}`);
-                    return (
-                      <td key={d} className="border-l border-zinc-100 p-0 text-center tabular-nums">
-                        <CellInput
-                          value={v ?? null}
-                          onChange={(n) => setCell(w.id, d, n)}
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="border-l border-zinc-200 bg-zinc-50 px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
-                  <td className="border-l border-zinc-200 bg-zinc-50 px-2 py-2 text-center tabular-nums text-zinc-600">{days || ''}</td>
-                  <td className="border-l border-zinc-100 px-1 py-2 text-center">
-                    <button
-                      className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"
-                      onClick={() => removeWorker(w.id)}
-                      aria-label="작업자 제거"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {/* 일자별 합계 */}
-            {enrolled.length > 0 && (
+            {slots.length > 0 && (
               <tr className="border-t-2 border-zinc-300 bg-zinc-50 font-semibold text-zinc-700">
-                <td colSpan={3} className="sticky left-0 z-10 bg-zinc-50 px-3 py-2">일자별 합계</td>
-                {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => (
+                <td colSpan={5} className="sticky left-0 z-10 bg-zinc-50 px-3 py-2">일자별 합계</td>
+                {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
                   <td key={d} className="border-l border-zinc-200 px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
                 ))}
                 <td className="border-l border-zinc-200 bg-zinc-100 px-2 py-2 text-center tabular-nums">
-                  {enrolled.reduce((s, w) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${w.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
+                  {slots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
                 </td>
                 <td className="border-l border-zinc-200 bg-zinc-100"></td>
                 <td className="border-l border-zinc-200"></td>
@@ -245,22 +359,18 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <Button variant="outline" onClick={() => setShowAddModal(true)} disabled={enrolled.length >= 26}>
+        <Button variant="outline" onClick={() => setShowAddModal(true)} disabled={slots.length >= 26}>
           <UserPlus className="h-4 w-4" />
-          작업자 추가 ({enrolled.length}/26)
+          작업자 추가 ({slots.length}/26)
         </Button>
-
-        <p className="text-xs text-zinc-500">
-          데이터는 브라우저 localStorage에 임시 저장됩니다 (Mock 모드)
-        </p>
       </div>
 
       {showAddModal && (
         <AddWorkerModal
-          available={availableWorkers}
+          available={allWorkers.filter((w) => !enrolledWorkerIds.has(w.id))}
           onClose={() => setShowAddModal(false)}
           onAdd={enrollWorkers}
-          remainingSlots={26 - enrolled.length}
+          remainingSlots={26 - slots.length}
         />
       )}
     </main>
@@ -280,7 +390,7 @@ function CellInput({ value, onChange }: { value: number | null; onChange: (n: nu
         const t = text.trim();
         if (t === '') { onChange(null); return; }
         const n = Number(t);
-        if (!Number.isFinite(n) || n < 0) { setText(value?.toString() ?? ''); return; }
+        if (!Number.isFinite(n) || n < 0 || n > 3.0) { setText(value?.toString() ?? ''); return; }
         onChange(n);
       }}
       onKeyDown={(e) => {
@@ -292,18 +402,101 @@ function CellInput({ value, onChange }: { value: number | null; onChange: (n: nu
   );
 }
 
+function TradeInput({
+  value,
+  placeholder,
+  onCommit,
+}: {
+  value: string;
+  placeholder: string;
+  onCommit: (v: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return (
+    <input
+      className="w-full bg-transparent px-2 py-1.5 text-xs text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => { if (text !== value) onCommit(text); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        if (e.key === 'Escape') { setText(value); (e.target as HTMLInputElement).blur(); }
+      }}
+    />
+  );
+}
+
+function WageInput({
+  value,
+  onCommit,
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+}) {
+  const [text, setText] = useState(formatWage(value));
+  useEffect(() => setText(formatWage(value)), [value]);
+  return (
+    <input
+      className="w-full bg-transparent px-2 py-1.5 text-right text-xs tabular-nums text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        const n = parseInt(text.replace(/[^0-9]/g, ''), 10);
+        if (!Number.isFinite(n) || n < 0) { setText(formatWage(value)); return; }
+        if (n !== value) onCommit(n);
+        setText(formatWage(n));
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        if (e.key === 'Escape') { setText(formatWage(value)); (e.target as HTMLInputElement).blur(); }
+      }}
+      inputMode="numeric"
+    />
+  );
+}
+
+function formatWage(n: number): string {
+  return n > 0 ? n.toLocaleString() : '';
+}
+
+function SubcontractorSelect({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: Subcontractor[];
+  onChange: (id: string) => void;
+}) {
+  return (
+    <select
+      className="w-full bg-transparent px-2 py-1.5 text-xs text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">미배정</option>
+      {options.map((s) => (
+        <option key={s.id} value={s.id}>{s.name}</option>
+      ))}
+    </select>
+  );
+}
+
 function AddWorkerModal({
   available,
   onClose,
   onAdd,
   remainingSlots,
 }: {
-  available: MockWorker[];
+  available: Worker[];
   onClose: () => void;
   onAdd: (ids: string[]) => void;
   remainingSlots: number;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -311,6 +504,12 @@ function AddWorkerModal({
     else if (next.size < remainingSlots) next.add(id);
     setSelected(next);
   }
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return available;
+    return available.filter((w) => w.name.toLowerCase().includes(q) || w.employee_code?.toLowerCase().includes(q));
+  }, [available, search]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -324,11 +523,22 @@ function AddWorkerModal({
             <X className="h-5 w-5" />
           </button>
         </div>
+        <div className="border-b border-zinc-100 px-6 py-3">
+          <input
+            className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-sm"
+            placeholder="이름·사번 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
-          {available.length === 0 ? (
-            <p className="p-8 text-center text-sm text-zinc-500">추가 가능한 작업자가 없습니다.</p>
+          {filtered.length === 0 ? (
+            <p className="p-8 text-center text-sm text-zinc-500">
+              {available.length === 0 ? '추가 가능한 작업자가 없습니다.' : '검색 결과가 없습니다.'}
+            </p>
           ) : (
-            available.map(w => {
+            filtered.map((w) => {
               const isSelected = selected.has(w.id);
               return (
                 <label
@@ -344,8 +554,13 @@ function AddWorkerModal({
                     className="h-4 w-4 rounded border-zinc-300"
                   />
                   <div className="flex-1">
-                    <p className="font-medium">{w.name}</p>
-                    <p className="text-xs text-zinc-500">{w.defaultTrade ?? '공종 미정'} · 일당 {w.defaultWage.toLocaleString()}원</p>
+                    <p className="font-medium">
+                      {w.name}
+                      {w.employee_code && <span className="ml-2 text-xs text-zinc-400 font-mono">[{w.employee_code}]</span>}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {w.default_trade ?? '공종 미정'} · 일당 {w.default_wage.toLocaleString()}원
+                    </p>
                   </div>
                 </label>
               );

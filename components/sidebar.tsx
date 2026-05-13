@@ -10,12 +10,12 @@ import {
   Receipt,
   Wrench,
   Users,
+  HardHat,
   Building2,
   Store,
   BellOff,
   LogOut as LogOutIcon,
-  UserCog,
-  Settings,
+  KeyRound,
   ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
@@ -54,6 +54,7 @@ const groups: Group[] = [
     label: '마스터 데이터',
     items: [
       { label: '작업자', href: '/workers', icon: Users },
+      { label: '협력사', href: '/subcontractors', icon: HardHat },
       { label: '현장', href: '/worksites', icon: Building2 },
       { label: '거래처', href: '/vendors', icon: Store },
     ],
@@ -68,8 +69,7 @@ const groups: Group[] = [
   {
     label: '설정',
     items: [
-      { label: '사용자', href: '/settings/members', icon: UserCog },
-      { label: '회사 정보', href: '/settings/company', icon: Settings },
+      { label: '계정 (ID/비밀번호)', href: '/settings/account', icon: KeyRound },
     ],
   },
 ];
