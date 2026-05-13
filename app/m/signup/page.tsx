@@ -806,9 +806,9 @@ function BelongingStep({
       <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
         소속을<br />선택해주세요
       </h1>
-      <p className="mt-4 text-sm text-zinc-500">현장이나 협력사가 바뀌면 내 정보에서 변경할 수 있어요.</p>
+      <p className="mt-4 text-sm text-zinc-500">현장이나 소속이 바뀌면 내 정보에서 변경할 수 있어요.</p>
       <div className="mt-8 space-y-6">
-        <Field label="협력사">
+        <Field label="소속">
           <select
             value={subcontractorId}
             onChange={(e) => setSubcontractorId(e.target.value)}

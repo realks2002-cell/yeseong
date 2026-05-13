@@ -106,7 +106,7 @@ export default function ProfilePage() {
 
       <section className="px-7 space-y-5">
         <div>
-          <label className="text-base font-semibold text-zinc-500">협력사</label>
+          <label className="text-base font-semibold text-zinc-500">소속</label>
           <select
             value={subcontractorId}
             onChange={(e) => setSubcontractorId(e.target.value)}

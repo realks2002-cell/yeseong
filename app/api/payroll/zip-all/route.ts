@@ -99,9 +99,6 @@ export async function GET(req: Request) {
     const data = payload as unknown as PayrollData;
     if (!data.slots || data.slots.length === 0) continue;
 
-    const wsFolder = zip.folder(safeFileName(data.worksite.name));
-    if (!wsFolder) continue;
-
     const groups = new Map<string, Slot[]>();
     for (const s of data.slots) {
       const key = s.subcontractor_name ?? '미배정';
@@ -124,8 +121,8 @@ export async function GET(req: Request) {
         worksiteName: data.worksite.name,
         workers: fillWorkers,
       });
-      const innerName = safeFileName(`노임대장_${subName}_${yyyymm}.xlsx`);
-      wsFolder.file(innerName, buf);
+      const innerName = safeFileName(`노임대장_${data.worksite.name}_${subName}_${yyyymm}.xlsx`);
+      zip.file(innerName, buf);
       totalFiles++;
     }
   }

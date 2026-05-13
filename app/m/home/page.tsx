@@ -92,7 +92,7 @@ export default function HomePage() {
     return (
       <MobileShell showTabs activeTab="home">
         <div className="px-7 pt-10">
-          <h1 className="text-2xl font-bold text-zinc-900">현장과 협력사를 먼저 설정해주세요</h1>
+          <h1 className="text-2xl font-bold text-zinc-900">현장과 소속을 먼저 설정해주세요</h1>
           <p className="mt-3 text-base text-zinc-500">내 정보 화면에서 변경할 수 있어요.</p>
           <button
             onClick={() => router.push('/m/profile')}

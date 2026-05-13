@@ -54,6 +54,7 @@ const groups: Group[] = [
     label: '마스터 데이터',
     items: [
       { label: '작업자', href: '/workers', icon: Users },
+      { label: '소장', href: '/managers', icon: HardHat },
       { label: '협력사', href: '/subcontractors', icon: HardHat },
       { label: '현장', href: '/worksites', icon: Building2 },
       { label: '거래처', href: '/vendors', icon: Store },
