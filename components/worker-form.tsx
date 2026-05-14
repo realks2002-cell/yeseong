@@ -111,7 +111,7 @@ export function WorkerForm({ initial, onSubmit, onCancel, title }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-2xl rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button onClick={onCancel} className="rounded p-1 text-zinc-500 hover:bg-zinc-100" aria-label="닫기">

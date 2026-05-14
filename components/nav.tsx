@@ -10,8 +10,8 @@ export function Nav() {
           <span>이루건설 노임대장</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">
-          <Link href="/dashboard" className="rounded-md px-3 py-1.5 hover:bg-zinc-100 text-zinc-700">대시보드</Link>
-          <Link href="/workers" className="rounded-md px-3 py-1.5 hover:bg-zinc-100 text-zinc-700">작업자</Link>
+          <Link href="/dashboard" className="rounded-[5px] px-3 py-1.5 hover:bg-zinc-100 text-zinc-700">대시보드</Link>
+          <Link href="/workers" className="rounded-[5px] px-3 py-1.5 hover:bg-zinc-100 text-zinc-700">작업자</Link>
         </nav>
         <div className="ml-auto text-xs text-zinc-500">
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">Mock 모드</span>

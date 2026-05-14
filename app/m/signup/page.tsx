@@ -412,10 +412,10 @@ function PhoneStep({
   return (
     <>
       <div className="mt-6 flex items-center gap-3">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-900 text-white">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-[5px] bg-blue-900 text-white">
           <Hammer className="h-6 w-6" />
         </span>
-        <span className="text-2xl font-bold text-zinc-900">예성건설</span>
+        <span className="text-2xl font-bold text-zinc-900">(주)예성건축</span>
       </div>
       <h1 className="mt-10 text-[40px] font-bold leading-tight text-zinc-900">
         전화번호를<br />입력해주세요
@@ -677,7 +677,7 @@ function AccountStep({
                 if (e.target.value === '__custom__') { setBankCustom(true); setBankName(''); }
                 else setBankName(e.target.value);
               }}
-              className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+              className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
             >
               <option value="">선택하세요</option>
               {KOREAN_BANKS.map((b) => (
@@ -768,7 +768,7 @@ function WorkStep({
                 if (e.target.value === '__custom__') { setTradeCustom(true); setDefaultTrade(''); }
                 else setDefaultTrade(e.target.value);
               }}
-              className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+              className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
             >
               <option value="">선택하세요</option>
               {TRADES.map((t) => (
@@ -812,7 +812,7 @@ function BelongingStep({
           <select
             value={subcontractorId}
             onChange={(e) => setSubcontractorId(e.target.value)}
-            className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
           >
             <option value="">선택하세요</option>
             {subcontractors.map((s) => (
@@ -824,7 +824,7 @@ function BelongingStep({
           <select
             value={worksiteId}
             onChange={(e) => setWorksiteId(e.target.value)}
-            className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
           >
             <option value="">선택하세요</option>
             {worksites.map((w) => (
@@ -846,7 +846,7 @@ function NextButton({ valid, onNext, label }: { valid: boolean; onNext: () => vo
         onClick={onNext}
         disabled={!valid}
         className={
-          'h-[78px] w-full rounded-2xl text-2xl font-bold transition ' +
+          'h-[78px] w-full rounded-[5px] text-2xl font-bold transition ' +
           (valid ? 'bg-red-800 text-white active:scale-[0.98]' : 'bg-zinc-100 text-zinc-400')
         }
       >
@@ -862,7 +862,7 @@ function SelectChip({ selected, onClick, label }: { selected: boolean; onClick: 
       type="button"
       onClick={onClick}
       className={
-        'h-[68px] rounded-2xl text-xl font-bold ring-2 transition ' +
+        'h-[68px] rounded-[5px] text-xl font-bold ring-2 transition ' +
         (selected ? 'bg-blue-900 text-white ring-blue-900' : 'bg-white text-zinc-700 ring-zinc-200 hover:ring-zinc-400')
       }
     >

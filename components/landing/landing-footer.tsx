@@ -17,7 +17,7 @@ export function LandingFooter() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">사업자 정보</p>
           <ul className="mt-3 space-y-1.5 text-sm">
-            <li>법인명: 주식회사 예성건축</li>
+            <li>법인명: 주식회사 (주)예성건축</li>
             <li>법인등록번호: 164911-0041303</li>
             <li>주소: 경기도 화성시 동탄영천로 150, A동 1135호(영천동)</li>
           </ul>

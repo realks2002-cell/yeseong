@@ -32,7 +32,7 @@ export default function PayrollDetailPage({
         </Link>
         <span className="text-xl font-bold text-zinc-900">{yyyymm}</span>
       </header>
-      <div className="mx-7 mt-12 flex flex-col items-center gap-3 rounded-3xl bg-zinc-50 p-10 text-center">
+      <div className="mx-7 mt-12 flex flex-col items-center gap-3 rounded-[5px] bg-zinc-50 p-10 text-center">
         <Wallet className="h-12 w-12 text-zinc-300" />
         <p className="text-lg font-semibold text-zinc-700">정산 내역은 준비 중입니다</p>
       </div>

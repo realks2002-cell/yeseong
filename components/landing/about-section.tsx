@@ -14,7 +14,7 @@ export function AboutSection() {
 
           <div className="mt-6 space-y-5 text-base leading-relaxed text-zinc-700">
             <p>
-              예성건설은 2024년 창사 이래, 습식공사 및 도장공사 전문분야를 주력으로 꾸준히
+              (주)예성건축은 2024년 창사 이래, 습식공사 및 도장공사 전문분야를 주력으로 꾸준히
               성장해왔습니다. 포스코건설·현대엔지니어링·CJ건설과 함께 방수공법을 공동 개발하여
               공동특허를 출원하였으며, 지속적인 연구를 통해 방수·습식 공사 개발에 크게 이바지하고
               있습니다.
@@ -44,7 +44,7 @@ export function AboutSection() {
 
             <div className="mt-5 flex justify-center">
               <a
-                href="/예성건축지명원_26.01.27.pdf"
+                href="/(주)예성건축지명원_26.01.27.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-[0.4rem] rounded-full bg-blue-800 px-[1.2rem] py-[0.6rem] text-xs font-bold text-white transition-all hover:bg-blue-900"
@@ -60,7 +60,7 @@ export function AboutSection() {
           <div className="mx-auto aspect-[4/5] w-[88%] overflow-hidden rounded-[5px] bg-zinc-200 shadow-xl">
             <img
               src="/10.png"
-              alt="예성건설 임직원과 사업장"
+              alt="(주)예성건축 임직원과 사업장"
               className="h-full w-full object-cover"
             />
           </div>

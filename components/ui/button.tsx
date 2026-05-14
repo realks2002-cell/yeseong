@@ -12,10 +12,10 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm rounded-md',
-  md: 'h-10 px-4 text-sm rounded-md',
-  lg: 'h-11 px-6 text-base rounded-md',
-  icon: 'h-9 w-9 rounded-md',
+  sm: 'h-8 px-3 text-sm rounded-[5px]',
+  md: 'h-10 px-4 text-sm rounded-[5px]',
+  lg: 'h-11 px-6 text-base rounded-[5px]',
+  icon: 'h-9 w-9 rounded-[5px]',
 };
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

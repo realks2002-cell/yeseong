@@ -43,9 +43,9 @@ export default function AppDownloadPage() {
               return (
                 <div
                   key={app.filename}
-                  className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+                  className="flex flex-col rounded-[5px] border border-zinc-200 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-[5px] bg-blue-50 text-blue-700">
                     <Icon className="h-7 w-7" />
                   </div>
                   <h2 className="mt-6 text-xl font-bold text-zinc-900">{app.title}</h2>
@@ -65,7 +65,7 @@ export default function AppDownloadPage() {
             })}
           </div>
 
-          <div className="mx-auto mt-10 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+          <div className="mx-auto mt-10 max-w-2xl rounded-[5px] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
             <p className="font-bold">설치 안내</p>
             <ul className="mt-2 space-y-1 text-[13px] leading-relaxed">
               <li>· Android 휴대폰에서만 설치할 수 있습니다.</li>

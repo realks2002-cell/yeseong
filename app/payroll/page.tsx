@@ -64,7 +64,7 @@ export default async function PayrollIndexPage() {
         </div>
 
         {error && (
-          <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
+          <p className="mt-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">
             현장 목록을 불러오지 못했습니다: {error.message}
           </p>
         )}

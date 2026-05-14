@@ -90,10 +90,10 @@ export function Sidebar() {
         href="/dashboard"
         className="flex items-center gap-2 px-5 h-14 border-b border-zinc-200 text-zinc-900 font-semibold"
       >
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 text-white">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-zinc-900 text-white">
           <Hammer className="h-4 w-4" />
         </span>
-        <span className="text-[11px]">예성건설</span>
+        <span className="text-[11px]">(주)예성건축</span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
@@ -111,7 +111,7 @@ export function Sidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-[11px] transition-colors',
+                        'flex items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-[11px] transition-colors',
                         active
                           ? 'bg-zinc-900 text-white'
                           : 'text-zinc-700 hover:bg-zinc-100'

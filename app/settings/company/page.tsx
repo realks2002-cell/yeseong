@@ -83,7 +83,7 @@ export default function CompanySettingsPage() {
                   <Input
                     value={form.company_name}
                     onChange={(e) => setForm({ ...form, company_name: e.target.value })}
-                    placeholder="예성건설"
+                    placeholder="(주)예성건축"
                   />
                 </Field>
                 <Field label="사업자번호">

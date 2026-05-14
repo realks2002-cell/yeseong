@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, LogOut, MapPin } from 'lucide-react';
+import { ChevronRight, MapPin } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone } from '@/lib/auth/phone-email';
@@ -34,12 +34,6 @@ export default function ManagerProfilePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const logout = async () => {
-    await sb.auth.signOut();
-    router.replace('/m/manager/signup');
-    router.refresh();
-  };
-
   if (!me) {
     return (
       <MobileShell showTabs activeTab="profile" variant="manager">
@@ -50,32 +44,23 @@ export default function ManagerProfilePage() {
     );
   }
 
-  const initial = (me.manager.name ?? '').slice(0, 1) || '?';
-
   return (
     <MobileShell showTabs activeTab="profile" variant="manager">
       <div className="px-7 pt-10 pb-8">
         <h1 className="text-[34px] font-bold text-zinc-900">내 정보</h1>
       </div>
 
-      <section className="mx-7 mb-8 rounded-3xl bg-blue-900 p-6 text-white">
-        <div className="flex items-center gap-4">
-          <span className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-3xl font-bold text-blue-900">
-            {initial}
-          </span>
-          <div>
-            <p className="text-[26px] font-bold leading-tight">{me.manager.name}</p>
-            <p className="mt-1 text-base font-semibold text-blue-200">
-              {formatPhone(me.manager.phone)}
-            </p>
-            <p className="mt-1 text-xs font-semibold text-blue-200">현장 소장</p>
-          </div>
-        </div>
+      <section className="mx-7 mb-8 rounded-[5px] bg-blue-900 p-6 text-center text-white">
+        <p className="text-[26px] font-bold leading-tight">{me.manager.name}</p>
+        <p className="mt-1 text-lg font-semibold text-blue-200">
+          {formatPhone(me.manager.phone)}
+        </p>
+        <p className="mt-1 text-xs font-semibold text-blue-200">현장 소장</p>
       </section>
 
       <section className="px-7">
         <h2 className="text-lg font-bold text-zinc-900">담당 현장</h2>
-        <ul className="mt-3 rounded-2xl bg-white ring-1 ring-zinc-200 divide-y divide-zinc-100">
+        <ul className="mt-3 rounded-[5px] bg-white ring-1 ring-zinc-200 divide-y divide-zinc-100">
           {me.worksites.map((w) => (
             <li key={w.id} className="px-5 py-4 text-base font-semibold text-zinc-800">
               {w.name}
@@ -90,7 +75,7 @@ export default function ManagerProfilePage() {
 
         <Link
           href="/m/manager/assignments"
-          className="mt-3 flex h-[60px] w-full items-center justify-between rounded-2xl bg-zinc-50 px-5 text-base font-bold text-zinc-700 ring-1 ring-zinc-200 active:scale-[0.99]"
+          className="mt-3 flex h-[60px] w-full items-center justify-between rounded-[5px] bg-zinc-50 px-5 text-base font-bold text-zinc-700 ring-1 ring-zinc-200 active:scale-[0.99]"
         >
           담당 현장 변경
           <ChevronRight className="h-5 w-5 text-zinc-400" />
@@ -98,7 +83,7 @@ export default function ManagerProfilePage() {
 
         <Link
           href="/m/manager/site-gps"
-          className="mt-2 flex h-[60px] w-full items-center justify-between rounded-2xl bg-emerald-50 px-5 text-base font-bold text-emerald-800 ring-1 ring-emerald-200 active:scale-[0.99]"
+          className="mt-2 flex h-[60px] w-full items-center justify-between rounded-[5px] bg-emerald-50 px-5 text-base font-bold text-emerald-800 ring-1 ring-emerald-200 active:scale-[0.99]"
         >
           <span className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
@@ -108,15 +93,6 @@ export default function ManagerProfilePage() {
         </Link>
       </section>
 
-      <div className="mt-12 px-7 pb-10">
-        <button
-          onClick={logout}
-          className="flex h-[78px] w-full items-center justify-center gap-3 rounded-2xl bg-white text-xl font-bold text-red-800 ring-2 ring-red-800 active:scale-[0.99]"
-        >
-          <LogOut className="h-6 w-6" />
-          로그아웃
-        </button>
-      </div>
     </MobileShell>
   );
 }

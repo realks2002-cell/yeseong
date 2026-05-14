@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">예성건설 소장</string>
-    <string name="title_activity_main">예성건설 소장</string>
+    <string name="app_name">예성건축 소장</string>
+    <string name="title_activity_main">예성건축 소장</string>
     <string name="package_name">com.yeseong.manager</string>
     <string name="custom_url_scheme">com.yeseong.manager</string>
 </resources>

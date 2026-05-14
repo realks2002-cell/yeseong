@@ -78,7 +78,7 @@ export default function WorksitesPage() {
         </div>
 
         {error && (
-          <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>
+          <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>
         )}
 
         <Card className="overflow-hidden">

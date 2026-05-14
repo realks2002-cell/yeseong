@@ -23,7 +23,7 @@ export function PlaceholderPage({ icon: Icon, title, description, comingFeatures
         </div>
 
         <Card className="p-12 text-center">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400 mb-4">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-[5px] bg-zinc-100 text-zinc-400 mb-4">
             <Icon className="h-8 w-8" />
           </div>
           <h2 className="text-lg font-semibold text-zinc-700 mb-2">곧 추가될 기능입니다</h2>

@@ -67,7 +67,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl p-5 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs text-zinc-500">예성건설</p>
+            <p className="text-xs text-zinc-500">(주)예성건축</p>
             <h1 className="text-xl font-bold tracking-tight">대시보드</h1>
           </div>
           <MonthSwitcher value={yearMonth} onChange={setYearMonth} />
@@ -152,7 +152,7 @@ export default function DashboardPage() {
 
 function MonthSwitcher({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-md border border-zinc-200 bg-white p-0.5">
+    <div className="flex items-center gap-0.5 rounded-[5px] border border-zinc-200 bg-white p-0.5">
       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onChange(shiftMonth(value, -1))} aria-label="이전 달">
         <ChevronLeft className="h-3.5 w-3.5" />
       </Button>

@@ -120,7 +120,7 @@ export default function WorkersPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 · 전화번호 · 주민번호로 검색"
-            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-[5px] border border-zinc-200 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
           {query && (
             <button
@@ -134,7 +134,7 @@ export default function WorkersPage() {
           )}
         </div>
 
-        {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">

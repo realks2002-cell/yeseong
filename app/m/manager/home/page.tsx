@@ -47,12 +47,12 @@ export default function ManagerHomePage() {
       sb.rpc('yeseong_manager_get_me'),
       sb.rpc('yeseong_manager_list_pending_attendance'),
     ]);
-    if (meRes.error || !meRes.data) {
-      setError(meRes.error?.message ?? '프로필 로드 실패');
+    if (meRes.error) {
+      setError(meRes.error.message);
       setLoading(false);
       return;
     }
-    const meData = meRes.data as unknown as Me;
+    const meData = meRes.data as unknown as Me | null;
     if (!meData?.manager) {
       router.replace('/m/manager/signup');
       return;
@@ -151,7 +151,7 @@ export default function ManagerHomePage() {
         {error && <p className="mt-4 text-base font-semibold text-red-800">{error}</p>}
 
         {items && items.length === 0 ? (
-          <div className="mt-6 flex flex-col items-center justify-center rounded-2xl bg-zinc-50 px-6 py-14 text-center">
+          <div className="mt-6 flex flex-col items-center justify-center rounded-[5px] bg-zinc-50 px-6 py-14 text-center">
             <ClipboardCheck className="h-10 w-10 text-zinc-300" />
             <p className="mt-3 text-base font-semibold text-zinc-500">
               검토할 출역이 없어요
@@ -182,7 +182,7 @@ export default function ManagerHomePage() {
             <button
               onClick={() => setConfirmApproveAll(true)}
               disabled={approveAllBusy}
-              className="mt-6 flex h-[60px] w-full items-center justify-center gap-2 rounded-2xl bg-blue-900 text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
+              className="mt-6 flex h-[60px] w-full items-center justify-center gap-2 rounded-[5px] bg-blue-900 text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
             >
               <CheckCheck className="h-6 w-6" />
               {approveAllBusy ? '처리 중...' : `모두 승인 (${items?.length ?? 0}건)`}
@@ -221,7 +221,7 @@ function PendingCard({
   onReject: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200">
+    <div className="flex items-center gap-2 rounded-[5px] bg-white px-3 py-2 ring-1 ring-zinc-200">
       <p className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-900">{item.worker_name}</p>
       <p className="shrink-0 text-base font-bold tabular-nums text-blue-900">{item.hours}일</p>
       <div className="shrink-0 flex gap-1.5">
@@ -229,7 +229,7 @@ function PendingCard({
           onClick={onReject}
           disabled={busy}
           aria-label="반려"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white text-red-800 ring-2 ring-red-200 active:scale-[0.95] disabled:opacity-50"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-white text-red-800 ring-2 ring-red-200 active:scale-[0.95] disabled:opacity-50"
         >
           <X className="h-4 w-4" />
         </button>
@@ -237,7 +237,7 @@ function PendingCard({
           onClick={onApprove}
           disabled={busy}
           aria-label="승인"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-900 text-white active:scale-[0.95] disabled:opacity-60"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-blue-900 text-white active:scale-[0.95] disabled:opacity-60"
         >
           <Check className="h-4 w-4" />
         </button>
@@ -256,7 +256,7 @@ function ApproveAllDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-3xl sm:rounded-3xl bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-base text-zinc-500">검토 대기 출역</p>
         <p className="mt-2 text-center text-[28px] font-bold text-zinc-900">
           {count}건 모두 승인할까요?
@@ -268,14 +268,14 @@ function ApproveAllDialog({
           <button
             onClick={onCancel}
             disabled={busy}
-            className="h-[60px] rounded-2xl bg-zinc-100 text-lg font-bold text-zinc-700 disabled:opacity-50"
+            className="h-[60px] rounded-[5px] bg-zinc-100 text-lg font-bold text-zinc-700 disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="h-[60px] rounded-2xl bg-blue-900 text-lg font-bold text-white disabled:opacity-60"
+            className="h-[60px] rounded-[5px] bg-blue-900 text-lg font-bold text-white disabled:opacity-60"
           >
             {busy ? '처리 중...' : '모두 승인'}
           </button>
@@ -296,7 +296,7 @@ function RejectDialog({
   const [reason, setReason] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-3xl sm:rounded-3xl bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-base text-zinc-500">반려 사유</p>
         <p className="mt-2 text-center text-[24px] font-bold text-zinc-900">
           {item.worker_name} · {item.hours}일
@@ -307,20 +307,20 @@ function RejectDialog({
           placeholder="사유를 입력해주세요 (선택)"
           rows={3}
           autoFocus
-          className="mt-5 w-full resize-none rounded-2xl bg-zinc-50 p-4 text-base text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+          className="mt-5 w-full resize-none rounded-[5px] bg-zinc-50 p-4 text-base text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
         />
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button
             onClick={onCancel}
             disabled={busy}
-            className="h-[60px] rounded-2xl bg-zinc-100 text-lg font-bold text-zinc-700 disabled:opacity-50"
+            className="h-[60px] rounded-[5px] bg-zinc-100 text-lg font-bold text-zinc-700 disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={() => onConfirm(reason.trim())}
             disabled={busy}
-            className="h-[60px] rounded-2xl bg-red-800 text-lg font-bold text-white disabled:opacity-60"
+            className="h-[60px] rounded-[5px] bg-red-800 text-lg font-bold text-white disabled:opacity-60"
           >
             {busy ? '처리 중...' : '반려'}
           </button>

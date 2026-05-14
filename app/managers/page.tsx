@@ -139,7 +139,7 @@ export default function ManagersPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 · 전화번호 · 현장으로 검색"
-            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-[5px] border border-zinc-200 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
           {query && (
             <button
@@ -153,7 +153,7 @@ export default function ManagersPage() {
           )}
         </div>
 
-        {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -319,7 +319,7 @@ function ManagerForm({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+        className="w-full max-w-lg rounded-[5px] bg-white p-6 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
@@ -334,7 +334,7 @@ function ManagerForm({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-[5px] border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -343,7 +343,7 @@ function ManagerForm({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="010-0000-0000"
-              className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-[5px] border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -354,7 +354,7 @@ function ManagerForm({
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="0000"
-              className="w-32 rounded-md border border-zinc-200 px-3 py-2 font-mono text-sm outline-none focus:border-blue-500"
+              className="w-32 rounded-[5px] border border-zinc-200 px-3 py-2 font-mono text-sm outline-none focus:border-blue-500"
             />
             <p className="mt-1 text-[11px] text-zinc-500">
               비워두면 모바일 앱에서 직접 가입할 수 있는 shell만 생성됩니다.
@@ -362,7 +362,7 @@ function ManagerForm({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-600">담당 현장</label>
-            <div className="max-h-40 overflow-y-auto rounded-md border border-zinc-200 p-2">
+            <div className="max-h-40 overflow-y-auto rounded-[5px] border border-zinc-200 p-2">
               {worksites.length === 0 ? (
                 <p className="px-1 py-2 text-xs text-zinc-400">현장이 없습니다.</p>
               ) : (
@@ -384,7 +384,7 @@ function ManagerForm({
           </div>
         </div>
 
-        {err && <p className="mt-3 rounded-md bg-red-50 p-2 text-xs text-red-600">{err}</p>}
+        {err && <p className="mt-3 rounded-[5px] bg-red-50 p-2 text-xs text-red-600">{err}</p>}
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>

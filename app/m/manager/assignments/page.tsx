@@ -115,7 +115,7 @@ export default function ManagerAssignmentsPage() {
                   type="button"
                   onClick={() => toggle(w.id)}
                   className={
-                    'flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-4 text-left ring-2 transition active:scale-[0.99] ' +
+                    'flex w-full items-center justify-between gap-3 rounded-[5px] px-5 py-4 text-left ring-2 transition active:scale-[0.99] ' +
                     (on
                       ? 'bg-blue-900 text-white ring-blue-900'
                       : 'bg-white text-zinc-700 ring-zinc-200 hover:ring-zinc-400')
@@ -132,7 +132,7 @@ export default function ManagerAssignmentsPage() {
             );
           })}
           {all.length === 0 && (
-            <li className="rounded-2xl bg-zinc-50 px-6 py-10 text-center text-zinc-500">
+            <li className="rounded-[5px] bg-zinc-50 px-6 py-10 text-center text-zinc-500">
               등록된 현장이 없습니다.
             </li>
           )}
@@ -145,7 +145,7 @@ export default function ManagerAssignmentsPage() {
             onClick={save}
             disabled={busy || selected.size === 0}
             className={
-              'flex h-[78px] w-full items-center justify-center gap-2 rounded-2xl text-2xl font-bold transition ' +
+              'flex h-[78px] w-full items-center justify-center gap-2 rounded-[5px] text-2xl font-bold transition ' +
               (busy || selected.size === 0
                 ? 'bg-zinc-100 text-zinc-400'
                 : 'bg-blue-900 text-white active:scale-[0.98]')

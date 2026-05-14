@@ -29,7 +29,7 @@ export default async function UploadPage({
           <ArrowLeft className="h-4 w-4" />
           노임대장으로
         </Link>
-        <div className="mt-6 rounded-xl border border-dashed border-zinc-300 bg-white p-12 text-center">
+        <div className="mt-6 rounded-[5px] border border-dashed border-zinc-300 bg-white p-12 text-center">
           <Camera className="mx-auto h-10 w-10 text-zinc-300" />
           <h1 className="mt-4 text-lg font-semibold">출역부 사진 업로드</h1>
           <p className="mt-2 text-sm text-zinc-500">

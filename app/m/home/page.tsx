@@ -1,24 +1,24 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check } from 'lucide-react';
+import { Check, AlertTriangle } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
-const OPTIONS: { value: Hours; title: string; sub: string; cls: string }[] = [
+const NORMAL_OPTIONS: { value: Hours; title: string; sub: string; cls: string }[] = [
   { value: 0.5, title: '0.5 일', sub: '반나절', cls: 'bg-white text-blue-900 ring-blue-200' },
   { value: 1,   title: '1 일',   sub: '정상',   cls: 'bg-blue-900 text-white ring-blue-900' },
-  { value: 1.5, title: '1.5 일', sub: '연장',   cls: 'bg-white text-red-800 ring-red-200' },
-  { value: 2,   title: '2 일',   sub: '특근',   cls: 'bg-red-800 text-white ring-red-800' },
 ];
 
+type AttendanceStatus = 'pending' | 'approved' | 'rejected';
+
 type Me = {
-  worker: { id: string; name: string; phone: string | null; default_worksite_id: string | null; default_subcontractor_id: string | null };
+  worker: { id: string; name: string; phone: string | null; default_trade: string | null; default_worksite_id: string | null; default_subcontractor_id: string | null };
   worksite: { id: string; name: string } | null;
   subcontractor: { id: string; name: string } | null;
-  recent: Array<{ work_date: string; hours: number }>;
+  recent: Array<{ work_date: string; hours: number; approval_status: AttendanceStatus; rejection_reason: string | null }>;
 };
 
 const TODAY_ISO = (() => {
@@ -44,24 +44,28 @@ export default function HomePage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) {
-      router.replace('/m/signup');
-      return;
-    }
-    const { data, error: rpcErr } = await sb.rpc('yeseong_mobile_get_me');
-    if (rpcErr || !data) {
-      setError(rpcErr?.message ?? '프로필 로드 실패');
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) {
+        router.replace('/m/signup');
+        return;
+      }
+      const { data, error: rpcErr } = await sb.rpc('yeseong_mobile_get_me');
+      if (rpcErr || !data) {
+        setError(rpcErr?.message ?? '프로필 로드 실패');
+        return;
+      }
+      setMe(data as unknown as Me);
+    } finally {
       setLoading(false);
-      return;
     }
-    setMe(data as unknown as Me);
-    setLoading(false);
   }, [sb, router]);
 
   useEffect(() => { load(); }, [load]);
 
-  const todayHours = me?.recent.find((r) => r.work_date === TODAY_ISO)?.hours ?? null;
+  const todayRecord = me?.recent.find((r) => r.work_date === TODAY_ISO) ?? null;
+  const isRejected = todayRecord?.approval_status === 'rejected';
+  const showRegister = todayRecord === null || isRejected;
 
   const submit = async (h: Hours) => {
     if (busy) return;
@@ -74,7 +78,12 @@ export default function HomePage() {
     setBusy(false);
     setConfirm(null);
     if (rpcErr) {
-      setError(rpcErr.message);
+      if (rpcErr.message.includes('already approved')) {
+        setError('이미 승인 완료된 출역입니다. 새로고침 후 확인해주세요.');
+        await load();
+      } else {
+        setError(rpcErr.message);
+      }
       return;
     }
     await load();
@@ -96,7 +105,7 @@ export default function HomePage() {
           <p className="mt-3 text-base text-zinc-500">내 정보 화면에서 변경할 수 있어요.</p>
           <button
             onClick={() => router.push('/m/profile')}
-            className="mt-8 h-[68px] w-full rounded-2xl bg-blue-900 text-xl font-bold text-white"
+            className="mt-8 h-[68px] w-full rounded-[5px] bg-blue-900 text-xl font-bold text-white"
           >
             내 정보로 이동
           </button>
@@ -107,21 +116,29 @@ export default function HomePage() {
 
   return (
     <MobileShell showTabs activeTab="home">
-      <div className="px-7 pt-10 pb-4">
+      <div className="px-7 pt-20 pb-4">
         <p className="text-[24px] font-bold text-zinc-700">{TODAY_LABEL}</p>
-        <h1 className="mt-1 text-[26px] font-bold leading-tight text-zinc-900">
-          안녕하세요 {me.worker.name}님
+        <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900">
+          {me.worker.name}님
+          {me.worker.default_trade && (
+            <span className="ml-2 text-[20px] font-semibold text-zinc-500">
+              ({me.worker.default_trade})
+            </span>
+          )}
         </h1>
         <p className="mt-2 text-base font-semibold text-zinc-500">
-          {me.worksite.name} · {me.subcontractor.name}
+          현장 : {me.worksite.name} ({me.subcontractor.name})
         </p>
       </div>
 
-      {todayHours === null ? (
-        <RegisterView onPick={setConfirm} />
-      ) : (
-        <LockedView hours={todayHours as Hours} />
+      {isRejected && todayRecord && (
+        <RejectedNotice hours={todayRecord.hours} reason={todayRecord.rejection_reason} />
       )}
+      {showRegister ? (
+        <RegisterView onPick={setConfirm} />
+      ) : todayRecord ? (
+        <LockedView hours={todayRecord.hours} />
+      ) : null}
 
       {error && <p className="mx-7 mt-4 text-base font-semibold text-red-800">{error}</p>}
 
@@ -141,15 +158,15 @@ export default function HomePage() {
 
 function RegisterView({ onPick }: { onPick: (h: Hours) => void }) {
   return (
-    <section className="px-7">
+    <section className="mt-4 px-7">
       <h2 className="text-2xl font-bold text-zinc-900">오늘 근무를 등록해주세요</h2>
       <ul className="mt-5 space-y-3">
-        {OPTIONS.map((o) => (
+        {NORMAL_OPTIONS.map((o) => (
           <li key={o.value}>
             <button
               onClick={() => onPick(o.value)}
               className={
-                'flex h-[88px] w-full items-center justify-between rounded-2xl px-7 ring-2 transition active:scale-[0.99] ' +
+                'flex h-[88px] w-full items-center justify-between rounded-[5px] px-7 ring-2 transition active:scale-[0.99] ' +
                 o.cls
               }
             >
@@ -163,9 +180,37 @@ function RegisterView({ onPick }: { onPick: (h: Hours) => void }) {
   );
 }
 
-function LockedView({ hours }: { hours: Hours }) {
+function RejectedNotice({ hours, reason }: { hours: number; reason: string | null }) {
   return (
-    <section className="mx-7 rounded-3xl bg-blue-900 px-8 py-10 text-white">
+    <section className="mx-7 mb-4 rounded-[5px] bg-red-50 px-6 py-5 ring-2 ring-red-200">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+          <AlertTriangle className="h-5 w-5" />
+        </span>
+        <div className="flex-1">
+          <p className="text-base font-bold text-red-800">
+            소장님이 출역을 반려했습니다
+          </p>
+          <p className="mt-1 text-sm text-red-700">
+            기존 등록: <span className="font-semibold">{hours}일</span>
+          </p>
+          {reason && (
+            <p className="mt-2 rounded-[5px] bg-white px-3 py-2 text-sm leading-relaxed text-zinc-700">
+              사유: {reason}
+            </p>
+          )}
+          <p className="mt-3 text-sm font-semibold text-red-800">
+            아래에서 다시 등록해주세요.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LockedView({ hours }: { hours: number }) {
+  return (
+    <section className="mx-7 rounded-[5px] bg-blue-900 px-8 py-10 text-white">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-lg font-semibold text-blue-200">오늘 등록 완료</p>
@@ -182,8 +227,12 @@ function LockedView({ hours }: { hours: Hours }) {
   );
 }
 
-function HistorySection({ recent }: { recent: Array<{ work_date: string; hours: number }> }) {
-  const days: Array<{ date: string; label: string; hours: number }> = [];
+function HistorySection({
+  recent,
+}: {
+  recent: Array<{ work_date: string; hours: number; approval_status: AttendanceStatus; rejection_reason: string | null }>;
+}) {
+  const days: Array<{ date: string; label: string; hours: number; status: AttendanceStatus | null }> = [];
   const now = new Date();
   for (let i = 0; i < 7; i++) {
     const d = new Date(now);
@@ -191,24 +240,54 @@ function HistorySection({ recent }: { recent: Array<{ work_date: string; hours: 
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const dow = ['일','월','화','수','목','금','토'][d.getDay()];
     const r = recent.find((x) => x.work_date === iso);
-    days.push({ date: iso, label: `${d.getMonth() + 1}/${d.getDate()} ${dow}`, hours: r?.hours ?? 0 });
+    days.push({
+      date: iso,
+      label: `${d.getMonth() + 1}/${d.getDate()} ${dow}`,
+      hours: r?.hours ?? 0,
+      status: r?.approval_status ?? null,
+    });
   }
-  const total = days.reduce((s, d) => s + d.hours, 0);
+  // 합계는 반려 건 제외
+  const total = days.reduce((s, d) => s + (d.status === 'rejected' ? 0 : d.hours), 0);
   return (
     <section className="mt-10 px-7 pb-10">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-zinc-900">최근 7일</h2>
         <span className="text-base font-semibold text-zinc-400">합계 {total}일</span>
       </div>
-      <ul className="mt-4 divide-y divide-zinc-100 rounded-2xl bg-white ring-1 ring-zinc-200">
-        {days.map((h) => (
-          <li key={h.date} className="flex items-center justify-between px-5 py-4">
-            <span className="text-lg font-semibold text-zinc-700">{h.label}</span>
-            <span className={'text-xl font-bold ' + (h.hours === 0 ? 'text-zinc-400' : 'text-blue-900')}>
-              {h.hours === 0 ? '─' : `${h.hours}일`}
-            </span>
-          </li>
-        ))}
+      <ul className="mt-4 divide-y divide-zinc-100 rounded-[5px] bg-white ring-1 ring-zinc-200">
+        {days.map((h) => {
+          const isRejected = h.status === 'rejected';
+          const isPending = h.status === 'pending';
+          const hoursClass =
+            h.hours === 0
+              ? 'text-zinc-400'
+              : isRejected
+              ? 'text-red-400 line-through'
+              : isPending
+              ? 'text-amber-700'
+              : 'text-blue-900';
+          return (
+            <li key={h.date} className="flex items-center justify-between px-5 py-4">
+              <span className="text-lg font-semibold text-zinc-700">
+                {h.label}
+                {isRejected && (
+                  <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                    반려
+                  </span>
+                )}
+                {isPending && (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                    검토 중
+                  </span>
+                )}
+              </span>
+              <span className={'text-xl font-bold ' + hoursClass}>
+                {h.hours === 0 ? '─' : `${h.hours}일`}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -227,7 +306,7 @@ function ConfirmDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-3xl sm:rounded-3xl bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-xl text-zinc-500">오늘 근무를</p>
         <p className="mt-2 text-center text-[44px] font-bold text-zinc-900">{hours}일로 등록할까요?</p>
         <p className="mt-3 text-center text-base text-zinc-500">등록 후 수정은 소장님만 가능해요</p>
@@ -235,14 +314,14 @@ function ConfirmDialog({
           <button
             onClick={onCancel}
             disabled={busy}
-            className="h-[68px] rounded-2xl bg-zinc-100 text-xl font-bold text-zinc-700 disabled:opacity-50"
+            className="h-[68px] rounded-[5px] bg-zinc-100 text-xl font-bold text-zinc-700 disabled:opacity-50"
           >
             아니오
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="h-[68px] rounded-2xl bg-blue-900 text-xl font-bold text-white disabled:opacity-60"
+            className="h-[68px] rounded-[5px] bg-blue-900 text-xl font-bold text-white disabled:opacity-60"
           >
             {busy ? '등록 중...' : '네, 등록할게요'}
           </button>

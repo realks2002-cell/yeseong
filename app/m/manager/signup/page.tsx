@@ -242,11 +242,11 @@ function PhoneStep({
   return (
     <>
       <div className="mt-6 flex items-center gap-3">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-900 text-white">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-[5px] bg-blue-900 text-white">
           <HardHat className="h-6 w-6" />
         </span>
         <div>
-          <p className="text-2xl font-bold text-zinc-900">예성건설 소장</p>
+          <p className="text-2xl font-bold text-zinc-900">(주)예성건축 소장</p>
           <p className="text-sm font-semibold text-zinc-500">현장 소장 전용</p>
         </div>
       </div>
@@ -347,7 +347,7 @@ function NextButton({ valid, onNext, label }: { valid: boolean; onNext: () => vo
         onClick={onNext}
         disabled={!valid}
         className={
-          'h-[78px] w-full rounded-2xl text-2xl font-bold transition ' +
+          'h-[78px] w-full rounded-[5px] text-2xl font-bold transition ' +
           (valid ? 'bg-blue-900 text-white active:scale-[0.98]' : 'bg-zinc-100 text-zinc-400')
         }
       >

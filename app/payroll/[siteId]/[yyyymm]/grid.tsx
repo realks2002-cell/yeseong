@@ -259,9 +259,9 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
         </div>
       </div>
 
-      {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-[5px] border border-zinc-200 bg-white shadow-sm">
         <table className="border-collapse text-sm">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50">
@@ -513,7 +513,7 @@ function AddWorkerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-2xl rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold">작업자 추가</h2>
@@ -525,7 +525,7 @@ function AddWorkerModal({
         </div>
         <div className="border-b border-zinc-100 px-6 py-3">
           <input
-            className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-sm"
+            className="w-full rounded-[5px] border border-zinc-200 px-3 py-1.5 text-sm"
             placeholder="이름·사번 검색"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -543,7 +543,7 @@ function AddWorkerModal({
               return (
                 <label
                   key={w.id}
-                  className={`flex items-center gap-3 rounded-lg p-3 cursor-pointer transition ${
+                  className={`flex items-center gap-3 rounded-[5px] p-3 cursor-pointer transition ${
                     isSelected ? 'bg-blue-50' : 'hover:bg-zinc-50'
                   }`}
                 >
