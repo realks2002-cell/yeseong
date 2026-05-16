@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { formatRrnPlain } from '@/lib/crypto/rrn';
+import { formatPhone } from '@/lib/auth/phone-email';
 import {
   TEMPLATE_SHEET_NAME,
   HEADER_CELLS,
@@ -75,16 +77,24 @@ export async function fillPayrollWorkbook(input: FillInput): Promise<Uint8Array>
   }
 
   // 3. 작업자별로 채움
-  const seenSlots = new Set<number>();
+  const filledSlots = new Set<number>();
   for (const w of input.workers) {
-    if (seenSlots.has(w.slot)) {
+    if (filledSlots.has(w.slot)) {
       throw new Error(`Duplicate slot ${w.slot} in input`);
     }
-    seenSlots.add(w.slot);
+    filledSlots.add(w.slot);
     fillWorker(sheet, w);
   }
 
-  // 4. 시트명을 월별로 변경 (예: 노임대장_05월)
+  // 4. 데이터 없는 슬롯의 두 행은 숨김 (인쇄·PDF 깔끔)
+  for (let slot = 1; slot <= MAX_SLOTS; slot++) {
+    if (filledSlots.has(slot)) continue;
+    const headRow = slotToHeadRow(slot);
+    sheet.getRow(headRow).hidden = true;
+    sheet.getRow(headRow + 1).hidden = true;
+  }
+
+  // 5. 시트명을 월별로 변경 (예: 노임대장_05월)
   sheet.name = targetSheetName(input.yearMonth);
 
   // 6. 원본에 dead한 외부 명명 범위(예: '[1]노임단가!$D$136')가 1,800+개 누적.
@@ -123,12 +133,12 @@ function fillWorker(sheet: ExcelJS.Worksheet, w: FillWorker): void {
   sheet.getCell(`${WORKER_COLS.NUMBER}${headRow}`).value = w.slot;
   if (w.trade !== null) sheet.getCell(`${WORKER_COLS.TRADE}${headRow}`).value = w.trade;
   sheet.getCell(`${WORKER_COLS.NAME}${headRow}`).value = w.name;
-  sheet.getCell(`${WORKER_COLS.RRN}${headRow}`).value = w.rrn;
+  sheet.getCell(`${WORKER_COLS.RRN}${headRow}`).value = formatRrnPlain(w.rrn);
   if (w.address !== null) sheet.getCell(`${WORKER_COLS.ADDRESS}${headRow}`).value = w.address;
   if (w.bankName !== null) sheet.getCell(`${WORKER_COLS.BANK_NAME}${headRow}`).value = w.bankName;
   if (w.accountNumber !== null) sheet.getCell(`${WORKER_COLS.ACCOUNT}${headRow}`).value = w.accountNumber;
   if (w.accountHolder !== null) sheet.getCell(`${WORKER_COLS.HOLDER}${headRow}`).value = w.accountHolder;
-  if (w.phone !== null) sheet.getCell(`${WORKER_COLS.PHONE}${headRow}`).value = w.phone;
+  if (w.phone !== null) sheet.getCell(`${WORKER_COLS.PHONE}${headRow}`).value = formatPhone(w.phone);
   sheet.getCell(`${WORKER_COLS.DAILY_WAGE}${headRow}`).value = w.dailyWage;
 
   // 출역

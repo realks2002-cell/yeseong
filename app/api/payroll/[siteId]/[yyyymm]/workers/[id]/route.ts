@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 
-// PATCH: 슬롯의 trade·daily_wage·subcontractor 변경
+// PATCH: 슬롯의 subcontractor 변경 (trade·daily_wage는 작업자 마스터에서만 관리)
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ siteId: string; yyyymm: string; id: string }> },
@@ -13,11 +13,6 @@ export async function PATCH(
 
   const body = await req.json().catch(() => null);
   const patch: Record<string, unknown> = {};
-  if (typeof body?.trade === 'string') patch.trade = body.trade.trim() || null;
-  else if (body?.trade === null) patch.trade = null;
-  if (typeof body?.daily_wage === 'number' && Number.isFinite(body.daily_wage)) {
-    patch.daily_wage = Math.floor(body.daily_wage);
-  }
   if (typeof body?.subcontractor_id === 'string') patch.subcontractor_id = body.subcontractor_id;
   else if (body?.subcontractor_id === null) patch.subcontractor_id = null;
 
@@ -29,7 +24,7 @@ export async function PATCH(
     .from('yeseong_payroll_workers')
     .update(patch)
     .eq('id', id)
-    .select('id, trade, daily_wage, subcontractor_id')
+    .select('id, subcontractor_id')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

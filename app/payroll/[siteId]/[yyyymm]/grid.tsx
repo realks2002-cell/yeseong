@@ -124,12 +124,10 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     }
   }
 
-  async function patchSlot(slotId: string, patch: { trade?: string | null; daily_wage?: number; subcontractor_id?: string | null }) {
+  async function patchSlot(slotId: string, patch: { subcontractor_id?: string | null }) {
     setSlots((prev) => prev.map((s) => (s.id === slotId
       ? {
           ...s,
-          trade: patch.trade !== undefined ? patch.trade : s.trade,
-          daily_wage: patch.daily_wage !== undefined ? patch.daily_wage : s.daily_wage,
           subcontractor: patch.subcontractor_id !== undefined
             ? (patch.subcontractor_id ? { id: patch.subcontractor_id, name: subMap.get(patch.subcontractor_id) ?? '' } : null)
             : s.subcontractor,
@@ -262,13 +260,13 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
       {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
       <div className="overflow-x-auto rounded-[5px] border border-zinc-200 bg-white shadow-sm">
-        <table className="border-collapse text-sm">
+        <table className="border-collapse text-[12px]">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50">
               <th className="sticky left-0 z-10 bg-zinc-50 px-3 py-2 font-medium w-10 text-zinc-600">#</th>
-              <th className="sticky left-10 z-10 bg-zinc-50 px-3 py-2 font-medium text-left text-zinc-600 min-w-[100px]">성명</th>
-              <th className="sticky left-[152px] z-10 bg-zinc-50 px-3 py-2 font-medium text-left text-zinc-600 min-w-[120px]">협력사</th>
-              <th className="px-3 py-2 font-medium text-left text-zinc-600 min-w-[80px]">공종</th>
+              <th className="sticky left-10 z-10 bg-zinc-50 px-3 py-2 font-medium text-center text-zinc-600 min-w-[100px]">성명</th>
+              <th className="sticky left-[152px] z-10 bg-zinc-50 px-3 py-2 font-medium text-center text-zinc-600 min-w-[120px]">협력사</th>
+              <th className="px-3 py-2 font-medium text-center text-zinc-600 min-w-[80px]">공종</th>
               <th className="px-3 py-2 font-medium text-right text-zinc-600 min-w-[100px]">일당</th>
               {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
                 <th key={d} className="border-l border-zinc-200 px-1.5 py-2 font-medium text-zinc-600 w-10 text-center tabular-nums">{d}</th>
@@ -294,26 +292,19 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                 return (
                   <tr key={s.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
                     <td className="sticky left-0 z-10 bg-white px-3 py-2 text-zinc-500 tabular-nums">{idx + 1}</td>
-                    <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium">{s.worker.name}</td>
-                    <td className="sticky left-[152px] z-10 bg-white px-1.5 py-1">
+                    <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium text-center">{s.worker.name}</td>
+                    <td className="sticky left-[152px] z-10 bg-white px-1.5 py-1 text-center">
                       <SubcontractorSelect
                         value={s.subcontractor?.id ?? ''}
                         options={subcontractors}
                         onChange={(id) => patchSlot(s.id, { subcontractor_id: id || null })}
                       />
                     </td>
-                    <td className="px-1.5 py-1">
-                      <TradeInput
-                        value={s.trade ?? ''}
-                        placeholder={s.worker.default_trade ?? '-'}
-                        onCommit={(v) => patchSlot(s.id, { trade: v.trim() || null })}
-                      />
+                    <td className="px-3 py-2 text-center text-zinc-700">
+                      {s.worker.default_trade ?? <span className="text-zinc-400">-</span>}
                     </td>
-                    <td className="px-1.5 py-1">
-                      <WageInput
-                        value={s.daily_wage}
-                        onCommit={(n) => patchSlot(s.id, { daily_wage: n })}
-                      />
+                    <td className="px-3 py-2 text-right tabular-nums text-zinc-700">
+                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-zinc-400">-</span>}
                     </td>
                     {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => {
                       const v = cellMap.get(`${s.id}:${d}`);
@@ -402,65 +393,6 @@ function CellInput({ value, onChange }: { value: number | null; onChange: (n: nu
   );
 }
 
-function TradeInput({
-  value,
-  placeholder,
-  onCommit,
-}: {
-  value: string;
-  placeholder: string;
-  onCommit: (v: string) => void;
-}) {
-  const [text, setText] = useState(value);
-  useEffect(() => setText(value), [value]);
-  return (
-    <input
-      className="w-full bg-transparent px-2 py-1.5 text-xs text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
-      value={text}
-      placeholder={placeholder}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => { if (text !== value) onCommit(text); }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-        if (e.key === 'Escape') { setText(value); (e.target as HTMLInputElement).blur(); }
-      }}
-    />
-  );
-}
-
-function WageInput({
-  value,
-  onCommit,
-}: {
-  value: number;
-  onCommit: (n: number) => void;
-}) {
-  const [text, setText] = useState(formatWage(value));
-  useEffect(() => setText(formatWage(value)), [value]);
-  return (
-    <input
-      className="w-full bg-transparent px-2 py-1.5 text-right text-xs tabular-nums text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => {
-        const n = parseInt(text.replace(/[^0-9]/g, ''), 10);
-        if (!Number.isFinite(n) || n < 0) { setText(formatWage(value)); return; }
-        if (n !== value) onCommit(n);
-        setText(formatWage(n));
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-        if (e.key === 'Escape') { setText(formatWage(value)); (e.target as HTMLInputElement).blur(); }
-      }}
-      inputMode="numeric"
-    />
-  );
-}
-
-function formatWage(n: number): string {
-  return n > 0 ? n.toLocaleString() : '';
-}
-
 function SubcontractorSelect({
   value,
   options,
@@ -472,7 +404,7 @@ function SubcontractorSelect({
 }) {
   return (
     <select
-      className="w-full bg-transparent px-2 py-1.5 text-xs text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
+      className="w-full bg-transparent px-2 py-1.5 text-center text-[12px] text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >

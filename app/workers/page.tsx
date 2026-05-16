@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WorkerForm, type Worker, type WorkerInput } from '@/components/worker-form';
 import { maskFromParts } from '@/lib/crypto/rrn';
-import { Search, UserPlus, Pencil, Trash2, X } from 'lucide-react';
+import { formatPhone } from '@/lib/auth/phone-email';
+import { Search, UserPlus, Pencil, Trash2, X, Smartphone } from 'lucide-react';
 
 function formatRrn(plain: string | null, prefix: string | null, gender: string | null): string {
   if (plain) {
@@ -87,7 +88,7 @@ export default function WorkersPage() {
   }
 
   async function handleDelete(w: Worker) {
-    if (!confirm(`"${w.name}" 작업자를 삭제할까요?\n(노임대장에 이미 등록된 작업자라면 비활성화만 가능)`)) return;
+    if (!confirm(`"${w.name}" 작업자를 삭제하시겠습니까?`)) return;
     const r = await fetch(`/api/workers/${w.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
@@ -104,7 +105,9 @@ export default function WorkersPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">작업자 마스터</h1>
             <p className="text-sm text-zinc-500 mt-1">
-              총 {list?.length ?? '...'}명{query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}. 주민번호 평문 표시 (관리자 전용).
+              총 {list?.length ?? '...'}명
+              {list && ` · 앱 가입 ${list.filter((w) => w.auth_user_id).length}명`}
+              {query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}
             </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
@@ -138,17 +141,19 @@ export default function WorkersPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs whitespace-nowrap">
               <thead className="bg-zinc-50 text-zinc-600">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">사번</th>
                   <th className="px-3 py-2 font-medium">성명</th>
-                  <th className="px-3 py-2 font-medium">공종/등급</th>
+                  <th className="px-3 py-2 font-medium">구분</th>
+                  <th className="px-3 py-2 font-medium">직종</th>
                   <th className="px-3 py-2 font-medium">주민번호</th>
                   <th className="px-3 py-2 font-medium">은행</th>
                   <th className="px-3 py-2 font-medium">계좌</th>
                   <th className="px-3 py-2 font-medium">연락처</th>
+                  <th className="px-3 py-2 font-medium text-center">앱</th>
                   <th className="px-3 py-2 font-medium text-center">PIN</th>
                   <th className="px-3 py-2 font-medium text-right">기본일당</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
@@ -156,35 +161,39 @@ export default function WorkersPage() {
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {filtered === null ? (
-                  <tr><td colSpan={11} className="py-10 text-center text-zinc-400">불러오는 중...</td></tr>
+                  <tr><td colSpan={13} className="py-10 text-center text-zinc-400">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={11} className="py-10 text-center text-zinc-400">
+                  <tr><td colSpan={13} className="py-10 text-center text-zinc-400">
                     {query ? '검색 결과가 없습니다.' : '등록된 작업자가 없습니다.'}
                   </td></tr>
                 ) : (
                   filtered.map((w, i) => (
-                    <tr key={w.id} className={`hover:bg-zinc-50 ${!w.is_active ? 'text-zinc-400' : ''}`}>
+                    <tr key={w.id} className="hover:bg-zinc-50">
                       <td className="px-3 py-2 text-zinc-500 tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-mono text-zinc-600">{w.employee_code ?? '-'}</td>
                       <td className="px-3 py-2 font-medium">
                         {w.name}
                         {w.name_english && <span className="ml-1 text-[10px] text-zinc-400">({w.name_english})</span>}
                       </td>
-                      <td className="px-3 py-2">
-                        {w.default_trade && (
-                          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px]">{w.default_trade}</span>
-                        )}
-                        {w.skill_grade && (
-                          <span className="ml-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">{w.skill_grade}</span>
-                        )}
-                      </td>
+                      <td className="px-3 py-2">{w.skill_grade ?? <span className="text-zinc-300">-</span>}</td>
+                      <td className="px-3 py-2">{w.default_trade ?? <span className="text-zinc-300">-</span>}</td>
                       <td className="px-3 py-2 font-mono text-zinc-700">
                         {formatRrn(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit)}
                         {w.is_foreign && <span className="ml-1 rounded bg-amber-50 px-1 py-0.5 text-[9px] text-amber-700">외</span>}
                       </td>
                       <td className="px-3 py-2">{w.bank_name ?? '-'}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-zinc-600">{w.account_number ?? '-'}</td>
-                      <td className="px-3 py-2 font-mono text-[11px]">{w.phone ?? '-'}</td>
+                      <td className="px-3 py-2 font-mono text-[11px]">{w.phone ? formatPhone(w.phone) : '-'}</td>
+                      <td className="px-3 py-2 text-center">
+                        {w.auth_user_id ? (
+                          <span className="inline-flex items-center gap-1 rounded-[5px] bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700" title="앱 가입 완료">
+                            <Smartphone className="h-3 w-3" />
+                            가입
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-300" title="앱 미가입">미가입</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-center font-mono tabular-nums">
                         {w.pin ? <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-white text-[11px]">{w.pin}</span> : <span className="text-zinc-300">-</span>}
                       </td>
@@ -223,6 +232,7 @@ export default function WorkersPage() {
           title="작업자 추가"
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
+          existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
         />
       )}
       {editing && (
@@ -231,6 +241,7 @@ export default function WorkersPage() {
           initial={editing}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
+          existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
         />
       )}
     </AdminShell>

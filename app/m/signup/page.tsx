@@ -35,6 +35,32 @@ const SIGNUP_STEPS: Mode[] = [
   'signup_belonging',
 ];
 
+// 결측 단계 키 ↔ Mode 매핑 (PIN은 항상 받음)
+const FIELD_TO_MODE: Record<string, Mode> = {
+  identity: 'signup_identity',
+  rrn: 'signup_rrn',
+  foreign: 'signup_foreign',
+  address: 'signup_address',
+  account: 'signup_account',
+  work: 'signup_work',
+  belonging: 'signup_belonging',
+};
+
+function buildFlow(missing: string[], isForeign: boolean): Mode[] {
+  const flow: Mode[] = ['signup_pin1', 'signup_pin2'];
+  for (const key of ['identity', 'rrn', 'foreign', 'address', 'account', 'work', 'belonging']) {
+    if (key === 'foreign') {
+      // 외국인 추가정보는 isForeign일 때만 (서버가 missing에 넣었거나 사용자 토글 시)
+      if (isForeign && (missing.includes('foreign') || missing.includes('rrn'))) {
+        flow.push(FIELD_TO_MODE.foreign);
+      }
+      continue;
+    }
+    if (missing.includes(key)) flow.push(FIELD_TO_MODE[key]);
+  }
+  return flow;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const sb = getBrowserSupabase();
@@ -84,6 +110,11 @@ export default function SignupPage() {
 
   const [signupBusy, setSignupBusy] = useState(false);
   const [signupError, setSignupError] = useState<string | undefined>();
+
+  // phone 매칭 결과 — 어떤 단계만 진행할지
+  const [missingFields, setMissingFields] = useState<string[]>([
+    'identity', 'rrn', 'address', 'account', 'work', 'belonging',
+  ]);
 
   const phoneValid = normalizePhone(phone).length >= 10;
   const rrnValid = normalizePhone(rrn).length === 13;
@@ -143,22 +174,31 @@ export default function SignupPage() {
         setPhoneError(j.error ?? '오류가 발생했어요');
         return;
       }
-      setMode(j.exists ? 'login_pin' : 'signup_pin1');
+
+      if (j.mode === 'login') {
+        setMode('login_pin');
+        return;
+      }
+      if (j.mode === 'signup_partial') {
+        setMissingFields(j.missing ?? []);
+        if (j.prefilled?.name) setName(j.prefilled.name);
+        if (typeof j.prefilled?.is_foreign === 'boolean') setIsForeign(j.prefilled.is_foreign);
+      } else {
+        // signup_new
+        setMissingFields(j.missing ?? ['identity', 'rrn', 'address', 'account', 'work', 'belonging']);
+      }
+      setMode('signup_pin1');
     } finally {
       setPhoneBusy(false);
     }
   };
 
-  // 단계 이동
+  // missingFields + isForeign 기반 동적 흐름
+  const flow = buildFlow(missingFields, isForeign);
+
   const goNext = () => {
-    if (mode === 'signup_pin1') return setMode('signup_pin2');
-    if (mode === 'signup_pin2') return setMode('signup_identity');
-    if (mode === 'signup_identity') return setMode('signup_rrn');
-    if (mode === 'signup_rrn') return setMode(isForeign ? 'signup_foreign' : 'signup_address');
-    if (mode === 'signup_foreign') return setMode('signup_address');
-    if (mode === 'signup_address') return setMode('signup_account');
-    if (mode === 'signup_account') return setMode('signup_work');
-    if (mode === 'signup_work') return setMode('signup_belonging');
+    const idx = flow.indexOf(mode);
+    if (idx >= 0 && idx < flow.length - 1) setMode(flow[idx + 1]);
   };
 
   const back = () => {
@@ -174,17 +214,13 @@ export default function SignupPage() {
       setMode('signup_pin1');
       return;
     }
-    if (mode === 'signup_identity') return setMode('signup_pin2');
-    if (mode === 'signup_rrn') return setMode('signup_identity');
-    if (mode === 'signup_foreign') return setMode('signup_rrn');
-    if (mode === 'signup_address') return setMode(isForeign ? 'signup_foreign' : 'signup_rrn');
-    if (mode === 'signup_account') return setMode('signup_address');
-    if (mode === 'signup_work') return setMode('signup_account');
-    if (mode === 'signup_belonging') return setMode('signup_work');
+    const idx = flow.indexOf(mode);
+    if (idx > 0) setMode(flow[idx - 1]);
   };
 
   const submitSignup = async () => {
-    if (!worksiteId || !subcontractorId || signupBusy) return;
+    if (signupBusy) return;
+    if (missingFields.includes('belonging') && (!worksiteId || !subcontractorId)) return;
     setSignupBusy(true);
     setSignupError(undefined);
     try {
@@ -208,16 +244,17 @@ export default function SignupPage() {
         return;
       }
 
+      // RPC는 nullif로 빈 문자열을 NULL 취급하므로 매칭된 워커는 기존 값 유지
       const { error: rpcErr } = await sb.rpc('yeseong_mobile_signup_full', {
         p_phone: normalizePhone(phone),
         p_pin: pin1,
         p_name: name.trim(),
-        p_rrn: normalizePhone(rrn),
+        p_rrn: rrn ? normalizePhone(rrn) : '',
         p_address: address.trim(),
         p_bank_name: bankName.trim(),
         p_account_number: accountNumber.trim(),
         p_account_holder: accountHolder.trim(),
-        p_default_wage: Number(defaultWage),
+        p_default_wage: defaultWage ? Number(defaultWage) : null,
         p_default_trade: defaultTrade.trim(),
         p_is_foreign: isForeign,
         p_name_english: nameEnglish.trim() || null,
@@ -229,13 +266,15 @@ export default function SignupPage() {
         return;
       }
 
-      const { error: defErr } = await sb.rpc('yeseong_mobile_set_defaults', {
-        p_worksite_id: worksiteId,
-        p_subcontractor_id: subcontractorId,
-      });
-      if (defErr) {
-        setSignupError('소속 저장 실패: ' + defErr.message);
-        return;
+      if (missingFields.includes('belonging')) {
+        const { error: defErr } = await sb.rpc('yeseong_mobile_set_defaults', {
+          p_worksite_id: worksiteId,
+          p_subcontractor_id: subcontractorId,
+        });
+        if (defErr) {
+          setSignupError('소속 저장 실패: ' + defErr.message);
+          return;
+        }
       }
 
       router.replace('/m/home');
@@ -243,6 +282,13 @@ export default function SignupPage() {
     } finally {
       setSignupBusy(false);
     }
+  };
+
+  // 마지막 단계인지에 따라 next or submit
+  const goNextOrSubmit = () => {
+    const idx = flow.indexOf(mode);
+    if (idx === flow.length - 1) submitSignup();
+    else goNext();
   };
 
   return (
@@ -256,7 +302,7 @@ export default function SignupPage() {
           >
             <ChevronLeft className="h-7 w-7" />
           </button>
-          <ProgressDots mode={mode} isForeign={isForeign} />
+          <ProgressDots mode={mode} flow={flow} />
           <span className="w-12" />
         </div>
 
@@ -306,7 +352,7 @@ export default function SignupPage() {
             setName={setName}
             isForeign={isForeign}
             setIsForeign={setIsForeign}
-            onNext={goNext}
+            onNext={goNextOrSubmit}
           />
         )}
 
@@ -316,7 +362,7 @@ export default function SignupPage() {
             rrn={rrn}
             setRrn={setRrn}
             valid={rrnValid}
-            onNext={goNext}
+            onNext={goNextOrSubmit}
           />
         )}
 
@@ -325,7 +371,7 @@ export default function SignupPage() {
             nameEnglish={nameEnglish} setNameEnglish={setNameEnglish}
             nationality={nationality} setNationality={setNationality}
             visaStatus={visaStatus} setVisaStatus={setVisaStatus}
-            onNext={goNext}
+            onNext={goNextOrSubmit}
           />
         )}
 
@@ -334,7 +380,7 @@ export default function SignupPage() {
             address={address}
             setAddress={setAddress}
             valid={address.trim().length > 0}
-            onNext={goNext}
+            onNext={goNextOrSubmit}
           />
         )}
 
@@ -345,7 +391,7 @@ export default function SignupPage() {
             accountNumber={accountNumber} setAccountNumber={setAccountNumber}
             accountHolder={accountHolder} setAccountHolder={setAccountHolder}
             valid={accountValid}
-            onNext={goNext}
+            onNext={goNextOrSubmit}
           />
         )}
 
@@ -355,7 +401,7 @@ export default function SignupPage() {
             defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
             tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
             valid={wageValid && defaultTrade.trim().length > 0}
-            onNext={goNext}
+            onNext={goNextOrSubmit}
           />
         )}
 
@@ -375,7 +421,7 @@ export default function SignupPage() {
   );
 }
 
-function ProgressDots({ mode, isForeign }: { mode: Mode; isForeign: boolean }) {
+function ProgressDots({ mode, flow }: { mode: Mode; flow: Mode[] }) {
   if (mode === 'phone') return <span />;
   if (mode === 'login_pin') {
     return (
@@ -385,9 +431,8 @@ function ProgressDots({ mode, isForeign }: { mode: Mode; isForeign: boolean }) {
       </div>
     );
   }
-  const steps = SIGNUP_STEPS.filter((s) => isForeign || s !== 'signup_foreign');
-  const current = steps.indexOf(mode);
-  const total = steps.length;
+  const current = flow.indexOf(mode);
+  const total = flow.length;
   return (
     <div className="flex gap-1">
       {Array.from({ length: total }).map((_, i) => (

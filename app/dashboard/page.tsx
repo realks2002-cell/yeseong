@@ -80,26 +80,21 @@ export default function DashboardPage() {
             icon={<Users className="h-3.5 w-3.5" />}
             label="등록 작업자"
             value={`${kpi?.workerCount ?? 0}명`}
-            sub="DB 전체"
           />
           <KpiCard
             icon={<Building2 className="h-3.5 w-3.5" />}
             label="활성 현장"
             value={`${kpi?.worksiteCount ?? 0}곳`}
-            sub="활성"
           />
           <KpiCard
             icon={<Hourglass className="h-3.5 w-3.5" />}
             label="총 공수"
             value={(kpi?.totalHours ?? 0).toLocaleString()}
-            sub={`인일수 ${kpi?.workerDays ?? 0}건`}
           />
           <KpiCard
             icon={<Wallet className="h-3.5 w-3.5" />}
             label="추정 임금총액"
             value={`${formatKRW(kpi?.estimatedWageTotal ?? 0)}원`}
-            sub="공제 전"
-            accent
           />
         </div>
 
@@ -118,7 +113,7 @@ export default function DashboardPage() {
                       <span className="w-20 shrink-0 truncate text-zinc-700">{t.trade}</span>
                       <div className="relative flex-1 h-5 rounded bg-zinc-100">
                         <div
-                          className="absolute inset-y-0 left-0 rounded bg-zinc-900"
+                          className="absolute inset-y-0 left-0 rounded bg-sky-400"
                           style={{ width: `${(t.hours / maxTrade) * 100}%` }}
                         />
                       </div>

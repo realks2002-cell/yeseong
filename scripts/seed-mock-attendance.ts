@@ -112,7 +112,7 @@ async function seed() {
             worker_id: w.id,
             slot_number: nextSlot++,
             daily_wage: w.default_wage ?? 270000,
-            trade: w.default_trade ?? '관리',
+            trade: w.default_trade ?? null,
             subcontractor_id: sub.id,
           })
           .select('id')

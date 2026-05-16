@@ -25,6 +25,7 @@ type PayrollData = {
       account_holder: string | null;
       phone: string | null;
       default_trade: string | null;
+      default_wage: number;
     };
     attendance: Array<{ work_date: string; hours: number }>;
   }>;
@@ -55,13 +56,16 @@ export async function GET(
   if (!data.slots || data.slots.length === 0) {
     return new NextResponse('no enrolled workers', { status: 400 });
   }
-  if (data.slots.length > 26) {
-    return new NextResponse('too many workers (max 26)', { status: 400 });
+  if (data.slots.length > 32) {
+    return new NextResponse('too many workers (max 32)', { status: 400 });
   }
 
-  const fillWorkers: FillWorker[] = data.slots.map((s) => ({
-    slot: s.slot_number,
-    trade: s.trade ?? s.worker.default_trade,
+  const sortedSlots = [...data.slots].sort((a, b) =>
+    a.worker.name.localeCompare(b.worker.name, 'ko'),
+  );
+  const fillWorkers: FillWorker[] = sortedSlots.map((s, i) => ({
+    slot: i + 1,
+    trade: s.worker.default_trade,
     name: s.worker.name,
     rrn: s.worker.rrn_plain,
     address: s.worker.address,
@@ -69,7 +73,7 @@ export async function GET(
     accountNumber: s.worker.account_number,
     accountHolder: s.worker.account_holder,
     phone: s.worker.phone,
-    dailyWage: s.daily_wage,
+    dailyWage: s.worker.default_wage,
     attendance: s.attendance.map((a) => ({
       day: parseInt(a.work_date.split('-')[2], 10),
       hours: a.hours,

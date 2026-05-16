@@ -36,7 +36,7 @@ export default function ManagerProfilePage() {
 
   if (!me) {
     return (
-      <MobileShell showTabs activeTab="profile" variant="manager">
+      <MobileShell showTabs activeTab="affiliation" variant="manager">
         <div className="flex h-full items-center justify-center text-zinc-400">
           {error ?? '로딩...'}
         </div>
@@ -45,9 +45,9 @@ export default function ManagerProfilePage() {
   }
 
   return (
-    <MobileShell showTabs activeTab="profile" variant="manager">
+    <MobileShell showTabs activeTab="affiliation" variant="manager">
       <div className="px-7 pt-10 pb-8">
-        <h1 className="text-[34px] font-bold text-zinc-900">내 정보</h1>
+        <h1 className="text-[34px] font-bold text-zinc-900">소속</h1>
       </div>
 
       <section className="mx-7 mb-8 rounded-[5px] bg-blue-900 p-6 text-center text-white">

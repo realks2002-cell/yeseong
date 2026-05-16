@@ -70,16 +70,16 @@ export default function ProfilePage() {
 
   if (!me) {
     return (
-      <MobileShell showTabs activeTab="profile">
+      <MobileShell showTabs activeTab="affiliation">
         <div className="flex h-full items-center justify-center text-zinc-400">로딩...</div>
       </MobileShell>
     );
   }
 
   return (
-    <MobileShell showTabs activeTab="profile">
+    <MobileShell showTabs activeTab="affiliation">
       <div className="px-7 pt-10 pb-8">
-        <h1 className="text-[34px] font-bold text-zinc-900">내 정보</h1>
+        <h1 className="text-[34px] font-bold text-zinc-900">소속</h1>
       </div>
 
       <section className="mx-7 mb-8 rounded-[5px] bg-blue-900 p-6 text-center text-white">

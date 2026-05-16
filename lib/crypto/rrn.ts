@@ -34,3 +34,10 @@ export function maskRrn(plain: string): string {
 export function maskFromParts(prefix: string, genderDigit: string): string {
   return `${prefix}-${genderDigit}******`;
 }
+
+export function formatRrnPlain(rrn: string | null | undefined): string {
+  if (!rrn) return '';
+  const d = rrn.replace(/\D/g, '');
+  if (d.length !== 13) return rrn;
+  return `${d.slice(0, 6)}-${d.slice(6)}`;
+}

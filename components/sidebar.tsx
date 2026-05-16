@@ -85,7 +85,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 h-svh w-60 shrink-0 border-r border-zinc-200 bg-white flex flex-col">
+    <aside className="sticky top-0 h-svh w-[168px] shrink-0 border-r border-zinc-200 bg-white flex flex-col">
       <Link
         href="/dashboard"
         className="flex items-center gap-2 px-5 h-14 border-b border-zinc-200 text-zinc-900 font-semibold"
@@ -113,7 +113,7 @@ export function Sidebar() {
                       className={cn(
                         'flex items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-[11px] transition-colors',
                         active
-                          ? 'bg-zinc-900 text-white'
+                          ? 'bg-zinc-200 text-zinc-900 font-semibold'
                           : 'text-zinc-700 hover:bg-zinc-100'
                       )}
                     >
@@ -124,7 +124,7 @@ export function Sidebar() {
                           className={cn(
                             'rounded px-1.5 py-0.5 text-[7px] font-semibold',
                             active
-                              ? 'bg-white/20 text-white'
+                              ? 'bg-zinc-900 text-white'
                               : 'bg-emerald-100 text-emerald-700'
                           )}
                         >

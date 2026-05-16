@@ -1,6 +1,6 @@
 // 노임대장 양식 셀/행/열 매핑 상수
-// 시트: '노임대장' (62행 × 60열)
-// 작업자 1명 = 2행 (예: 9~10, 11~12, ..., 59~60), 총 26명 슬롯
+// 시트: '노임대장' (74행 × 60열)
+// 작업자 1명 = 2행 (예: 9~10, 11~12, ..., 71~72), 총 32명 슬롯
 
 export const TEMPLATE_SHEET_NAME = '노임대장';
 
@@ -11,11 +11,11 @@ export const HEADER_CELLS = {
   WORKSITE: 'AA2',       // '보은현장'
 } as const;
 
-// 작업자 row pair: (slot 1) 9-10, (slot 2) 11-12, ..., (slot 26) 59-60
+// 작업자 row pair: (slot 1) 9-10, (slot 2) 11-12, ..., (slot 32) 71-72
 export const FIRST_WORKER_ROW = 9;
-export const LAST_WORKER_ROW = 60;
-export const TOTALS_ROW = 61;
-export const MAX_SLOTS = 26;
+export const LAST_WORKER_ROW = 72;
+export const TOTALS_ROW = 73;
+export const MAX_SLOTS = 32;
 
 export function slotToHeadRow(slot: number): number {
   if (slot < 1 || slot > MAX_SLOTS) {

@@ -69,7 +69,10 @@ async function seed() {
   let totalSlots = 0;
   let totalAttendance = 0;
 
-  for (const ws of worksites) {
+  for (let wsIdx = 0; wsIdx < worksites.length; wsIdx++) {
+    const ws = worksites[wsIdx];
+    // 현장 1곳 = 협력사 1곳 (현장 인덱스로 라운드로빈)
+    const sub = subs[wsIdx % subs.length];
     // period upsert
     const { data: period, error: pErr } = await sb
       .from('yeseong_payroll_periods')
@@ -92,16 +95,15 @@ async function seed() {
     let nextSlot = Math.max(0, ...(existingSlots ?? []).map((s) => s.slot_number)) + 1;
 
     // 이번 현장에 배정할 작업자 10명 (순환)
-    const picked: Array<typeof workers[number]> = [];
-    for (let i = 0; i < WORKERS_PER_WORKSITE; i++) {
-      picked.push(workers[workerCursor % workers.length]);
+    const picked = Array.from({ length: WORKERS_PER_WORKSITE }, () => {
+      const w = workers[workerCursor % workers.length];
       workerCursor++;
-    }
+      return w;
+    });
 
     let wsAttendance = 0;
     for (let i = 0; i < picked.length; i++) {
       const w = picked[i];
-      const sub = subs[i % subs.length];
       let slotId: string;
 
       const existing = slotByWorker.get(w.id);
@@ -119,7 +121,7 @@ async function seed() {
             worker_id: w.id,
             slot_number: nextSlot++,
             daily_wage: w.default_wage ?? 270000,
-            trade: w.default_trade ?? '관리',
+            trade: w.default_trade ?? null,
             subcontractor_id: sub.id,
           })
           .select('id')
@@ -160,7 +162,7 @@ async function seed() {
     }
 
     totalAttendance += wsAttendance;
-    console.log(`  • ${ws.name}: 슬롯 ${picked.length}, 출역 ${wsAttendance}건`);
+    console.log(`  • ${ws.name} (${sub.name}): 슬롯 ${picked.length}, 출역 ${wsAttendance}건`);
   }
 
   console.log(`\n✓ 신규 슬롯 ${totalSlots}, 출역 ${totalAttendance}건 (${YEAR_MONTH})`);

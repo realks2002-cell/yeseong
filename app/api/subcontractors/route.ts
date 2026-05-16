@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 
-export async function GET() {
+export async function GET(req: Request) {
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data, error } = await sb
+  const includeArchived = new URL(req.url).searchParams.get('includeArchived') === 'true';
+
+  let query = sb
     .from('yeseong_subcontractors')
     .select('id, name, business_number, contact_phone, is_active, created_at')
     .order('name');
+  if (!includeArchived) query = query.eq('is_active', true);
 
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

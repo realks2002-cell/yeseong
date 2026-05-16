@@ -51,7 +51,7 @@ export default function WorksitesPage() {
   }
 
   async function handleDelete(w: Worksite) {
-    if (!confirm(`"${w.name}" 현장을 삭제할까요?`)) return;
+    if (!confirm(`"${w.name}" 현장을 삭제하시겠습니까?`)) return;
     const r = await fetch(`/api/worksites/${w.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
@@ -89,28 +89,20 @@ export default function WorksitesPage() {
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">현장명</th>
                   <th className="px-3 py-2 font-medium">주소</th>
-                  <th className="px-3 py-2 font-medium w-20">상태</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {list === null ? (
-                  <tr><td colSpan={5} className="py-10 text-center text-zinc-400">불러오는 중...</td></tr>
+                  <tr><td colSpan={4} className="py-10 text-center text-zinc-400">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={5} className="py-10 text-center text-zinc-400">등록된 현장이 없습니다.</td></tr>
+                  <tr><td colSpan={4} className="py-10 text-center text-zinc-400">등록된 현장이 없습니다.</td></tr>
                 ) : (
                   list.map((w, i) => (
                     <tr key={w.id} className="hover:bg-zinc-50">
                       <td className="px-3 py-2 text-zinc-500 tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{w.name}</td>
                       <td className="px-3 py-2 text-zinc-600">{w.address ?? '-'}</td>
-                      <td className="px-3 py-2">
-                        {w.is_active ? (
-                          <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">활성</span>
-                        ) : (
-                          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500">비활성</span>
-                        )}
-                      </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
                           <button

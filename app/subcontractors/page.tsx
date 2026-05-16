@@ -1,31 +1,34 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubcontractorForm, type Subcontractor, type SubcontractorInput } from '@/components/subcontractor-form';
-import { HardHat, Pencil, Trash2 } from 'lucide-react';
+import { HardHat, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 
 export default function SubcontractorsPage() {
   const [list, setList] = useState<Subcontractor[] | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Subcontractor | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError(null);
-    const r = await fetch('/api/subcontractors', { cache: 'no-store' });
+    const r = await fetch(`/api/subcontractors${showArchived ? '?includeArchived=true' : ''}`, {
+      cache: 'no-store',
+    });
     if (!r.ok) {
       setError('목록을 불러오지 못했습니다');
       setList([]);
       return;
     }
     setList(await r.json());
-  }
+  }, [showArchived]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   async function handleAdd(input: SubcontractorInput) {
     const r = await fetch('/api/subcontractors', {
@@ -51,11 +54,26 @@ export default function SubcontractorsPage() {
   }
 
   async function handleDelete(s: Subcontractor) {
-    if (!confirm(`"${s.name}" 협력사를 삭제할까요?\n(연결된 작업자·노임대장 슬롯의 협력사 정보는 비워집니다)`)) return;
+    if (!confirm(`"${s.name}" 협력사를 보관함으로 이동할까요?\n과거 데이터는 그대로 유지되고, 목록에서만 숨겨집니다.`)) return;
     const r = await fetch(`/api/subcontractors/${s.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
-      alert(j.error ?? '삭제 실패');
+      alert(j.error ?? '보관 실패');
+      return;
+    }
+    load();
+  }
+
+  async function handleRestore(s: Subcontractor) {
+    if (!confirm(`"${s.name}" 협력사를 복원할까요?`)) return;
+    const r = await fetch(`/api/subcontractors/${s.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '복원 실패');
       return;
     }
     load();
@@ -71,10 +89,21 @@ export default function SubcontractorsPage() {
               총 {list?.length ?? '...'}개 협력사
             </p>
           </div>
-          <Button onClick={() => setShowAdd(true)}>
-            <HardHat className="h-4 w-4" />
-            협력사 추가
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              보관함 보기
+            </label>
+            <Button onClick={() => setShowAdd(true)}>
+              <HardHat className="h-4 w-4" />
+              협력사 추가
+            </Button>
+          </div>
         </div>
 
         {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
@@ -99,7 +128,7 @@ export default function SubcontractorsPage() {
                   <tr><td colSpan={6} className="py-10 text-center text-zinc-400">등록된 협력사가 없습니다.</td></tr>
                 ) : (
                   list.map((s, i) => (
-                    <tr key={s.id} className="hover:bg-zinc-50">
+                    <tr key={s.id} className={`hover:bg-zinc-50 ${!s.is_active ? 'text-zinc-400' : ''}`}>
                       <td className="px-3 py-2 text-zinc-500 tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{s.name}</td>
                       <td className="px-3 py-2 font-mono text-zinc-600">{s.business_number ?? '-'}</td>
@@ -108,25 +137,38 @@ export default function SubcontractorsPage() {
                         {s.is_active ? (
                           <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">활성</span>
                         ) : (
-                          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500">비활성</span>
+                          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500">보관됨</span>
                         )}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
-                          <button
-                            className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-                            onClick={() => setEditing(s)}
-                            aria-label="수정"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            className="rounded p-1 text-zinc-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={() => handleDelete(s)}
-                            aria-label="삭제"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {s.is_active ? (
+                            <>
+                              <button
+                                className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                                onClick={() => setEditing(s)}
+                                aria-label="수정"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                className="rounded p-1 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                                onClick={() => handleDelete(s)}
+                                aria-label="보관"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="rounded p-1 text-zinc-500 hover:bg-emerald-50 hover:text-emerald-700"
+                              onClick={() => handleRestore(s)}
+                              aria-label="복원"
+                              title="복원"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

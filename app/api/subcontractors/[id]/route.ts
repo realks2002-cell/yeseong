@@ -53,8 +53,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // 협력사가 작업자/슬롯에 참조되어 있어도 ON DELETE SET NULL로 안전하게 끊김
-  const { error } = await sb.from('yeseong_subcontractors').delete().eq('id', id);
+  const { error } = await sb
+    .from('yeseong_subcontractors')
+    .update({ is_active: false })
+    .eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

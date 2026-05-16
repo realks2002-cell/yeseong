@@ -23,6 +23,7 @@ type Slot = {
     account_holder: string | null;
     phone: string | null;
     default_trade: string | null;
+    default_wage: number;
   };
   attendance: Array<{ work_date: string; hours: number }>;
 };
@@ -40,7 +41,7 @@ function safeFileName(s: string): string {
 function toFillWorker(s: Slot, slotIdx: number): FillWorker {
   return {
     slot: slotIdx,
-    trade: s.trade ?? s.worker.default_trade,
+    trade: s.worker.default_trade,
     name: s.worker.name,
     rrn: s.worker.rrn_plain,
     address: s.worker.address,
@@ -48,7 +49,7 @@ function toFillWorker(s: Slot, slotIdx: number): FillWorker {
     accountNumber: s.worker.account_number,
     accountHolder: s.worker.account_holder,
     phone: s.worker.phone,
-    dailyWage: s.daily_wage,
+    dailyWage: s.worker.default_wage,
     attendance: s.attendance.map((a) => ({
       day: parseInt(a.work_date.split('-')[2], 10),
       hours: a.hours,
@@ -95,13 +96,16 @@ export async function GET(
   const zip = new JSZip();
 
   for (const [subName, groupSlots] of groups) {
-    if (groupSlots.length > 26) {
+    if (groupSlots.length > 32) {
       return new NextResponse(
-        `${subName}: 슬롯 26명 초과 (${groupSlots.length}). 협력사를 분리하세요.`,
+        `${subName}: 슬롯 32명 초과 (${groupSlots.length}). 협력사를 분리하세요.`,
         { status: 400 },
       );
     }
-    const fillWorkers = groupSlots.map((s, i) => toFillWorker(s, i + 1));
+    const sorted = [...groupSlots].sort((a, b) =>
+      a.worker.name.localeCompare(b.worker.name, 'ko'),
+    );
+    const fillWorkers = sorted.map((s, i) => toFillWorker(s, i + 1));
     const buf = await fillPayrollWorkbook({
       yearMonth: yyyymm,
       periodStart: start,

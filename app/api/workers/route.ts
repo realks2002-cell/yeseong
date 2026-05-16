@@ -13,8 +13,10 @@ export async function GET() {
       rrn_prefix, rrn_gender_digit, rrn_plain, pin, is_foreign,
       address, bank_name, account_number, account_holder, phone,
       default_wage, default_trade, skill_grade, wage_type,
-      first_work_date, nationality, visa_status, is_active, created_at
+      first_work_date, nationality, visa_status, is_active, created_at,
+      auth_user_id
     `)
+    .eq('is_active', true)
     .order('name');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

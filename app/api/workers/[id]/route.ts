@@ -62,15 +62,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { error } = await sb.from('yeseong_workers').delete().eq('id', id);
-  if (error) {
-    if (error.code === '23503') {
-      return NextResponse.json(
-        { error: '이 작업자는 노임대장에 등록되어 있어 삭제할 수 없습니다. 비활성화만 가능합니다.' },
-        { status: 409 },
-      );
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  const { error } = await sb
+    .from('yeseong_workers')
+    .update({ is_active: false })
+    .eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

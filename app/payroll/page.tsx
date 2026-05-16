@@ -22,6 +22,7 @@ export default async function PayrollIndexPage() {
   const { data: worksites, error } = await sb
     .from('yeseong_worksites')
     .select('id, name, address, is_active')
+    .eq('is_active', true)
     .order('name');
 
   // 이번 달 노임대장 슬롯의 협력사 → 현장별 distinct 목록
@@ -69,57 +70,62 @@ export default async function PayrollIndexPage() {
           </p>
         )}
 
-        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {(worksites ?? []).map((ws) => (
-            <Card key={ws.id} className={ws.is_active ? '' : 'opacity-60'}>
-              <CardHeader className="p-4 pb-2">
-                <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
-                  <MapPin className="h-3.5 w-3.5" />
-                  현장 {!ws.is_active && <span className="ml-1 text-zinc-400">(비활성)</span>}
-                </div>
-                <CardTitle className="text-base">{ws.name}</CardTitle>
-                {ws.address && (
-                  <p className="text-[11px] text-zinc-500 line-clamp-1">{ws.address}</p>
-                )}
-                {(() => {
-                  const subs = subsByWorksite.get(ws.id);
-                  if (!subs || subs.length === 0) return null;
-                  return (
-                    <div className="mt-2 flex flex-wrap items-center gap-1">
-                      <Building2 className="h-3 w-3 text-zinc-400" />
-                      {subs.map((name) => (
-                        <span
-                          key={name}
-                          className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-100"
-                        >
-                          {name}
-                        </span>
-                      ))}
+        {(() => {
+          const visible = (worksites ?? []).filter((ws) => subsByWorksite.has(ws.id));
+          if (visible.length === 0) {
+            return (
+              <p className="mt-10 text-center text-sm text-zinc-400">
+                {ym} 노임대장 데이터가 있는 현장이 없습니다.
+              </p>
+            );
+          }
+          return (
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {visible.map((ws) => (
+                <Card key={ws.id}>
+                  <CardHeader className="p-4 pb-2">
+                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
+                      <MapPin className="h-3.5 w-3.5" />
+                      현장
                     </div>
-                  );
-                })()}
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <Link href={`/payroll/${ws.id}/${ym}`}>
-                  <Button size="sm" className="w-full justify-between">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {ym} 노임대장 열기
-                    </span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {worksites && worksites.length === 0 && (
-          <p className="mt-10 text-center text-sm text-zinc-400">
-            등록된 현장이 없습니다.{' '}
-            <Link href="/worksites" className="text-blue-600 hover:underline">현장 마스터에서 추가</Link>
-          </p>
-        )}
+                    <CardTitle className="text-base">{ws.name}</CardTitle>
+                    {ws.address && (
+                      <p className="text-[11px] text-zinc-500 line-clamp-1">{ws.address}</p>
+                    )}
+                    {(() => {
+                      const subs = subsByWorksite.get(ws.id);
+                      if (!subs || subs.length === 0) return null;
+                      return (
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          <Building2 className="h-3 w-3 text-zinc-400" />
+                          {subs.map((name) => (
+                            <span
+                              key={name}
+                              className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-100"
+                            >
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Link href={`/payroll/${ws.id}/${ym}`}>
+                      <Button size="sm" className="w-full justify-between bg-sky-200 hover:bg-sky-300 text-zinc-900">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {ym} 노임대장 열기
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </AdminShell>
   );
