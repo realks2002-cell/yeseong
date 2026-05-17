@@ -63,7 +63,8 @@ export async function GET(
     const { data: att, error: aErr } = await sb
       .from('yeseong_attendance')
       .select('payroll_worker_id, work_date, hours')
-      .in('payroll_worker_id', slotIds);
+      .in('payroll_worker_id', slotIds)
+      .eq('approval_status', 'approved');
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
     attendance = att ?? [];
   }

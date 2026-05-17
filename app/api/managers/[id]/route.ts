@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
-import { normalizePhone, phoneToManagerEmail } from '@/lib/auth/phone-email';
+import { normalizePhone, phoneToManagerEmail, pinToPassword } from '@/lib/auth/phone-email';
 
 export const runtime = 'nodejs';
 
@@ -55,7 +55,7 @@ export async function PATCH(
     if (current.auth_user_id) {
       const authUpdate: { email?: string; password?: string } = {};
       if (newPhone && newPhone !== current.phone) authUpdate.email = phoneToManagerEmail(newPhone);
-      if (newPin) authUpdate.password = newPin;
+      if (newPin) authUpdate.password = pinToPassword(newPin);
       if (Object.keys(authUpdate).length > 0) {
         const { error: aue } = await admin.auth.admin.updateUserById(current.auth_user_id, authUpdate);
         if (aue) return NextResponse.json({ error: `auth 갱신 실패: ${aue.message}` }, { status: 500 });
@@ -65,7 +65,7 @@ export async function PATCH(
       const finalPhone = newPhone ?? current.phone;
       const { data: u, error: ue } = await admin.auth.admin.createUser({
         email: phoneToManagerEmail(finalPhone),
-        password: newPin,
+        password: pinToPassword(newPin),
         email_confirm: true,
         user_metadata: { phone: finalPhone, role: 'manager' },
       });

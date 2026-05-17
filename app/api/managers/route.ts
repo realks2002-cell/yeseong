@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
-import { normalizePhone, phoneToManagerEmail } from '@/lib/auth/phone-email';
+import { normalizePhone, phoneToManagerEmail, pinToPassword } from '@/lib/auth/phone-email';
 
 export const runtime = 'nodejs';
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   if (pin) {
     const { data: u, error: ue } = await admin.auth.admin.createUser({
       email: phoneToManagerEmail(phone),
-      password: pin,
+      password: pinToPassword(pin),
       email_confirm: true,
       user_metadata: { phone, role: 'manager' },
     });

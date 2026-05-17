@@ -33,7 +33,7 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
         )}
         {showTabs && variant === 'manager' && (
           <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
-            <Tab href="/m/manager/home" icon={<ClipboardCheck className="h-6 w-6" />} label="출역검토" active={activeTab === 'home'} />
+            <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} />
             <Tab href="/m/manager/orders" icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
             <Tab href="/m/manager/expenses" icon={<Receipt className="h-6 w-6" />} label="비용" active={activeTab === 'expenses'} />
             <Tab href="/m/manager/profile" icon={<Building2 className="h-6 w-6" />} label="소속" active={activeTab === 'affiliation'} />
@@ -57,6 +57,81 @@ function Tab({ href, icon, label, active }: { href: string; icon: ReactNode; lab
       {icon}
       <span>{label}</span>
     </Link>
+  );
+}
+
+// 소장앱 출역검토 탭 long-press(5초)로 로그아웃. 짧은 탭은 /m/manager/home 이동.
+function ManagerHomeTabWithLongPressLogout({ active }: { active: boolean }) {
+  const router = useRouter();
+  const [pressing, setPressing] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggered = useRef(false);
+
+  const start = () => {
+    triggered.current = false;
+    setPressing(true);
+    timer.current = setTimeout(async () => {
+      triggered.current = true;
+      setPressing(false);
+      const sb = getBrowserSupabase();
+      await sb.auth.signOut();
+      router.replace('/m/manager/signup');
+      router.refresh();
+    }, LOGOUT_HOLD_MS);
+  };
+
+  const cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    setPressing(false);
+  };
+
+  const onClick = (e: React.MouseEvent) => {
+    if (triggered.current) {
+      e.preventDefault();
+      return;
+    }
+    if (!active) router.push('/m/manager/home');
+  };
+
+  return (
+    <button
+      type="button"
+      onPointerDown={start}
+      onPointerUp={cancel}
+      onPointerCancel={cancel}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={onClick}
+      style={{
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        touchAction: 'manipulation',
+      }}
+      className={
+        'relative flex flex-col items-center justify-center gap-1 py-3 text-sm font-semibold transition-colors overflow-hidden ' +
+        (active ? 'text-blue-900' : 'text-zinc-400')
+      }
+    >
+      {pressing && (
+        <span
+          className="absolute inset-0 bg-red-100 origin-bottom pointer-events-none"
+          style={{ animationName: 'longpress', animationDuration: `${LOGOUT_HOLD_MS}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards' }}
+        />
+      )}
+      <span className="relative">
+        <ClipboardCheck className="h-6 w-6" />
+      </span>
+      <span className="relative">{pressing ? '계속 누르면 로그아웃' : '출역검토'}</span>
+      <style jsx>{`
+        @keyframes longpress {
+          from { transform: scaleY(0); }
+          to { transform: scaleY(1); }
+        }
+      `}</style>
+    </button>
   );
 }
 

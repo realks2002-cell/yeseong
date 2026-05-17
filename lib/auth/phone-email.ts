@@ -24,6 +24,12 @@ export function isManagerEmail(email: string | null | undefined): boolean {
   return !!email && email.endsWith(MANAGER_DOMAIN);
 }
 
+// Supabase Auth는 비밀번호 최소 6자 정책 강제. 4자 PIN 그대로는 거부됨.
+// 모든 사용처(가입/로그인/수정)에서 동일 변환 적용해야 일관성 유지.
+export function pinToPassword(pin: string): string {
+  return `${pin}00`;
+}
+
 export function formatPhone(v: string): string {
   const d = normalizePhone(v).slice(0, 11);
   if (d.length < 4) return d;

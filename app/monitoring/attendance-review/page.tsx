@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, X, RefreshCw } from 'lucide-react';
+import { Check, X, RefreshCw, Search } from 'lucide-react';
 import { formatPhone } from '@/lib/auth/phone-email';
 
 type Row = {
@@ -42,38 +42,75 @@ function fmtDate(d: string): string {
   return d; // already yyyy-mm-dd
 }
 
+type TabFilters = { query: string; days: number; startDate: string; endDate: string };
+
+const DEFAULT_FILTERS: TabFilters = { query: '', days: 30, startDate: '', endDate: '' };
+
 export default function AttendanceReviewPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('rejected');
-  const [days, setDays] = useState<number>(30);
+  // 미승인 / 승인 탭마다 검색·기간 독립 유지
+  const [filtersByTab, setFiltersByTab] = useState<Record<StatusFilter, TabFilters>>({
+    rejected: { ...DEFAULT_FILTERS },
+    approved: { ...DEFAULT_FILTERS },
+  });
+  const filters = filtersByTab[statusFilter];
+  const setFilters = (next: Partial<TabFilters>) =>
+    setFiltersByTab((prev) => ({ ...prev, [statusFilter]: { ...prev[statusFilter], ...next } }));
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [reasonModal, setReasonModal] = useState<{ ids: string[] } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
-    const params = new URLSearchParams({ days: String(days), status: statusFilter });
+    const params = new URLSearchParams({ days: String(filters.days) });
     const r = await fetch(`/api/admin/attendance-review?${params}`, { cache: 'no-store' });
     if (!r.ok) {
       setError('목록을 불러오지 못했습니다');
       setRows([]);
       return;
     }
-    setRows(await r.json());
+    const all: Row[] = await r.json();
+    const byStatus = all.filter((row) =>
+      statusFilter === 'approved'
+        ? row.approval_status === 'approved'
+        : row.approval_status !== 'approved'
+    );
+    setRows(byStatus);
     setSelected(new Set());
-  }, [days, statusFilter]);
+  }, [filters.days, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
 
+  const visible = useMemo(() => {
+    if (!rows) return null;
+    const raw = filters.query.trim().toLowerCase();
+    const digits = raw.replace(/\D/g, '');
+    const { startDate, endDate } = filters;
+    return rows.filter((r) => {
+      // 날짜 범위
+      if (startDate && r.work_date < startDate) return false;
+      if (endDate && r.work_date > endDate) return false;
+      // 텍스트 검색 (입력 있을 때만)
+      if (!raw) return true;
+      if (r.worker_name?.toLowerCase().includes(raw)) return true;
+      if (r.worksite_name?.toLowerCase().includes(raw)) return true;
+      if (r.subcontractor_name?.toLowerCase().includes(raw)) return true;
+      if (digits && (r.worker_phone ?? '').replace(/\D/g, '').includes(digits)) return true;
+      return false;
+    });
+  }, [rows, filters.query, filters.startDate, filters.endDate]);
+
   const allChecked = useMemo(() => {
-    if (!rows || rows.length === 0) return false;
-    return rows.every((r) => selected.has(r.id));
-  }, [rows, selected]);
+    if (!visible || visible.length === 0) return false;
+    return visible.every((r) => selected.has(r.id));
+  }, [visible, selected]);
 
   const toggleAll = () => {
-    if (!rows) return;
-    setSelected(allChecked ? new Set() : new Set(rows.map((r) => r.id)));
+    if (!visible) return;
+    setSelected(allChecked ? new Set() : new Set(visible.map((r) => r.id)));
   };
   const toggleOne = (id: string) => {
     setSelected((prev) => {
@@ -128,8 +165,8 @@ export default function AttendanceReviewPage() {
           <div className="ml-auto flex items-center gap-2 text-sm">
             <label className="text-[#6B7280]">기간</label>
             <select
-              value={days}
-              onChange={(e) => setDays(Number(e.target.value))}
+              value={filters.days}
+              onChange={(e) => setFilters({ days: Number(e.target.value) })}
               className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-sm"
             >
               <option value={7}>최근 7일</option>
@@ -137,6 +174,56 @@ export default function AttendanceReviewPage() {
               <option value={90}>최근 90일</option>
               <option value={365}>최근 365일</option>
             </select>
+          </div>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+            <input
+              type="search"
+              value={filters.query}
+              onChange={(e) => setFilters({ query: e.target.value })}
+              placeholder="이름 · 전화번호 · 현장으로 검색"
+              className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/30"
+            />
+            {filters.query && (
+              <button
+                type="button"
+                onClick={() => setFilters({ query: '' })}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                aria-label="검색어 지우기"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <label className="text-[#6B7280]">날짜</label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => setFilters({ startDate: e.target.value })}
+              className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-sm"
+            />
+            <span className="text-[#9CA3AF]">~</span>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => setFilters({ endDate: e.target.value })}
+              className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-sm"
+            />
+            {(filters.startDate || filters.endDate) && (
+              <button
+                type="button"
+                onClick={() => setFilters({ startDate: '', endDate: '' })}
+                className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                aria-label="날짜 초기화"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -186,12 +273,14 @@ export default function AttendanceReviewPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
-                {rows === null ? (
+                {visible === null ? (
                   <tr><td colSpan={statusFilter === 'rejected' ? 9 : 7} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
-                ) : rows.length === 0 ? (
-                  <tr><td colSpan={statusFilter === 'rejected' ? 9 : 7} className="py-10 text-center text-[#9CA3AF]">해당 조건의 출역이 없습니다.</td></tr>
+                ) : visible.length === 0 ? (
+                  <tr><td colSpan={statusFilter === 'rejected' ? 9 : 7} className="py-10 text-center text-[#9CA3AF]">
+                    {filters.query ? '검색 결과가 없습니다.' : '해당 조건의 출역이 없습니다.'}
+                  </td></tr>
                 ) : (
-                  rows.map((r) => (
+                  visible.map((r) => (
                     <tr key={r.id} className="hover:bg-[#F5F5F5]">
                       {statusFilter === 'rejected' && (
                         <td className="px-3 py-2">

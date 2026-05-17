@@ -23,7 +23,7 @@ export default function ManagerAssignmentsPage() {
   }, []);
 
   const [all, setAll] = useState<Option[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -46,27 +46,18 @@ export default function ManagerAssignmentsPage() {
     }
     const me = meRes.data as unknown as Me;
     setAll(optsRes.worksites ?? []);
-    setSelected(new Set(me.worksites.map((w) => w.id)));
+    setSelected(me.worksites[0]?.id ?? null);
     setLoading(false);
   }, [sb, router]);
 
   useEffect(() => { load(); }, [load]);
 
-  const toggle = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const save = async () => {
-    if (busy || selected.size === 0) return;
+    if (busy || !selected) return;
     setBusy(true);
     setError(undefined);
     const { error: rpcErr } = await sb.rpc('yeseong_manager_set_assignments', {
-      p_worksite_ids: Array.from(selected),
+      p_worksite_ids: [selected],
     });
     setBusy(false);
     if (rpcErr) {
@@ -103,17 +94,17 @@ export default function ManagerAssignmentsPage() {
           담당하시는<br />현장을 선택해주세요
         </h1>
         <p className="mt-3 text-base text-zinc-500">
-          여러 현장을 선택할 수 있어요. 나중에 변경 가능합니다.
+          한 곳만 선택할 수 있어요. 나중에 변경 가능합니다.
         </p>
 
         <ul className="mt-8 space-y-3">
           {all.map((w) => {
-            const on = selected.has(w.id);
+            const on = selected === w.id;
             return (
               <li key={w.id}>
                 <button
                   type="button"
-                  onClick={() => toggle(w.id)}
+                  onClick={() => setSelected(w.id)}
                   className={
                     'flex w-full items-center justify-between gap-3 rounded-[5px] px-5 py-4 text-left ring-2 transition active:scale-[0.99] ' +
                     (on
@@ -143,16 +134,16 @@ export default function ManagerAssignmentsPage() {
         <div className="mt-auto pt-10">
           <button
             onClick={save}
-            disabled={busy || selected.size === 0}
+            disabled={busy || !selected}
             className={
               'flex h-[78px] w-full items-center justify-center gap-2 rounded-[5px] text-2xl font-bold transition ' +
-              (busy || selected.size === 0
+              (busy || !selected
                 ? 'bg-zinc-100 text-zinc-400'
                 : 'bg-blue-900 text-white active:scale-[0.98]')
             }
           >
             <Save className="h-6 w-6" />
-            {busy ? '저장 중...' : `${selected.size}개 현장 저장`}
+            {busy ? '저장 중...' : '현장 저장'}
           </button>
         </div>
       </div>

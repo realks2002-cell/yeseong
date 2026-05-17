@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Hammer } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { formatPhone, normalizePhone, phoneToEmail } from '@/lib/auth/phone-email';
+import { formatPhone, normalizePhone, phoneToEmail, pinToPassword } from '@/lib/auth/phone-email';
 import { KOREAN_BANKS } from '@/lib/constants/banks';
 import { TRADES, GRADES } from '@/lib/constants/trades';
 
@@ -132,7 +132,7 @@ export default function SignupPage() {
       setLoginError(undefined);
       const { error } = await sb.auth.signInWithPassword({
         email: phoneToEmail(phone),
-        password: loginPin,
+        password: pinToPassword(loginPin),
       });
       setLoginBusy(false);
       if (error) {
@@ -238,7 +238,7 @@ export default function SignupPage() {
 
       const { error: signInErr } = await sb.auth.signInWithPassword({
         email: phoneToEmail(phone),
-        password: pin1,
+        password: pinToPassword(pin1),
       });
       if (signInErr) {
         setSignupError('로그인에 실패했어요');

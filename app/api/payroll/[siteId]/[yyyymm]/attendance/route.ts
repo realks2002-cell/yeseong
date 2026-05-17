@@ -49,7 +49,15 @@ export async function PATCH(
   const { data, error } = await sb
     .from('yeseong_attendance')
     .upsert(
-      { payroll_worker_id: pwId, work_date: workDateStr, hours, source: 'manual' },
+      {
+        payroll_worker_id: pwId,
+        work_date: workDateStr,
+        hours,
+        source: 'manual',
+        approval_status: 'approved',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+      },
       { onConflict: 'payroll_worker_id,work_date' },
     )
     .select('id, work_date, hours')

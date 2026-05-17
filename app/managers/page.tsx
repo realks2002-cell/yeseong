@@ -11,11 +11,19 @@ type Manager = {
   phone: string;
   pin: string | null;
   created_at: string;
-  yeseong_site_manager_assignments: Array<{
-    worksite_id: string;
-    yeseong_worksites: { id: string; name: string } | null;
-  }>;
+  yeseong_site_manager_assignments:
+    | Array<{ worksite_id: string; yeseong_worksites: { id: string; name: string } | null }>
+    | { worksite_id: string; yeseong_worksites: { id: string; name: string } | null }
+    | null;
 };
+
+type Assignment = { worksite_id: string; yeseong_worksites: { id: string; name: string } | null };
+
+function getAssignments(m: Manager): Assignment[] {
+  const v = m.yeseong_site_manager_assignments;
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
 
 type Worksite = { id: string; name: string };
 
@@ -54,7 +62,7 @@ export default function ManagersPage() {
     return list.filter((m) => {
       if (m.name?.toLowerCase().includes(raw)) return true;
       if (digits && m.phone.replace(/\D/g, '').includes(digits)) return true;
-      const sites = m.yeseong_site_manager_assignments
+      const sites = getAssignments(m)
         .map((a) => a.yeseong_worksites?.name ?? '')
         .join(' ');
       if (sites.toLowerCase().includes(raw)) return true;
@@ -184,7 +192,7 @@ export default function ManagersPage() {
                   </tr>
                 ) : (
                   filtered.map((m, i) => {
-                    const sites = m.yeseong_site_manager_assignments
+                    const sites = getAssignments(m)
                       .map((a) => a.yeseong_worksites)
                       .filter((s): s is { id: string; name: string } => s !== null);
                     return (
@@ -265,8 +273,7 @@ export default function ManagersPage() {
             name: editing.name,
             phone: editing.phone,
             pin: editing.pin ?? '',
-            worksite_ids: editing.yeseong_site_manager_assignments
-              .map((a) => a.worksite_id),
+            worksite_ids: getAssignments(editing).map((a) => a.worksite_id),
           }}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}

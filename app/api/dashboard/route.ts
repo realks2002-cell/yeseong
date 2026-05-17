@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     sb.from('yeseong_worksites').select('id, name, address, is_active').order('name'),
     sb
       .from('yeseong_payroll_periods')
-      .select('id, worksite_id, yeseong_payroll_workers(daily_wage, trade, yeseong_workers(default_trade), yeseong_attendance(hours))')
+      .select('id, worksite_id, yeseong_payroll_workers(daily_wage, trade, yeseong_workers(default_trade), yeseong_attendance(hours, approval_status))')
       .eq('year_month', yearMonth),
   ]);
 
@@ -46,14 +46,14 @@ export async function GET(req: Request) {
       daily_wage: number;
       trade: string | null;
       yeseong_workers: { default_trade: string | null } | null;
-      yeseong_attendance: Array<{ hours: number }>;
+      yeseong_attendance: Array<{ hours: number; approval_status: string }>;
     }> | null;
   };
 
   const periods = (periodRes.data ?? []) as unknown as Joined[];
   for (const p of periods) {
     for (const slot of p.yeseong_payroll_workers ?? []) {
-      const att = slot.yeseong_attendance ?? [];
+      const att = (slot.yeseong_attendance ?? []).filter((a) => a.approval_status === 'approved');
       const slotHours = att.reduce((s, a) => s + Number(a.hours ?? 0), 0);
       const slotDays = att.filter((a) => Number(a.hours ?? 0) > 0).length;
       totalHours += slotHours;
