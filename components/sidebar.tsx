@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Hammer,
   LayoutDashboard,
@@ -17,10 +18,11 @@ import {
   ClipboardCheck,
   LogOut as LogOutIcon,
   KeyRound,
-  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { getBrowserSupabase } from '@/lib/supabase/client';
+import { emailToId } from '@/lib/auth/id-email';
 
 type Item = {
   label: string;
@@ -85,6 +87,24 @@ function isActive(pathname: string, href: string): boolean {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [userId, setUserId] = useState<string>('');
+
+  useEffect(() => {
+    const sb = getBrowserSupabase();
+    sb.auth.getUser().then(({ data }) => {
+      const email = data.user?.email ?? '';
+      if (email) setUserId(emailToId(email));
+    });
+  }, []);
+
+  async function handleLogout() {
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    const sb = getBrowserSupabase();
+    await sb.auth.signOut();
+    router.replace('/admin');
+    router.refresh();
+  }
 
   return (
     <aside className="sticky top-0 h-svh w-[168px] shrink-0 border-r border-[#D7D7D7] bg-white flex flex-col">
@@ -137,16 +157,17 @@ export function Sidebar() {
 
       <button
         type="button"
+        onClick={handleLogout}
         className="flex items-center gap-2.5 px-4 py-3 border-t border-[#D7D7D7] text-[12px] text-[#091413] hover:bg-[#F5F5F5]"
       >
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#D7D7D7] text-[11px] font-semibold text-[#091413]">
-          김
+          {userId ? userId.charAt(0).toUpperCase() : '?'}
         </span>
         <span className="flex-1 text-left">
-          <span className="block text-[12px] font-medium leading-tight">김관리</span>
+          <span className="block text-[12px] font-medium leading-tight">{userId || '...'}</span>
           <span className="block text-[9px] text-[#6B7280] leading-tight">admin</span>
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-[#6B7280]" />
+        <LogOutIcon className="h-3.5 w-3.5 text-[#6B7280]" />
       </button>
     </aside>
   );
