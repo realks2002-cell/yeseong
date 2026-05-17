@@ -85,17 +85,17 @@ export default function SubcontractorsPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">협력사 마스터</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               총 {list?.length ?? '...'}개 협력사
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer select-none">
+            <label className="flex items-center gap-1.5 text-xs text-[#4B5563] cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={showArchived}
                 onChange={(e) => setShowArchived(e.target.checked)}
-                className="rounded border-zinc-300"
+                className="rounded border-[#D7D7D7]"
               />
               보관함 보기
             </label>
@@ -111,7 +111,7 @@ export default function SubcontractorsPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-zinc-50 text-zinc-600">
+              <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">협력사명</th>
@@ -121,23 +121,23 @@ export default function SubcontractorsPage() {
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-zinc-400">불러오는 중...</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-zinc-400">등록된 협력사가 없습니다.</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">등록된 협력사가 없습니다.</td></tr>
                 ) : (
                   list.map((s, i) => (
-                    <tr key={s.id} className={`hover:bg-zinc-50 ${!s.is_active ? 'text-zinc-400' : ''}`}>
-                      <td className="px-3 py-2 text-zinc-500 tabular-nums">{i + 1}</td>
+                    <tr key={s.id} className={`hover:bg-[#F5F5F5] ${!s.is_active ? 'text-[#9CA3AF]' : ''}`}>
+                      <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{s.name}</td>
-                      <td className="px-3 py-2 font-mono text-zinc-600">{s.business_number ?? '-'}</td>
-                      <td className="px-3 py-2 font-mono text-zinc-600">{s.contact_phone ?? '-'}</td>
+                      <td className="px-3 py-2 font-mono text-[#4B5563]">{s.business_number ?? '-'}</td>
+                      <td className="px-3 py-2 font-mono text-[#4B5563]">{s.contact_phone ?? '-'}</td>
                       <td className="px-3 py-2">
                         {s.is_active ? (
                           <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">활성</span>
                         ) : (
-                          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500">보관됨</span>
+                          <span className="rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] text-[#6B7280]">보관됨</span>
                         )}
                       </td>
                       <td className="px-3 py-2">
@@ -145,14 +145,14 @@ export default function SubcontractorsPage() {
                           {s.is_active ? (
                             <>
                               <button
-                                className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                                className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
                                 onClick={() => setEditing(s)}
                                 aria-label="수정"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
                               <button
-                                className="rounded p-1 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                                className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
                                 onClick={() => handleDelete(s)}
                                 aria-label="보관"
                               >
@@ -161,7 +161,7 @@ export default function SubcontractorsPage() {
                             </>
                           ) : (
                             <button
-                              className="rounded p-1 text-zinc-500 hover:bg-emerald-50 hover:text-emerald-700"
+                              className="rounded p-1 text-[#6B7280] hover:bg-emerald-50 hover:text-emerald-700"
                               onClick={() => handleRestore(s)}
                               aria-label="복원"
                               title="복원"

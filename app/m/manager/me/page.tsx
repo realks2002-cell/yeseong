@@ -36,6 +36,7 @@ export default function ManagerMePage() {
     address: '',
   });
   const [editing, setEditing] = useState(false);
+  const [bankCustom, setBankCustom] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -58,14 +59,16 @@ export default function ManagerMePage() {
     }
     setMe(meData);
     if (meData.worker) {
+      const bn = meData.worker.bank_name ?? '';
       setForm({
         name: meData.worker.name ?? '',
         default_trade: meData.worker.default_trade ?? '',
-        bank_name: meData.worker.bank_name ?? '',
+        bank_name: bn,
         account_number: meData.worker.account_number ?? '',
         account_holder: meData.worker.account_holder ?? '',
         address: meData.worker.address ?? '',
       });
+      setBankCustom(bn !== '' && !(KOREAN_BANKS as readonly string[]).includes(bn));
     }
   }, [sb, router]);
 
@@ -100,14 +103,16 @@ export default function ManagerMePage() {
 
   const cancel = () => {
     if (!me?.worker) return;
+    const bn = me.worker.bank_name ?? '';
     setForm({
       name: me.worker.name ?? '',
       default_trade: me.worker.default_trade ?? '',
-      bank_name: me.worker.bank_name ?? '',
+      bank_name: bn,
       account_number: me.worker.account_number ?? '',
       account_holder: me.worker.account_holder ?? '',
       address: me.worker.address ?? '',
     });
+    setBankCustom(bn !== '' && !(KOREAN_BANKS as readonly string[]).includes(bn));
     setEditing(false);
     setError(undefined);
     setMsg(undefined);
@@ -159,17 +164,46 @@ export default function ManagerMePage() {
           </Field>
 
           <Field label="은행">
-            <input
-              list="manager-me-bank-list"
-              value={form.bank_name}
-              onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
-              disabled={!editing}
-              placeholder="은행 선택 또는 입력"
-              className="w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
-            />
-            <datalist id="manager-me-bank-list">
-              {KOREAN_BANKS.map((b) => <option key={b} value={b} />)}
-            </datalist>
+            {bankCustom ? (
+              <div className="flex gap-2">
+                <input
+                  value={form.bank_name}
+                  onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
+                  disabled={!editing}
+                  placeholder="은행명 직접 입력"
+                  className="flex-1 rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
+                />
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={() => { setBankCustom(false); setForm((f) => ({ ...f, bank_name: '' })); }}
+                    className="px-4 text-sm font-semibold text-zinc-500 underline"
+                  >
+                    목록
+                  </button>
+                )}
+              </div>
+            ) : (
+              <select
+                value={form.bank_name}
+                onChange={(e) => {
+                  if (e.target.value === '__custom__') {
+                    setBankCustom(true);
+                    setForm((f) => ({ ...f, bank_name: '' }));
+                  } else {
+                    setForm((f) => ({ ...f, bank_name: e.target.value }));
+                  }
+                }}
+                disabled={!editing}
+                className="w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
+              >
+                <option value="">선택하세요</option>
+                {KOREAN_BANKS.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+                <option value="__custom__">직접 입력...</option>
+              </select>
+            )}
           </Field>
 
           <Field label="계좌번호">

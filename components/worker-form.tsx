@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
-import { maskFromParts } from '@/lib/crypto/rrn';
+import { formatRrnPlain } from '@/lib/crypto/rrn';
 
 const RRN_PATTERN = /^\d{6}-?\d{7}$/;
 
@@ -44,7 +44,7 @@ export type Worker = {
 export type WorkerInput = {
   employee_code: string | null;
   name: string;
-  rrn: string;        // 평문 — POST 시에만 전달, PATCH에선 제외
+  rrn: string;        // 평문 — POST 필수. PATCH는 비어있으면 변경 없음, 있으면 갱신.
   default_trade: string | null;
   default_wage: number;
   bank_name: string | null;
@@ -96,9 +96,12 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
     setSubmitErr(null);
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = '필수';
+    const rrnTrimmed = form.rrn.trim();
+    const rrnChanged = rrnTrimmed !== (initial?.rrn_plain ? formatRrnPlain(initial.rrn_plain) : '');
     if (!isEdit) {
-      const rrn = normalizeRrn(form.rrn);
-      if (!RRN_PATTERN.test(rrn)) next.rrn = '주민번호 형식: 000000-0000000';
+      if (!RRN_PATTERN.test(normalizeRrn(rrnTrimmed))) next.rrn = '주민번호 형식: 000000-0000000';
+    } else if (rrnChanged && rrnTrimmed.length > 0) {
+      if (!RRN_PATTERN.test(normalizeRrn(rrnTrimmed))) next.rrn = '주민번호 형식: 000000-0000000';
     }
     if (!Number.isFinite(form.default_wage) || form.default_wage < 0) next.default_wage = '0 이상';
     setErrors(next);
@@ -109,7 +112,7 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
       await onSubmit({
         ...form,
         name: form.name.trim(),
-        rrn: isEdit ? '' : normalizeRrn(form.rrn),
+        rrn: rrnChanged && rrnTrimmed ? normalizeRrn(rrnTrimmed) : '',
         default_wage: Math.floor(form.default_wage),
       });
     } catch (e) {
@@ -122,9 +125,9 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
       <div className="w-full max-w-2xl rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[#D7D7D7] px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onCancel} className="rounded p-1 text-zinc-500 hover:bg-zinc-100" aria-label="닫기">
+          <button onClick={onCancel} className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5]" aria-label="닫기">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -163,26 +166,21 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
             />
           </Field>
 
-          {isEdit ? (
-            <Field label="주민번호 (수정 불가)" className="col-span-2">
-              <Input
-                value={initial!.rrn_prefix && initial!.rrn_gender_digit ? maskFromParts(initial!.rrn_prefix, initial!.rrn_gender_digit) : '미등록'}
-                disabled
-                className="font-mono"
-              />
-            </Field>
-          ) : (
-            <Field label="주민번호" required error={errors.rrn} className="col-span-2">
-              <Input
-                value={form.rrn}
-                onChange={(e) => set('rrn', e.target.value)}
-                placeholder="000000-0000000"
-                className="font-mono"
-                inputMode="numeric"
-                disabled={loading}
-              />
-            </Field>
-          )}
+          <Field
+            label="주민번호"
+            required={!isEdit}
+            error={errors.rrn}
+            className="col-span-2"
+          >
+            <Input
+              value={form.rrn}
+              onChange={(e) => set('rrn', e.target.value)}
+              placeholder="000000-0000000"
+              className="font-mono"
+              inputMode="numeric"
+              disabled={loading}
+            />
+          </Field>
 
           <Field label="주소" className="col-span-2">
             <Input
@@ -247,7 +245,7 @@ function buildInitial(initial?: Worker): WorkerInput {
   return {
     employee_code: initial?.employee_code ?? null,
     name: initial?.name ?? '',
-    rrn: '',
+    rrn: initial?.rrn_plain ? formatRrnPlain(initial.rrn_plain) : '',
     default_trade: initial?.default_trade ?? null,
     default_wage: initial?.default_wage ?? 0,
     bank_name: initial?.bank_name ?? null,

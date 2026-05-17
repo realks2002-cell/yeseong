@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 
-// PATCH는 RRN 외 일반 필드만. RRN 변경 필요하면 작업자 삭제 후 재등록.
+// PATCH: 일반 필드 + (선택) RRN 평문. RRN은 별도 RPC로 4개 컬럼 일관 업데이트.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sb = await getServerSupabase();
@@ -10,6 +10,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+
+  if (typeof body.rrn === 'string' && body.rrn.trim()) {
+    const rrn = body.rrn.trim();
+    if (!/^\d{6}-?\d{7}$/.test(rrn)) {
+      return NextResponse.json({ error: '주민번호 형식 오류 (000000-0000000)' }, { status: 400 });
+    }
+    const { error: rrnErr } = await sb.rpc('yeseong_admin_update_worker_rrn', {
+      p_id: id,
+      p_rrn_plain: rrn,
+    });
+    if (rrnErr) return NextResponse.json({ error: rrnErr.message }, { status: 500 });
+  }
 
   const allowed = [
     'employee_code', 'name', 'name_english',
@@ -34,7 +46,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
   }
   if (Object.keys(patch).length === 0) {
-    return NextResponse.json({ error: '변경할 필드가 없습니다' }, { status: 400 });
+    return NextResponse.json({ ok: true, id });
   }
   if (typeof patch.name === 'string' && !patch.name) {
     return NextResponse.json({ error: '성명은 비울 수 없습니다' }, { status: 400 });

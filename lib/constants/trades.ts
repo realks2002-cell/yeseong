@@ -1,8 +1,6 @@
-// 모바일 가입 시 공종 select 옵션 (시드 워커의 default_trade 분포 기반)
+// 공종(직종) — '구분(등급)'은 GRADES로 분리됨
 // '직접 입력'은 클라이언트에서 자유 입력 모드 트리거
 export const TRADES = [
-  '조공',
-  '기공',
   '조적',
   '미장공',
   '바닥미장',
@@ -14,3 +12,6 @@ export const TRADES = [
   '철근공',
   '목수',
 ] as const;
+
+// 구분(등급)
+export const GRADES = ['기공', '조공'] as const;

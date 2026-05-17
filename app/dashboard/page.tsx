@@ -67,7 +67,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl p-5 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs text-zinc-500">(주)예성건축</p>
+            <p className="text-xs text-[#6B7280]">(주)예성건축</p>
             <h1 className="text-xl font-bold tracking-tight">대시보드</h1>
           </div>
           <MonthSwitcher value={yearMonth} onChange={setYearMonth} />
@@ -105,19 +105,19 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0">
               {trades.length === 0 ? (
-                <p className="py-8 text-center text-xs text-zinc-400">출역 데이터가 없습니다.</p>
+                <p className="py-8 text-center text-xs text-[#9CA3AF]">출역 데이터가 없습니다.</p>
               ) : (
                 <ul className="space-y-2">
                   {trades.map((t) => (
                     <li key={t.trade} className="flex items-center gap-3 text-xs">
-                      <span className="w-20 shrink-0 truncate text-zinc-700">{t.trade}</span>
-                      <div className="relative flex-1 h-5 rounded bg-zinc-100">
+                      <span className="w-20 shrink-0 truncate text-[#091413]">{t.trade}</span>
+                      <div className="relative flex-1 h-5 rounded bg-[#F5F5F5]">
                         <div
-                          className="absolute inset-y-0 left-0 rounded bg-sky-400"
+                          className="absolute inset-y-0 left-0 rounded bg-[#447D9B]"
                           style={{ width: `${(t.hours / maxTrade) * 100}%` }}
                         />
                       </div>
-                      <span className="w-16 shrink-0 text-right tabular-nums text-zinc-600">
+                      <span className="w-16 shrink-0 text-right tabular-nums text-[#4B5563]">
                         {t.hours.toLocaleString()}
                       </span>
                     </li>
@@ -147,7 +147,7 @@ export default function DashboardPage() {
 
 function MonthSwitcher({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-[5px] border border-zinc-200 bg-white p-0.5">
+    <div className="flex items-center gap-0.5 rounded-[5px] border border-[#D7D7D7] bg-white p-0.5">
       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onChange(shiftMonth(value, -1))} aria-label="이전 달">
         <ChevronLeft className="h-3.5 w-3.5" />
       </Button>
@@ -173,14 +173,14 @@ function KpiCard({
   accent?: boolean;
 }) {
   return (
-    <Card className={accent ? 'bg-zinc-900 text-white border-zinc-900' : ''}>
+    <Card className={accent ? 'bg-[#273F4F] text-white border-[#273F4F]' : ''}>
       <CardContent className="p-4">
-        <div className={`flex items-center gap-1 text-[11px] ${accent ? 'text-zinc-300' : 'text-zinc-500'}`}>
+        <div className={`flex items-center gap-1 text-[11px] ${accent ? 'text-[#D7D7D7]' : 'text-[#6B7280]'}`}>
           {icon}
           {label}
         </div>
         <div className="mt-1 text-xl font-bold tabular-nums">{value}</div>
-        {sub && <p className={`text-[10px] mt-0.5 ${accent ? 'text-zinc-400' : 'text-zinc-500'}`}>{sub}</p>}
+        {sub && <p className={`text-[10px] mt-0.5 ${accent ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}`}>{sub}</p>}
       </CardContent>
     </Card>
   );

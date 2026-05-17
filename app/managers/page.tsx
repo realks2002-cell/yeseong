@@ -121,7 +121,7 @@ export default function ManagersPage() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">현장 소장</h1>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-[#6B7280]">
               총 {list?.length ?? '...'}명{query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}.
               관리자가 직접 추가/수정하거나 소장 앱에서 가입한 사용자가 노출됩니다.
             </p>
@@ -133,19 +133,19 @@ export default function ManagersPage() {
         </div>
 
         <div className="relative mb-4 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 · 전화번호 · 현장으로 검색"
-            className="w-full rounded-[5px] border border-zinc-200 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
               aria-label="검색어 지우기"
             >
               <X className="h-3.5 w-3.5" />
@@ -158,7 +158,7 @@ export default function ManagersPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 text-zinc-600">
+              <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-xs">
                   <th className="w-10 px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">성명</th>
@@ -169,16 +169,16 @@ export default function ManagersPage() {
                   <th className="w-20 px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-[#D7D7D7]">
                 {filtered === null ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-zinc-400">
+                    <td colSpan={7} className="py-10 text-center text-[#9CA3AF]">
                       불러오는 중...
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-zinc-400">
+                    <td colSpan={7} className="py-10 text-center text-[#9CA3AF]">
                       {query ? '검색 결과가 없습니다.' : '등록된 소장이 없습니다.'}
                     </td>
                   </tr>
@@ -188,31 +188,31 @@ export default function ManagersPage() {
                       .map((a) => a.yeseong_worksites)
                       .filter((s): s is { id: string; name: string } => s !== null);
                     return (
-                      <tr key={m.id} className="hover:bg-zinc-50">
-                        <td className="px-3 py-2 tabular-nums text-zinc-500">{i + 1}</td>
+                      <tr key={m.id} className="hover:bg-[#F5F5F5]">
+                        <td className="px-3 py-2 tabular-nums text-[#6B7280]">{i + 1}</td>
                         <td className="px-3 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
-                            <HardHat className="h-3.5 w-3.5 text-zinc-400" />
+                            <HardHat className="h-3.5 w-3.5 text-[#9CA3AF]" />
                             {m.name}
                           </span>
                         </td>
                         <td className="px-3 py-2 font-mono text-xs">{formatPhone(m.phone)}</td>
                         <td className="px-3 py-2 text-center font-mono tabular-nums">
                           {m.pin ? (
-                            <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-[11px] text-white">{m.pin}</span>
+                            <span className="rounded bg-[#273F4F] px-1.5 py-0.5 text-[11px] text-white">{m.pin}</span>
                           ) : (
-                            <span className="text-zinc-300">-</span>
+                            <span className="text-[#D7D7D7]">-</span>
                           )}
                         </td>
                         <td className="px-3 py-2">
                           {sites.length === 0 ? (
-                            <span className="text-xs text-zinc-400">미배정</span>
+                            <span className="text-xs text-[#9CA3AF]">미배정</span>
                           ) : (
                             <div className="flex flex-wrap gap-1">
                               {sites.map((s) => (
                                 <span
                                   key={s.id}
-                                  className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700"
+                                  className="rounded-full bg-[#F5F5F5] px-2 py-0.5 text-[11px] text-[#091413]"
                                 >
                                   {s.name}
                                 </span>
@@ -220,18 +220,18 @@ export default function ManagersPage() {
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-zinc-600">{formatDate(m.created_at)}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-[#4B5563]">{formatDate(m.created_at)}</td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-0.5">
                             <button
-                              className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                              className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
                               onClick={() => setEditing(m)}
                               aria-label="수정"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              className="rounded p-1 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                              className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
                               onClick={() => handleDelete(m)}
                               aria-label="삭제"
                             >
@@ -323,53 +323,53 @@ function ManagerForm({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button type="button" onClick={onCancel} className="rounded p-1 text-zinc-400 hover:bg-zinc-100">
+          <button type="button" onClick={onCancel} className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5]">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">성명 *</label>
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">성명 *</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-[5px] border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">전화번호 *</label>
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">전화번호 *</label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="010-0000-0000"
-              className="w-full rounded-[5px] border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">
               PIN (4자리, 모바일 앱 로그인용)
             </label>
             <input
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="0000"
-              className="w-32 rounded-[5px] border border-zinc-200 px-3 py-2 font-mono text-sm outline-none focus:border-blue-500"
+              className="w-32 rounded-[5px] border border-[#D7D7D7] px-3 py-2 font-mono text-sm outline-none focus:border-blue-500"
             />
-            <p className="mt-1 text-[11px] text-zinc-500">
+            <p className="mt-1 text-[11px] text-[#6B7280]">
               비워두면 모바일 앱에서 직접 가입할 수 있는 shell만 생성됩니다.
             </p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">담당 현장</label>
-            <div className="max-h-40 overflow-y-auto rounded-[5px] border border-zinc-200 p-2">
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">담당 현장</label>
+            <div className="max-h-40 overflow-y-auto rounded-[5px] border border-[#D7D7D7] p-2">
               {worksites.length === 0 ? (
-                <p className="px-1 py-2 text-xs text-zinc-400">현장이 없습니다.</p>
+                <p className="px-1 py-2 text-xs text-[#9CA3AF]">현장이 없습니다.</p>
               ) : (
                 worksites.map((w) => (
                   <label
                     key={w.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-zinc-50"
+                    className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-[#F5F5F5]"
                   >
                     <input
                       type="checkbox"

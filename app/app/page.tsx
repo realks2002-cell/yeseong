@@ -74,13 +74,13 @@ export default function AppDownloadPage() {
   return (
     <>
       <LandingHeader />
-      <main className="bg-zinc-50 py-16 md:py-24">
+      <main className="bg-[#F5F5F5] py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-block rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
               App Download
             </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-zinc-900 md:text-4xl">
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#091413] md:text-4xl">
               모바일 앱 다운로드
             </h1>
           </div>
@@ -91,13 +91,13 @@ export default function AppDownloadPage() {
               return (
                 <div
                   key={app.filename}
-                  className="flex flex-col rounded-[5px] border border-zinc-200 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+                  className="flex flex-col rounded-[5px] border border-[#D7D7D7] bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
                 >
                   <div className="inline-flex h-14 w-14 items-center justify-center rounded-[5px] bg-blue-50 text-blue-700">
                     <Icon className="h-7 w-7" />
                   </div>
-                  <h2 className="mt-6 text-xl font-bold text-zinc-900">{app.title}</h2>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-600">
+                  <h2 className="mt-6 text-xl font-bold text-[#091413]">{app.title}</h2>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-[#4B5563]">
                     {app.description}
                   </p>
                   <a
@@ -129,10 +129,10 @@ export default function AppDownloadPage() {
               <span className="inline-block rounded-full bg-blue-800 px-3 py-1 text-xs font-bold text-white">
                 Step-by-Step Guide
               </span>
-              <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-900 md:text-3xl">
+              <h2 className="mt-4 text-2xl font-bold tracking-tight text-[#091413] md:text-3xl">
                 처음 가입 안내
               </h2>
-              <p className="mt-3 text-sm text-zinc-600 md:text-base">
+              <p className="mt-3 text-sm text-[#4B5563] md:text-base">
                 앱을 처음 실행하면 아래 8단계로 본인 정보를 등록합니다.<br />
                 (이미 작업자마스터에 등록된 기존 직원은 본인 정보등록 없이 바로 로그인 됩니다.)
               </p>
@@ -152,17 +152,17 @@ export default function AppDownloadPage() {
                     <img
                       src={step.image}
                       alt={`${idx + 1}단계 ${step.title}`}
-                      className="w-full max-w-[260px] rounded-[14px] border border-zinc-200 shadow-md md:max-w-[280px]"
+                      className="w-full max-w-[260px] rounded-[14px] border border-[#D7D7D7] shadow-md md:max-w-[280px]"
                     />
                   </div>
                   <div className={idx % 2 === 1 ? 'md:order-1' : ''}>
                     <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-800 text-sm font-bold text-white">
                       {idx + 1}
                     </div>
-                    <h3 className="mt-4 text-xl font-bold text-zinc-900 md:text-2xl">
+                    <h3 className="mt-4 text-xl font-bold text-[#091413] md:text-2xl">
                       {step.title}
                     </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-zinc-600 md:text-base">
+                    <p className="mt-3 text-sm leading-relaxed text-[#4B5563] md:text-base">
                       {step.description}
                     </p>
                   </div>

@@ -6,7 +6,7 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone, normalizePhone, phoneToEmail } from '@/lib/auth/phone-email';
 import { KOREAN_BANKS } from '@/lib/constants/banks';
-import { TRADES } from '@/lib/constants/trades';
+import { TRADES, GRADES } from '@/lib/constants/trades';
 
 type Mode =
   | 'phone'
@@ -99,6 +99,7 @@ export default function SignupPage() {
 
   // 직무
   const [defaultWage, setDefaultWage] = useState('');
+  const [skillGrade, setSkillGrade] = useState('');
   const [defaultTrade, setDefaultTrade] = useState('');
   const [tradeCustom, setTradeCustom] = useState(false);
 
@@ -260,6 +261,7 @@ export default function SignupPage() {
         p_name_english: nameEnglish.trim() || null,
         p_nationality: nationality.trim() || null,
         p_visa_status: visaStatus.trim() || null,
+        p_skill_grade: skillGrade || null,
       });
       if (rpcErr) {
         setSignupError('프로필 저장 실패: ' + rpcErr.message);
@@ -398,9 +400,10 @@ export default function SignupPage() {
         {mode === 'signup_work' && (
           <WorkStep
             defaultWage={defaultWage} setDefaultWage={setDefaultWage}
+            skillGrade={skillGrade} setSkillGrade={setSkillGrade}
             defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
             tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
-            valid={wageValid && defaultTrade.trim().length > 0}
+            valid={wageValid && skillGrade.length > 0 && defaultTrade.trim().length > 0}
             onNext={goNextOrSubmit}
           />
         )}
@@ -757,11 +760,14 @@ function AccountStep({
 
 function WorkStep({
   defaultWage, setDefaultWage,
+  skillGrade, setSkillGrade,
   defaultTrade, setDefaultTrade, tradeCustom, setTradeCustom,
   valid, onNext,
 }: {
   defaultWage: string;
   setDefaultWage: (v: string) => void;
+  skillGrade: string;
+  setSkillGrade: (v: string) => void;
   defaultTrade: string;
   setDefaultTrade: (v: string) => void;
   tradeCustom: boolean;
@@ -787,6 +793,18 @@ function WorkStep({
           {defaultWage && /^\d+$/.test(defaultWage) && (
             <p className="mt-1 text-sm text-zinc-500">{Number(defaultWage).toLocaleString()}원</p>
           )}
+        </Field>
+        <Field label="구분">
+          <select
+            value={skillGrade}
+            onChange={(e) => setSkillGrade(e.target.value)}
+            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+          >
+            <option value="">선택하세요</option>
+            {GRADES.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
         </Field>
         <Field label="공종">
           {tradeCustom ? (

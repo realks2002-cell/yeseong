@@ -4,7 +4,7 @@ import type { HTMLAttributes } from 'react';
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('rounded-[5px] border border-zinc-200 bg-white shadow-sm', className)}
+      className={cn('rounded-[5px] border border-[#D7D7D7] bg-white shadow-sm', className)}
       {...props}
     />
   );
@@ -19,7 +19,7 @@ export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingEle
 }
 
 export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn('text-sm text-zinc-500', className)} {...props} />;
+  return <p className={cn('text-sm text-[#6B7280]', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

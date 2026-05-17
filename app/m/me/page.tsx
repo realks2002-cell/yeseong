@@ -5,6 +5,7 @@ import { Pencil, Save, X } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone } from '@/lib/auth/phone-email';
+import { GRADES, TRADES } from '@/lib/constants/trades';
 
 const KOREAN_BANKS = [
   'KB국민은행', '신한은행', '우리은행', '하나은행', 'NH농협은행', 'IBK기업은행',
@@ -19,6 +20,7 @@ type Me = {
     name: string;
     phone: string | null;
     default_trade: string | null;
+    skill_grade: string | null;
     bank_name: string | null;
     account_number: string | null;
     account_holder: string | null;
@@ -33,6 +35,7 @@ export default function MePage() {
   const [me, setMe] = useState<Me | null>(null);
   const [form, setForm] = useState({
     name: '',
+    skill_grade: '',
     default_trade: '',
     bank_name: '',
     account_number: '',
@@ -40,6 +43,8 @@ export default function MePage() {
     address: '',
   });
   const [editing, setEditing] = useState(false);
+  const [bankCustom, setBankCustom] = useState(false);
+  const [tradeCustom, setTradeCustom] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -57,14 +62,19 @@ export default function MePage() {
     }
     const meData = data as unknown as Me;
     setMe(meData);
+    const bn = meData.worker.bank_name ?? '';
+    const dt = meData.worker.default_trade ?? '';
     setForm({
       name: meData.worker.name ?? '',
-      default_trade: meData.worker.default_trade ?? '',
-      bank_name: meData.worker.bank_name ?? '',
+      skill_grade: meData.worker.skill_grade ?? '',
+      default_trade: dt,
+      bank_name: bn,
       account_number: meData.worker.account_number ?? '',
       account_holder: meData.worker.account_holder ?? '',
       address: meData.worker.address ?? '',
     });
+    setBankCustom(bn !== '' && !KOREAN_BANKS.includes(bn));
+    setTradeCustom(dt !== '' && !(TRADES as readonly string[]).includes(dt));
   }, [sb, router]);
 
   useEffect(() => { load(); }, [load]);
@@ -85,6 +95,7 @@ export default function MePage() {
       p_account_number: form.account_number,
       p_account_holder: form.account_holder,
       p_address: form.address,
+      p_skill_grade: form.skill_grade,
     });
     setBusy(false);
     if (rpcErr) {
@@ -98,14 +109,19 @@ export default function MePage() {
 
   const cancel = () => {
     if (!me) return;
+    const bn = me.worker.bank_name ?? '';
+    const dt = me.worker.default_trade ?? '';
     setForm({
       name: me.worker.name ?? '',
-      default_trade: me.worker.default_trade ?? '',
-      bank_name: me.worker.bank_name ?? '',
+      skill_grade: me.worker.skill_grade ?? '',
+      default_trade: dt,
+      bank_name: bn,
       account_number: me.worker.account_number ?? '',
       account_holder: me.worker.account_holder ?? '',
       address: me.worker.address ?? '',
     });
+    setBankCustom(bn !== '' && !KOREAN_BANKS.includes(bn));
+    setTradeCustom(dt !== '' && !(TRADES as readonly string[]).includes(dt));
     setEditing(false);
     setError(undefined);
     setMsg(undefined);
@@ -144,28 +160,104 @@ export default function MePage() {
           />
         </Field>
 
-        <Field label="공종">
-          <input
-            value={form.default_trade}
-            onChange={(e) => setForm((f) => ({ ...f, default_trade: e.target.value }))}
+        <Field label="구분">
+          <select
+            value={form.skill_grade}
+            onChange={(e) => setForm((f) => ({ ...f, skill_grade: e.target.value }))}
             disabled={!editing}
-            placeholder="예: 미장공, 줄눈공"
             className="w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
-          />
+          >
+            <option value="">선택하세요</option>
+            {GRADES.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="공종">
+          {tradeCustom ? (
+            <div className="flex gap-2">
+              <input
+                value={form.default_trade}
+                onChange={(e) => setForm((f) => ({ ...f, default_trade: e.target.value }))}
+                disabled={!editing}
+                placeholder="공종 직접 입력"
+                className="flex-1 rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
+              />
+              {editing && (
+                <button
+                  type="button"
+                  onClick={() => { setTradeCustom(false); setForm((f) => ({ ...f, default_trade: '' })); }}
+                  className="px-4 text-sm font-semibold text-zinc-500 underline"
+                >
+                  목록
+                </button>
+              )}
+            </div>
+          ) : (
+            <select
+              value={form.default_trade}
+              onChange={(e) => {
+                if (e.target.value === '__custom__') {
+                  setTradeCustom(true);
+                  setForm((f) => ({ ...f, default_trade: '' }));
+                } else {
+                  setForm((f) => ({ ...f, default_trade: e.target.value }));
+                }
+              }}
+              disabled={!editing}
+              className="w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
+            >
+              <option value="">선택하세요</option>
+              {TRADES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+              <option value="__custom__">직접 입력...</option>
+            </select>
+          )}
         </Field>
 
         <Field label="은행">
-          <input
-            list="me-bank-list"
-            value={form.bank_name}
-            onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
-            disabled={!editing}
-            placeholder="은행 선택 또는 입력"
-            className="w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
-          />
-          <datalist id="me-bank-list">
-            {KOREAN_BANKS.map((b) => <option key={b} value={b} />)}
-          </datalist>
+          {bankCustom ? (
+            <div className="flex gap-2">
+              <input
+                value={form.bank_name}
+                onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
+                disabled={!editing}
+                placeholder="은행명 직접 입력"
+                className="flex-1 rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
+              />
+              {editing && (
+                <button
+                  type="button"
+                  onClick={() => { setBankCustom(false); setForm((f) => ({ ...f, bank_name: '' })); }}
+                  className="px-4 text-sm font-semibold text-zinc-500 underline"
+                >
+                  목록
+                </button>
+              )}
+            </div>
+          ) : (
+            <select
+              value={form.bank_name}
+              onChange={(e) => {
+                if (e.target.value === '__custom__') {
+                  setBankCustom(true);
+                  setForm((f) => ({ ...f, bank_name: '' }));
+                } else {
+                  setForm((f) => ({ ...f, bank_name: e.target.value }));
+                }
+              }}
+              disabled={!editing}
+              className="w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:ring-zinc-100 disabled:text-zinc-600"
+            >
+              <option value="">선택하세요</option>
+              {KOREAN_BANKS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+              <option value="__custom__">직접 입력...</option>
+            </select>
+          )}
         </Field>
 
         <Field label="계좌번호">

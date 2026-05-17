@@ -64,9 +64,9 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
       <div className="w-full max-w-md rounded-[5px] bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-[#D7D7D7] px-5 py-3">
           <h2 className="text-base font-semibold">{title}</h2>
-          <button onClick={onCancel} className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700" aria-label="닫기">
+          <button onClick={onCancel} className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]" aria-label="닫기">
             <X className="h-4 w-4" />
           </button>
         </div>

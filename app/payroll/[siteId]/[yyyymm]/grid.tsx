@@ -177,9 +177,9 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     load();
   }
 
-  const [downloadBusy, setDownloadBusy] = useState<'download' | 'zip' | null>(null);
+  const [downloadBusy, setDownloadBusy] = useState<'download' | null>(null);
 
-  async function fetchAndSave(endpoint: 'download' | 'zip', fallbackName: string) {
+  async function fetchAndSave(endpoint: 'download', fallbackName: string) {
     if (slots.length === 0) {
       alert('작업자를 1명 이상 추가해주세요.');
       return;
@@ -208,7 +208,6 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     }
   }
   const handleDownload = () => fetchAndSave('download', `노임대장_${yearMonth}.xlsx`);
-  const handleZipDownload = () => fetchAndSave('zip', `노임대장_${yearMonth}.zip`);
 
   function dayTotalHours(day: number): number {
     return slots.reduce((sum, s) => sum + (cellMap.get(`${s.id}:${day}`) ?? 0), 0);
@@ -217,14 +216,14 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   return (
     <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link href="/payroll" className="text-sm text-zinc-500 hover:text-zinc-900">
+        <Link href="/payroll" className="text-sm text-[#6B7280] hover:text-[#091413]">
           ← 현장 목록
         </Link>
       </div>
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-zinc-500">{siteName}</p>
+          <p className="text-sm text-[#6B7280]">{siteName}</p>
           <div className="flex items-center gap-2">
             <Button
               size="icon"
@@ -246,42 +245,38 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={handleDownload} disabled={!!downloadBusy}>
+          <Button onClick={handleDownload} disabled={!!downloadBusy}>
             <Download className="h-4 w-4" />
-            {downloadBusy === 'download' ? '생성 중...' : '엑셀 1개'}
-          </Button>
-          <Button onClick={handleZipDownload} disabled={!!downloadBusy}>
-            <Download className="h-4 w-4" />
-            {downloadBusy === 'zip' ? '생성 중...' : '협력사별 ZIP'}
+            {downloadBusy === 'download' ? '생성 중...' : '엑셀 다운로드'}
           </Button>
         </div>
       </div>
 
       {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-[5px] border border-zinc-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-[5px] border border-[#D7D7D7] bg-white shadow-sm">
         <table className="border-collapse text-[12px]">
           <thead>
-            <tr className="border-b border-zinc-200 bg-zinc-50">
-              <th className="sticky left-0 z-10 bg-zinc-50 px-3 py-2 font-medium w-10 text-zinc-600">#</th>
-              <th className="sticky left-10 z-10 bg-zinc-50 px-3 py-2 font-medium text-center text-zinc-600 min-w-[100px]">성명</th>
-              <th className="sticky left-[152px] z-10 bg-zinc-50 px-3 py-2 font-medium text-center text-zinc-600 min-w-[120px]">협력사</th>
-              <th className="px-3 py-2 font-medium text-center text-zinc-600 min-w-[80px]">공종</th>
-              <th className="px-3 py-2 font-medium text-right text-zinc-600 min-w-[100px]">일당</th>
+            <tr className="border-b border-[#D7D7D7] bg-[#F5F5F5]">
+              <th className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2 font-medium w-10 text-[#4B5563]">#</th>
+              <th className="sticky left-10 z-10 bg-[#F5F5F5] px-3 py-2 font-medium text-center text-[#4B5563] min-w-[100px]">성명</th>
+              <th className="sticky left-[152px] z-10 bg-[#F5F5F5] px-3 py-2 font-medium text-center text-[#4B5563] min-w-[120px]">협력사</th>
+              <th className="px-3 py-2 font-medium text-center text-[#4B5563] min-w-[80px]">공종</th>
+              <th className="px-3 py-2 font-medium text-right text-[#4B5563] min-w-[100px]">일당</th>
               {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                <th key={d} className="border-l border-zinc-200 px-1.5 py-2 font-medium text-zinc-600 w-10 text-center tabular-nums">{d}</th>
+                <th key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 font-medium text-[#4B5563] w-10 text-center tabular-nums">{d}</th>
               ))}
-              <th className="border-l border-zinc-200 bg-zinc-100 px-3 py-2 font-medium text-zinc-700 w-14 text-center">공수</th>
-              <th className="border-l border-zinc-200 bg-zinc-100 px-3 py-2 font-medium text-zinc-700 w-14 text-center">일수</th>
-              <th className="border-l border-zinc-200 px-2 py-2 font-medium text-zinc-600 w-10"></th>
+              <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-14 text-center">공수</th>
+              <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-14 text-center">일수</th>
+              <th className="border-l border-[#D7D7D7] px-2 py-2 font-medium text-[#4B5563] w-10"></th>
             </tr>
           </thead>
           <tbody>
             {!loaded ? (
-              <tr><td colSpan={6 + totalDays} className="py-12 text-center text-zinc-400">불러오는 중...</td></tr>
+              <tr><td colSpan={6 + totalDays} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
             ) : slots.length === 0 ? (
               <tr>
-                <td colSpan={6 + totalDays} className="py-12 text-center text-zinc-400">
+                <td colSpan={6 + totalDays} className="py-12 text-center text-[#9CA3AF]">
                   아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
                 </td>
               </tr>
@@ -290,8 +285,8 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                 const sum = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
                 const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`)).filter((v) => v != null && v > 0).length;
                 return (
-                  <tr key={s.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
-                    <td className="sticky left-0 z-10 bg-white px-3 py-2 text-zinc-500 tabular-nums">{idx + 1}</td>
+                  <tr key={s.id} className="border-b border-[#D7D7D7] hover:bg-[#F5F5F5]/50">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[#6B7280] tabular-nums">{idx + 1}</td>
                     <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium text-center">{s.worker.name}</td>
                     <td className="sticky left-[152px] z-10 bg-white px-1.5 py-1 text-center">
                       <SubcontractorSelect
@@ -300,16 +295,16 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                         onChange={(id) => patchSlot(s.id, { subcontractor_id: id || null })}
                       />
                     </td>
-                    <td className="px-3 py-2 text-center text-zinc-700">
-                      {s.worker.default_trade ?? <span className="text-zinc-400">-</span>}
+                    <td className="px-3 py-2 text-center text-[#091413]">
+                      {s.worker.default_trade ?? <span className="text-[#9CA3AF]">-</span>}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-zinc-700">
-                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-zinc-400">-</span>}
+                    <td className="px-3 py-2 text-right tabular-nums text-[#091413]">
+                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#9CA3AF]">-</span>}
                     </td>
                     {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => {
                       const v = cellMap.get(`${s.id}:${d}`);
                       return (
-                        <td key={d} className="border-l border-zinc-100 p-0 text-center tabular-nums">
+                        <td key={d} className="border-l border-[#D7D7D7] p-0 text-center tabular-nums">
                           <CellInput
                             value={v ?? null}
                             onChange={(n) => setCell(s.id, d, n)}
@@ -317,11 +312,11 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                         </td>
                       );
                     })}
-                    <td className="border-l border-zinc-200 bg-zinc-50 px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
-                    <td className="border-l border-zinc-200 bg-zinc-50 px-2 py-2 text-center tabular-nums text-zinc-600">{days || ''}</td>
-                    <td className="border-l border-zinc-100 px-1 py-2 text-center">
+                    <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
+                    <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[#4B5563]">{days || ''}</td>
+                    <td className="border-l border-[#D7D7D7] px-1 py-2 text-center">
                       <button
-                        className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                        className="rounded p-1 text-[#9CA3AF] hover:bg-red-50 hover:text-red-600"
                         onClick={() => removeSlot(s.id, s.worker.name)}
                         aria-label="작업자 제거"
                       >
@@ -333,16 +328,16 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
               })
             )}
             {slots.length > 0 && (
-              <tr className="border-t-2 border-zinc-300 bg-zinc-50 font-semibold text-zinc-700">
-                <td colSpan={5} className="sticky left-0 z-10 bg-zinc-50 px-3 py-2">일자별 합계</td>
+              <tr className="border-t-2 border-[#D7D7D7] bg-[#F5F5F5] font-semibold text-[#091413]">
+                <td colSpan={5} className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2">일자별 합계</td>
                 {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                  <td key={d} className="border-l border-zinc-200 px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
+                  <td key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
                 ))}
-                <td className="border-l border-zinc-200 bg-zinc-100 px-2 py-2 text-center tabular-nums">
+                <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums">
                   {slots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
                 </td>
-                <td className="border-l border-zinc-200 bg-zinc-100"></td>
-                <td className="border-l border-zinc-200"></td>
+                <td className="border-l border-[#D7D7D7] bg-[#F5F5F5]"></td>
+                <td className="border-l border-[#D7D7D7]"></td>
               </tr>
             )}
           </tbody>
@@ -404,7 +399,7 @@ function SubcontractorSelect({
 }) {
   return (
     <select
-      className="w-full bg-transparent px-2 py-1.5 text-center text-[12px] text-zinc-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
+      className="w-full bg-transparent px-2 py-1.5 text-center text-[12px] text-[#091413] outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 rounded"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -446,18 +441,18 @@ function AddWorkerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[#D7D7D7] px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold">작업자 추가</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">최대 {remainingSlots}명까지 선택 가능</p>
+            <p className="text-xs text-[#6B7280] mt-0.5">최대 {remainingSlots}명까지 선택 가능</p>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-zinc-500 hover:bg-zinc-100">
+          <button onClick={onClose} className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5]">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="border-b border-zinc-100 px-6 py-3">
+        <div className="border-b border-[#D7D7D7] px-6 py-3">
           <input
-            className="w-full rounded-[5px] border border-zinc-200 px-3 py-1.5 text-sm"
+            className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-1.5 text-sm"
             placeholder="이름·사번 검색"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -466,7 +461,7 @@ function AddWorkerModal({
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {filtered.length === 0 ? (
-            <p className="p-8 text-center text-sm text-zinc-500">
+            <p className="p-8 text-center text-sm text-[#6B7280]">
               {available.length === 0 ? '추가 가능한 작업자가 없습니다.' : '검색 결과가 없습니다.'}
             </p>
           ) : (
@@ -476,21 +471,21 @@ function AddWorkerModal({
                 <label
                   key={w.id}
                   className={`flex items-center gap-3 rounded-[5px] p-3 cursor-pointer transition ${
-                    isSelected ? 'bg-blue-50' : 'hover:bg-zinc-50'
+                    isSelected ? 'bg-blue-50' : 'hover:bg-[#F5F5F5]'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggle(w.id)}
-                    className="h-4 w-4 rounded border-zinc-300"
+                    className="h-4 w-4 rounded border-[#D7D7D7]"
                   />
                   <div className="flex-1">
                     <p className="font-medium">
                       {w.name}
-                      {w.employee_code && <span className="ml-2 text-xs text-zinc-400 font-mono">[{w.employee_code}]</span>}
+                      {w.employee_code && <span className="ml-2 text-xs text-[#9CA3AF] font-mono">[{w.employee_code}]</span>}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-[#6B7280]">
                       {w.default_trade ?? '공종 미정'} · 일당 {w.default_wage.toLocaleString()}원
                     </p>
                   </div>
@@ -499,7 +494,7 @@ function AddWorkerModal({
             })
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-zinc-200 px-6 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-[#D7D7D7] px-6 py-4">
           <Button variant="outline" onClick={onClose}>취소</Button>
           <Button disabled={selected.size === 0} onClick={() => onAdd(Array.from(selected))}>
             {selected.size}명 추가

@@ -39,10 +39,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-zinc-50 p-6">
+    <div className="min-h-svh flex items-center justify-center bg-[#F5F5F5] p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-[5px] bg-zinc-900 text-white">
+          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-[5px] bg-[#273F4F] text-white">
             <Hammer className="h-5 w-5" />
           </div>
           <CardTitle>(주)예성건축 노임대장</CardTitle>

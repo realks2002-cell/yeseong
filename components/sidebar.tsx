@@ -14,6 +14,7 @@ import {
   Building2,
   Store,
   BellOff,
+  ClipboardCheck,
   LogOut as LogOutIcon,
   KeyRound,
   ChevronDown,
@@ -63,6 +64,7 @@ const groups: Group[] = [
   {
     label: '모니터링',
     items: [
+      { label: '소장출역 검토', href: '/monitoring/attendance-review', icon: ClipboardCheck },
       { label: '앱 종료 알림', href: '/monitoring/offline', icon: BellOff },
       { label: '이탈 기록', href: '/monitoring/departures', icon: LogOutIcon },
     ],
@@ -85,21 +87,21 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 h-svh w-[168px] shrink-0 border-r border-zinc-200 bg-white flex flex-col">
+    <aside className="sticky top-0 h-svh w-[168px] shrink-0 border-r border-[#D7D7D7] bg-white flex flex-col">
       <Link
         href="/dashboard"
-        className="flex items-center gap-2 px-5 h-14 border-b border-zinc-200 text-zinc-900 font-semibold"
+        className="flex items-center gap-2 px-5 h-14 border-b border-[#D7D7D7] text-[#091413] font-semibold"
       >
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-zinc-900 text-white">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-[#273F4F] text-white">
           <Hammer className="h-4 w-4" />
         </span>
-        <span className="text-[11px]">(주)예성건축</span>
+        <span className="text-[12px]">(주)예성건축</span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
         {groups.map(group => (
           <div key={group.label}>
-            <p className="px-3 mb-1 text-[8px] font-semibold uppercase tracking-wider text-zinc-400">
+            <p className="px-3 mb-1 text-[9px] font-semibold uppercase tracking-wider text-[#6B7280]">
               {group.label}
             </p>
             <ul className="space-y-0.5">
@@ -111,23 +113,16 @@ export function Sidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-[11px] transition-colors',
+                        'flex items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-[12px] transition-colors',
                         active
-                          ? 'bg-zinc-200 text-zinc-900 font-semibold'
-                          : 'text-zinc-700 hover:bg-zinc-100'
+                          ? 'bg-[#D7D7D7] text-[#091413] font-semibold'
+                          : 'text-[#091413] hover:bg-[#F5F5F5]'
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       <span className="flex-1">{item.label}</span>
                       {item.badge && (
-                        <span
-                          className={cn(
-                            'rounded px-1.5 py-0.5 text-[7px] font-semibold',
-                            active
-                              ? 'bg-zinc-900 text-white'
-                              : 'bg-emerald-100 text-emerald-700'
-                          )}
-                        >
+                        <span className="rounded px-1.5 py-0.5 text-[8px] font-semibold bg-[#FE7743] text-white">
                           {item.badge}
                         </span>
                       )}
@@ -142,16 +137,16 @@ export function Sidebar() {
 
       <button
         type="button"
-        className="flex items-center gap-2.5 px-4 py-3 border-t border-zinc-200 text-[11px] text-zinc-700 hover:bg-zinc-50"
+        className="flex items-center gap-2.5 px-4 py-3 border-t border-[#D7D7D7] text-[12px] text-[#091413] hover:bg-[#F5F5F5]"
       >
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-semibold text-zinc-700">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#D7D7D7] text-[11px] font-semibold text-[#091413]">
           김
         </span>
         <span className="flex-1 text-left">
-          <span className="block text-[11px] font-medium leading-tight">김관리</span>
-          <span className="block text-[8px] text-zinc-500 leading-tight">admin</span>
+          <span className="block text-[12px] font-medium leading-tight">김관리</span>
+          <span className="block text-[9px] text-[#6B7280] leading-tight">admin</span>
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+        <ChevronDown className="h-3.5 w-3.5 text-[#6B7280]" />
       </button>
     </aside>
   );

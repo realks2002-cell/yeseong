@@ -56,7 +56,7 @@ export default function AccountPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">관리자 계정</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               총 {list?.length ?? '...'}명. 여러 관리자가 동시에 접속할 수 있습니다.
             </p>
           </div>
@@ -71,7 +71,7 @@ export default function AccountPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 text-zinc-600">
+              <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-xs">
                   <th className="px-4 py-3 font-medium w-12">#</th>
                   <th className="px-4 py-3 font-medium">ID</th>
@@ -80,32 +80,32 @@ export default function AccountPage() {
                   <th className="px-4 py-3 font-medium w-24"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-zinc-400">불러오는 중...</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-zinc-400">관리자가 없습니다.</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-[#9CA3AF]">관리자가 없습니다.</td></tr>
                 ) : (
                   list.map((a, i) => (
-                    <tr key={a.id} className="hover:bg-zinc-50">
-                      <td className="px-4 py-3 text-zinc-500 tabular-nums">{i + 1}</td>
+                    <tr key={a.id} className="hover:bg-[#F5F5F5]">
+                      <td className="px-4 py-3 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-4 py-3 font-medium">
                         {a.login_id}
                         {a.is_self && <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">본인</span>}
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 tabular-nums">{formatDate(a.last_sign_in_at)}</td>
-                      <td className="px-4 py-3 text-zinc-600 tabular-nums">{formatDate(a.created_at)}</td>
+                      <td className="px-4 py-3 text-[#4B5563] tabular-nums">{formatDate(a.last_sign_in_at)}</td>
+                      <td className="px-4 py-3 text-[#4B5563] tabular-nums">{formatDate(a.created_at)}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <button
-                            className="rounded p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                            className="rounded p-1.5 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
                             onClick={() => setForm({ kind: 'edit', admin: a })}
                             aria-label="수정"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
-                            className="rounded p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="rounded p-1.5 text-[#6B7280] hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
                             onClick={() => handleDelete(a)}
                             disabled={a.is_self}
                             aria-label="삭제"
@@ -187,15 +187,15 @@ function AdminFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[#D7D7D7] px-6 py-4">
           <h2 className="text-lg font-semibold">{isEdit ? `${mode.admin.login_id} 수정` : '관리자 추가'}</h2>
-          <button onClick={onClose} className="rounded p-1 text-zinc-500 hover:bg-zinc-100">
+          <button onClick={onClose} className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5]">
             <X className="h-5 w-5" />
           </button>
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-700">ID</label>
+            <label className="text-sm font-medium text-[#091413]">ID</label>
             <Input
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
@@ -205,8 +205,8 @@ function AdminFormModal({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-700">
-              비밀번호 {isEdit && <span className="text-xs text-zinc-400">(비우면 변경 안 함)</span>}
+            <label className="text-sm font-medium text-[#091413]">
+              비밀번호 {isEdit && <span className="text-xs text-[#9CA3AF]">(비우면 변경 안 함)</span>}
             </label>
             <Input
               type="password"

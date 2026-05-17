@@ -25,17 +25,17 @@ export default async function UploadPage({
     <div className="min-h-svh">
       <Nav />
       <main className="mx-auto max-w-3xl p-6">
-        <Link href={`/payroll/${siteId}/${yyyymm}`} className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900">
+        <Link href={`/payroll/${siteId}/${yyyymm}`} className="inline-flex items-center gap-1 text-sm text-[#6B7280] hover:text-[#091413]">
           <ArrowLeft className="h-4 w-4" />
           노임대장으로
         </Link>
-        <div className="mt-6 rounded-[5px] border border-dashed border-zinc-300 bg-white p-12 text-center">
-          <Camera className="mx-auto h-10 w-10 text-zinc-300" />
+        <div className="mt-6 rounded-[5px] border border-dashed border-[#D7D7D7] bg-white p-12 text-center">
+          <Camera className="mx-auto h-10 w-10 text-[#D7D7D7]" />
           <h1 className="mt-4 text-lg font-semibold">출역부 사진 업로드</h1>
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 text-sm text-[#6B7280]">
             {ws.name} · {yyyymm}
           </p>
-          <p className="mt-6 text-sm text-zinc-500">
+          <p className="mt-6 text-sm text-[#6B7280]">
             Vision 자동 입력 기능은 준비 중입니다.<br />
             현재는 노임대장 그리드에서 직접 입력해주세요.
           </p>

@@ -66,7 +66,7 @@ export default function CompanySettingsPage() {
       <div className="mx-auto max-w-2xl p-6 space-y-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight">회사 정보</h1>
-          <p className="text-sm text-zinc-500">노임대장 등 출력물에 사용되는 회사 기본 정보입니다.</p>
+          <p className="text-sm text-[#6B7280]">노임대장 등 출력물에 사용되는 회사 기본 정보입니다.</p>
         </div>
 
         <Card>
@@ -76,7 +76,7 @@ export default function CompanySettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {!loaded ? (
-              <p className="text-sm text-zinc-400">불러오는 중...</p>
+              <p className="text-sm text-[#9CA3AF]">불러오는 중...</p>
             ) : (
               <>
                 <Field label="회사명 *">
@@ -126,7 +126,7 @@ export default function CompanySettingsPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-zinc-700">{label}</label>
+      <label className="text-sm font-medium text-[#091413]">{label}</label>
       {children}
     </div>
   );

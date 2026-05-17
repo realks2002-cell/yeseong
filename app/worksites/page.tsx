@@ -67,7 +67,7 @@ export default function WorksitesPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">현장 마스터</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               총 {list?.length ?? '...'}개 현장
             </p>
           </div>
@@ -84,7 +84,7 @@ export default function WorksitesPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-zinc-50 text-zinc-600">
+              <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">현장명</th>
@@ -92,28 +92,28 @@ export default function WorksitesPage() {
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={4} className="py-10 text-center text-zinc-400">불러오는 중...</td></tr>
+                  <tr><td colSpan={4} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={4} className="py-10 text-center text-zinc-400">등록된 현장이 없습니다.</td></tr>
+                  <tr><td colSpan={4} className="py-10 text-center text-[#9CA3AF]">등록된 현장이 없습니다.</td></tr>
                 ) : (
                   list.map((w, i) => (
-                    <tr key={w.id} className="hover:bg-zinc-50">
-                      <td className="px-3 py-2 text-zinc-500 tabular-nums">{i + 1}</td>
+                    <tr key={w.id} className="hover:bg-[#F5F5F5]">
+                      <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{w.name}</td>
-                      <td className="px-3 py-2 text-zinc-600">{w.address ?? '-'}</td>
+                      <td className="px-3 py-2 text-[#4B5563]">{w.address ?? '-'}</td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
                           <button
-                            className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                            className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
                             onClick={() => setEditing(w)}
                             aria-label="수정"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            className="rounded p-1 text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                            className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
                             onClick={() => handleDelete(w)}
                             aria-label="삭제"
                           >

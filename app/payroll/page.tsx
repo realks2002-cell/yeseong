@@ -59,7 +59,7 @@ export default async function PayrollIndexPage() {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">노임대장</h1>
-            <p className="text-sm text-zinc-500 mt-1">현장을 선택하여 월별 노임대장을 관리하세요.</p>
+            <p className="text-sm text-[#6B7280] mt-1">현장을 선택하여 월별 노임대장을 관리하세요.</p>
           </div>
           <ZipAllButton yyyymm={ym} />
         </div>
@@ -74,7 +74,7 @@ export default async function PayrollIndexPage() {
           const visible = (worksites ?? []).filter((ws) => subsByWorksite.has(ws.id));
           if (visible.length === 0) {
             return (
-              <p className="mt-10 text-center text-sm text-zinc-400">
+              <p className="mt-10 text-center text-sm text-[#9CA3AF]">
                 {ym} 노임대장 데이터가 있는 현장이 없습니다.
               </p>
             );
@@ -84,20 +84,20 @@ export default async function PayrollIndexPage() {
               {visible.map((ws) => (
                 <Card key={ws.id}>
                   <CardHeader className="p-4 pb-2">
-                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
+                    <div className="flex items-center gap-1.5 text-[#6B7280] text-xs">
                       <MapPin className="h-3.5 w-3.5" />
                       현장
                     </div>
                     <CardTitle className="text-base">{ws.name}</CardTitle>
                     {ws.address && (
-                      <p className="text-[11px] text-zinc-500 line-clamp-1">{ws.address}</p>
+                      <p className="text-[11px] text-[#6B7280] line-clamp-1">{ws.address}</p>
                     )}
                     {(() => {
                       const subs = subsByWorksite.get(ws.id);
                       if (!subs || subs.length === 0) return null;
                       return (
                         <div className="mt-2 flex flex-wrap items-center gap-1">
-                          <Building2 className="h-3 w-3 text-zinc-400" />
+                          <Building2 className="h-3 w-3 text-[#9CA3AF]" />
                           {subs.map((name) => (
                             <span
                               key={name}
@@ -112,7 +112,7 @@ export default async function PayrollIndexPage() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <Link href={`/payroll/${ws.id}/${ym}`}>
-                      <Button size="sm" className="w-full justify-between bg-sky-200 hover:bg-sky-300 text-zinc-900">
+                      <Button size="sm" className="w-full justify-between">
                         <span className="inline-flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5" />
                           {ym} 노임대장 열기

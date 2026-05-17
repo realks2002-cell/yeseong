@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, CheckCheck, ClipboardCheck, X } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -122,6 +122,22 @@ export default function ManagerHomePage() {
     console.log(`승인 처리 ${data}건`);
   };
 
+  // 헤더 5초 길게 누르면 로그아웃
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startLongPress = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    longPressRef.current = setTimeout(async () => {
+      await sb.auth.signOut();
+      router.replace('/m');
+    }, 5000);
+  };
+  const cancelLongPress = () => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+
   const grouped = useMemo(() => {
     if (!items) return [];
     const byDate = new Map<string, PendingItem[]>();
@@ -144,7 +160,21 @@ export default function ManagerHomePage() {
     <MobileShell showTabs activeTab="home" variant="manager">
       <section className="px-7 pt-8 pb-10">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-zinc-900">검토 대기 출역</h2>
+          <h2
+            className="text-xl font-bold text-zinc-900 select-none cursor-pointer"
+            style={{
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              touchAction: 'manipulation',
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            onPointerDown={startLongPress}
+            onPointerUp={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+          >
+            검토 대기 출역
+          </h2>
           <span className="text-sm font-semibold text-zinc-400">{items?.length ?? 0}건</span>
         </div>
 
