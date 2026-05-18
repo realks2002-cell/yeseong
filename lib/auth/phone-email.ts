@@ -1,6 +1,6 @@
-// 모바일 작업자/소장 전화번호 → Supabase Auth 가짜 이메일 매핑
+// 모바일 작업자/팀장 전화번호 → Supabase Auth 가짜 이메일 매핑
 // 관리자(admin@yeseong.local)와 도메인을 분리해 충돌 방지
-// 작업자 앱 / 소장 앱은 도메인을 다시 분리해서 한 번호로 양쪽 가입 가능
+// 작업자 앱 / 팀장 앱은 도메인을 다시 분리해서 한 번호로 양쪽 가입 가능
 const MOBILE_DOMAIN = '@yeseong.mobile';
 const MANAGER_DOMAIN = '@yeseong.manager';
 

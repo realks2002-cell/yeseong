@@ -189,7 +189,7 @@ function RejectedNotice({ hours, reason }: { hours: number; reason: string | nul
         </span>
         <div className="flex-1">
           <p className="text-base font-bold text-red-800">
-            소장님이 출역을 반려했습니다
+            팀장님이 출역을 반려했습니다
           </p>
           <p className="mt-1 text-sm text-red-700">
             기존 등록: <span className="font-semibold">{hours}일</span>
@@ -221,7 +221,7 @@ function LockedView({ hours }: { hours: number }) {
         </span>
       </div>
       <p className="mt-8 text-base text-blue-200">
-        수정이 필요하시면 소장님께 말씀해주세요
+        수정이 필요하시면 팀장님께 말씀해주세요
       </p>
     </section>
   );
@@ -309,7 +309,7 @@ function ConfirmDialog({
       <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-xl text-zinc-500">오늘 근무를</p>
         <p className="mt-2 text-center text-[44px] font-bold text-zinc-900">{hours}일로 등록할까요?</p>
-        <p className="mt-3 text-center text-base text-zinc-500">등록 후 수정은 소장님만 가능해요</p>
+        <p className="mt-3 text-center text-base text-zinc-500">등록 후 수정은 팀장님만 가능해요</p>
         <div className="mt-7 grid grid-cols-2 gap-3">
           <button
             onClick={onCancel}

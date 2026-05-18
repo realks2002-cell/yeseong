@@ -1,4 +1,4 @@
--- 소장앱 가입 흐름 통합:
+-- 팀장앱 가입 흐름 통합:
 -- 1) yeseong_check_phone_full: phone 입력 후 흐름 분기 위한 통합 조회
 -- 2) yeseong_manager_attach_worker_and_signup: 작업자 마스터에 phone 있는 경우 auth+pin 연결 + 매니저 row 생성
 -- 3) yeseong_manager_get_me 확장: workers JOIN으로 본인 작업자 정보 동봉

@@ -28,6 +28,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     'address', 'bank_name', 'account_number', 'account_holder', 'phone',
     'default_wage', 'default_trade', 'skill_grade', 'wage_type',
     'first_work_date', 'nationality', 'visa_status', 'is_active',
+    'team_leader_id',
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
@@ -65,6 +66,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // 팀장 현장 변경 시 소속 팀원 현장 자동 배치
+  if ('default_worksite_id' in patch) {
+    // 업데이트 후 DB에서 최종 skill_grade 조회 (patch에 skill_grade가 있든 없든 확실하게)
+    const { data: worker } = await sb
+      .from('yeseong_workers')
+      .select('skill_grade')
+      .eq('id', id)
+      .single();
+    if (worker?.skill_grade === '팀장') {
+      await sb
+        .from('yeseong_workers')
+        .update({ default_worksite_id: patch.default_worksite_id })
+        .eq('team_leader_id', id);
+    }
+  }
+
   return NextResponse.json(data);
 }
 

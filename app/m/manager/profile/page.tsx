@@ -55,7 +55,7 @@ export default function ManagerProfilePage() {
         <p className="mt-1 text-lg font-semibold text-blue-200">
           {formatPhone(me.manager.phone)}
         </p>
-        <p className="mt-1 text-xs font-semibold text-blue-200">현장 소장</p>
+        <p className="mt-1 text-xs font-semibold text-blue-200">현장 팀장</p>
       </section>
 
       <section className="px-7">

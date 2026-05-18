@@ -1,4 +1,4 @@
-// 소장 앱 검증용 pending 출역 mock 시드
+// 팀장 앱 검증용 pending 출역 mock 시드
 // 각 현장에 작업자 5명씩 × 오늘 1건 = 약 75건 pending 생성
 // 실행: pnpm tsx scripts/seed-mock-attendance.ts
 //

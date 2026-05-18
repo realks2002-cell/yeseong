@@ -12,7 +12,7 @@ const APPS = [
   },
   {
     icon: HardHat,
-    title: '소장 앱',
+    title: '팀장 앱',
     description: '현장 관리 · 작업자 출역 승인 · 발주',
     href: '/apps/yeseong-manager.apk',
     filename: 'yeseong-manager.apk',

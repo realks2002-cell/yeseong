@@ -113,7 +113,7 @@ export default function ManagersPage() {
   }
 
   async function handleDelete(m: Manager) {
-    if (!confirm(`"${m.name}" 소장을 삭제할까요?`)) return;
+    if (!confirm(`"${m.name}" 팀장을 삭제할까요?`)) return;
     const r = await fetch(`/api/managers/${m.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
@@ -128,15 +128,15 @@ export default function ManagersPage() {
       <div className="mx-auto max-w-7xl p-6">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">현장 소장</h1>
+            <h1 className="text-2xl font-bold tracking-tight">현장 팀장</h1>
             <p className="mt-1 text-sm text-[#6B7280]">
               총 {list?.length ?? '...'}명{query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}.
-              관리자가 직접 추가/수정하거나 소장 앱에서 가입한 사용자가 노출됩니다.
+              관리자가 직접 추가/수정하거나 팀장 앱에서 가입한 사용자가 노출됩니다.
             </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
             <UserPlus className="h-4 w-4" />
-            소장 추가
+            팀장 추가
           </Button>
         </div>
 
@@ -187,7 +187,7 @@ export default function ManagersPage() {
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-10 text-center text-[#9CA3AF]">
-                      {query ? '검색 결과가 없습니다.' : '등록된 소장이 없습니다.'}
+                      {query ? '검색 결과가 없습니다.' : '등록된 팀장이 없습니다.'}
                     </td>
                   </tr>
                 ) : (
@@ -259,7 +259,7 @@ export default function ManagersPage() {
 
       {showAdd && (
         <ManagerForm
-          title="소장 추가"
+          title="팀장 추가"
           worksites={worksites}
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}

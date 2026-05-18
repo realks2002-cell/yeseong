@@ -222,7 +222,10 @@ function PendingCard({
 }) {
   return (
     <div className="flex items-center gap-2 rounded-[5px] bg-white px-3 py-2 ring-1 ring-zinc-200">
-      <p className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-900">{item.worker_name}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-zinc-900">{item.worker_name}</p>
+        <p className="text-[10px] text-zinc-400 tabular-nums">{formatTime(item.created_at)}</p>
+      </div>
       <p className="shrink-0 text-base font-bold tabular-nums text-blue-900">{item.hours}일</p>
       <div className="shrink-0 flex gap-1.5">
         <button
@@ -335,4 +338,13 @@ function formatDate(iso: string): string {
   const date = new Date(y, m - 1, d);
   const dow = ['일','월','화','수','목','금','토'][date.getDay()];
   return `${m}월 ${d}일 (${dow})`;
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? '오전' : '오후';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${ampm} ${h12}:${m} 제출`;
 }

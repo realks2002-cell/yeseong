@@ -390,8 +390,8 @@ function PhoneStep({
           <HardHat className="h-6 w-6" />
         </span>
         <div>
-          <p className="text-2xl font-bold text-zinc-900">(주)예성건축 소장</p>
-          <p className="text-sm font-semibold text-zinc-500">현장 소장 전용</p>
+          <p className="text-2xl font-bold text-zinc-900">(주)예성건축 팀장</p>
+          <p className="text-sm font-semibold text-zinc-500">현장 팀장 전용</p>
         </div>
       </div>
       <h1 className="mt-10 text-[40px] font-bold leading-tight text-zinc-900">

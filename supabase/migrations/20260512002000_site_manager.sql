@@ -1,9 +1,9 @@
--- 현장 소장 모바일 앱 (별도 APK com.yeseong.manager)
+-- 현장 팀장 모바일 앱 (별도 APK com.yeseong.manager)
 --
 -- 결정 사항 (2026-05-12):
 --   1) 작업자(yeseong_workers)와 분리된 yeseong_site_managers 테이블
---      "소장 앱을 설치하는 사람이 소장" — role 분기 X
---   2) 소장 ↔ 현장 다대다 매핑 (yeseong_site_manager_assignments)
+--      "팀장 앱을 설치하는 사람이 팀장" — role 분기 X
+--   2) 팀장 ↔ 현장 다대다 매핑 (yeseong_site_manager_assignments)
 --   3) yeseong_attendance 에 승인 컬럼 추가 (approval_status, approved_at, approved_by, rejection_reason)
 --   4) 기존 출역 데이터 백필: source != 'mobile'은 'approved'로 일괄
 --      (출시 이전 manual/vision/import 출역은 관리자가 노임대장 작성용으로 이미 검증)
@@ -33,7 +33,7 @@ create policy "site_managers_self" on yeseong_site_managers for all
   with check (auth_user_id = auth.uid());
 
 -- ============================================================
--- 2) yeseong_site_manager_assignments (소장 ↔ 담당 현장)
+-- 2) yeseong_site_manager_assignments (팀장 ↔ 담당 현장)
 -- ============================================================
 create table yeseong_site_manager_assignments (
   id uuid primary key default gen_random_uuid(),

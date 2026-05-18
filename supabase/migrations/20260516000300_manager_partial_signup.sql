@@ -1,4 +1,4 @@
--- 소장앱 가입도 결측 단계만 진행하도록 통합
+-- 팀장앱 가입도 결측 단계만 진행하도록 통합
 --   1) yeseong_check_phone_full v2: missing/prefilled 추가
 --   2) yeseong_manager_signup_full v3: NULL coalesce로 부분 업데이트
 

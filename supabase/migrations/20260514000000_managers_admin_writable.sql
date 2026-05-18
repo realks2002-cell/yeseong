@@ -1,10 +1,10 @@
--- 관리자 웹에서 소장 추가/수정 가능하도록 스키마/RPC 확장
+-- 관리자 웹에서 팀장 추가/수정 가능하도록 스키마/RPC 확장
 --
 -- 변경:
 --   1) auth_user_id nullable — 관리자가 모바일 가입 전 미리 생성 가능
 --   2) pin text 컬럼 추가 — 작업자(yeseong_workers.pin)와 동일 패턴, 관리자 가시성
 --   3) signup_or_link RPC: 동일 phone shell 존재 시 링크
---   4) RLS: 인증된 사용자도 select 가능하도록 보강 (관리자가 본인 외 소장 조회 필요)
+--   4) RLS: 인증된 사용자도 select 가능하도록 보강 (관리자가 본인 외 팀장 조회 필요)
 --      → 기존 'site_managers_self' 정책은 mutate에만 적용, select는 분리 정책
 
 alter table yeseong_site_managers

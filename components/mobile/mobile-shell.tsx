@@ -60,7 +60,7 @@ function Tab({ href, icon, label, active }: { href: string; icon: ReactNode; lab
   );
 }
 
-// 소장앱 출역검토 탭 long-press(5초)로 로그아웃. 짧은 탭은 /m/manager/home 이동.
+// 팀장앱 출역검토 탭 long-press(5초)로 로그아웃. 짧은 탭은 /m/manager/home 이동.
 function ManagerHomeTabWithLongPressLogout({ active }: { active: boolean }) {
   const router = useRouter();
   const [pressing, setPressing] = useState(false);

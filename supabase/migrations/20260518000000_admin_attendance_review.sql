@@ -1,5 +1,5 @@
--- 관리자 웹 — 소장출역 검토 페이지
---   1) yeseong_admin_list_attendance_review: 출역 + 작업자 + 현장 + 승인 소장 정보 join
+-- 관리자 웹 — 팀장출역 검토 페이지
+--   1) yeseong_admin_list_attendance_review: 출역 + 작업자 + 현장 + 승인 팀장 정보 join
 --   2) yeseong_admin_bulk_approve_attendance: 일괄/단일 승인·미승인 (관리자 권한)
 
 -- ============================================================

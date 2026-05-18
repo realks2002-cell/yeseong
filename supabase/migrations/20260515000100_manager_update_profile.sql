@@ -1,4 +1,4 @@
--- 소장 앱 "내 정보" 화면 지원:
+-- 팀장 앱 "내 정보" 화면 지원:
 -- yeseong_manager_update_profile: 본인 이름 수정 RPC (auth.uid()로 본인 row만 안전 update)
 
 create or replace function yeseong_manager_update_profile(

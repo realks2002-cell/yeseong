@@ -14,4 +14,4 @@ export const TRADES = [
 ] as const;
 
 // 구분(등급)
-export const GRADES = ['기공', '조공'] as const;
+export const GRADES = ['팀장', '기공', '조공'] as const;

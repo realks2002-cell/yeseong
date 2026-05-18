@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { formatRrnPlain } from '@/lib/crypto/rrn';
+import { GRADES } from '@/lib/constants/trades';
 
 const RRN_PATTERN = /^\d{6}-?\d{7}$/;
 
@@ -39,6 +40,7 @@ export type Worker = {
   is_active: boolean;
   created_at: string;
   auth_user_id: string | null;
+  team_leader_id: string | null;
 };
 
 export type WorkerInput = {
@@ -52,6 +54,8 @@ export type WorkerInput = {
   account_holder: string | null;
   phone: string | null;
   address: string | null;
+  skill_grade: string | null;
+  team_leader_id: string | null;
 };
 
 type Props = {
@@ -60,11 +64,13 @@ type Props = {
   onCancel: () => void;
   title: string;
   existingBanks?: string[];
+  workers?: Worker[];
 };
 
-export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks = [] }: Props) {
+export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks = [], workers = [] }: Props) {
   const bankOptions = Array.from(new Set([...KOREAN_BANKS, ...existingBanks.filter(Boolean)]));
   const isEdit = !!initial;
+  const teamLeaders = workers.filter((w) => w.skill_grade === '팀장' && w.id !== initial?.id);
   const [form, setForm] = useState<WorkerInput>(() => buildInitial(initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -141,6 +147,23 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
               disabled={loading}
             />
           </Field>
+          <Field label="구분">
+            <select
+              value={form.skill_grade ?? ''}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                set('skill_grade', v);
+                if (v === '팀장') set('team_leader_id', null);
+              }}
+              disabled={loading}
+              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">선택</option>
+              {GRADES.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </Field>
           <Field label="공종">
             <Input
               value={form.default_trade ?? ''}
@@ -149,6 +172,22 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
               disabled={loading}
             />
           </Field>
+
+          {form.skill_grade !== '팀장' && (
+            <Field label="팀장">
+              <select
+                value={form.team_leader_id ?? ''}
+                onChange={(e) => set('team_leader_id', e.target.value || null)}
+                disabled={loading}
+                className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">없음</option>
+                {teamLeaders.map((tl) => (
+                  <option key={tl.id} value={tl.id}>{tl.name}</option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           <Field label="성명" required error={errors.name}>
             <Input value={form.name} onChange={(e) => set('name', e.target.value)} disabled={loading} />
@@ -253,6 +292,8 @@ function buildInitial(initial?: Worker): WorkerInput {
     account_holder: initial?.account_holder ?? null,
     phone: initial?.phone ?? null,
     address: initial?.address ?? null,
+    skill_grade: initial?.skill_grade ?? null,
+    team_leader_id: initial?.team_leader_id ?? null,
   };
 }
 

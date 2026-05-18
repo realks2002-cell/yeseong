@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { WorkerForm, type Worker, type WorkerInput } from '@/components/worker-form';
 import { maskFromParts } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
-import { Search, UserPlus, Pencil, Trash2, X, Smartphone } from 'lucide-react';
+import { Search, UserPlus, Pencil, Trash2, X, Smartphone, Download } from 'lucide-react';
 
 function formatRrn(plain: string | null, prefix: string | null, gender: string | null): string {
   if (plain) {
@@ -23,6 +23,7 @@ export default function WorkersPage() {
   const [editing, setEditing] = useState<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -107,10 +108,41 @@ export default function WorkersPage() {
               {query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}
             </p>
           </div>
-          <Button onClick={() => setShowAdd(true)}>
-            <UserPlus className="h-4 w-4" />
-            작업자 추가
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowAdd(true)}>
+              <UserPlus className="h-4 w-4" />
+              작업자 추가
+            </Button>
+            <Button
+              variant="outline"
+              disabled={downloading || !list?.length}
+              onClick={async () => {
+                setDownloading(true);
+                try {
+                  const res = await fetch('/api/workers/download');
+                  if (!res.ok) throw new Error('다운로드 실패');
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  const cd = res.headers.get('Content-Disposition') ?? '';
+                  const match = cd.match(/filename\*=UTF-8''(.+)/);
+                  a.download = match ? decodeURIComponent(match[1]) : '작업자마스터.xlsx';
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  alert('엑셀 다운로드에 실패했습니다');
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+            >
+              <Download className="h-4 w-4" />
+              {downloading ? '생성 중...' : '엑셀 다운로드'}
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4 relative max-w-md">
@@ -144,6 +176,7 @@ export default function WorkersPage() {
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">사번</th>
                   <th className="px-3 py-2 font-medium">성명</th>
+                  <th className="px-3 py-2 font-medium">팀장</th>
                   <th className="px-3 py-2 font-medium">구분</th>
                   <th className="px-3 py-2 font-medium">직종</th>
                   <th className="px-3 py-2 font-medium">주민번호</th>
@@ -159,9 +192,9 @@ export default function WorkersPage() {
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {filtered === null ? (
-                  <tr><td colSpan={14} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={15} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={14} className="py-10 text-center text-[#9CA3AF]">
+                  <tr><td colSpan={15} className="py-10 text-center text-[#9CA3AF]">
                     {query ? '검색 결과가 없습니다.' : '등록된 작업자가 없습니다.'}
                   </td></tr>
                 ) : (
@@ -172,6 +205,11 @@ export default function WorkersPage() {
                       <td className="px-3 py-2 font-medium">
                         {w.name}
                         {w.name_english && <span className="ml-1 text-[10px] text-[#9CA3AF]">({w.name_english})</span>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {w.team_leader_id
+                          ? list?.find((l) => l.id === w.team_leader_id)?.name ?? <span className="text-[#D7D7D7]">-</span>
+                          : <span className="text-[#D7D7D7]">-</span>}
                       </td>
                       <td className="px-3 py-2">{w.skill_grade ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2">{w.default_trade ?? <span className="text-[#D7D7D7]">-</span>}</td>
@@ -238,6 +276,7 @@ export default function WorkersPage() {
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
           existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
+          workers={list ?? []}
         />
       )}
       {editing && (
@@ -247,6 +286,7 @@ export default function WorkersPage() {
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
           existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
+          workers={list ?? []}
         />
       )}
     </AdminShell>

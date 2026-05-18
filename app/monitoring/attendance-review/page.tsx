@@ -42,6 +42,15 @@ function fmtDate(d: string): string {
   return d; // already yyyy-mm-dd
 }
 
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? '오전' : '오후';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${ampm} ${h12}:${m}`;
+}
+
 type TabFilters = { query: string; days: number; startDate: string; endDate: string };
 
 const DEFAULT_FILTERS: TabFilters = { query: '', days: 30, startDate: '', endDate: '' };
@@ -148,7 +157,7 @@ export default function AttendanceReviewPage() {
       <div className="w-full p-6">
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">소장출역 검토</h1>
+            <h1 className="text-2xl font-bold tracking-tight">팀장출역 검토</h1>
             <p className="text-sm text-[#6B7280] mt-1">
               작업자 제출 출역의 승인·미승인 내역. 관리자가 직접 처리할 수 있습니다.
             </p>
@@ -261,12 +270,13 @@ export default function AttendanceReviewPage() {
                     </th>
                   )}
                   <th className="px-3 py-2 font-medium">날짜</th>
+                  <th className="px-3 py-2 font-medium">제출시간</th>
                   <th className="px-3 py-2 font-medium">작업자</th>
                   <th className="px-3 py-2 font-medium">현장</th>
                   <th className="px-3 py-2 font-medium">협력사</th>
                   <th className="px-3 py-2 font-medium text-right">공수</th>
                   <th className="px-3 py-2 font-medium text-center">상태</th>
-                  <th className="px-3 py-2 font-medium">승인자(소장)</th>
+                  <th className="px-3 py-2 font-medium">승인자(팀장)</th>
                   {statusFilter === 'rejected' && (
                     <th className="px-3 py-2 font-medium text-right w-32">처리</th>
                   )}
@@ -274,9 +284,9 @@ export default function AttendanceReviewPage() {
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {visible === null ? (
-                  <tr><td colSpan={statusFilter === 'rejected' ? 9 : 7} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={statusFilter === 'rejected' ? 10 : 8} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : visible.length === 0 ? (
-                  <tr><td colSpan={statusFilter === 'rejected' ? 9 : 7} className="py-10 text-center text-[#9CA3AF]">
+                  <tr><td colSpan={statusFilter === 'rejected' ? 10 : 8} className="py-10 text-center text-[#9CA3AF]">
                     {filters.query ? '검색 결과가 없습니다.' : '해당 조건의 출역이 없습니다.'}
                   </td></tr>
                 ) : (
@@ -293,6 +303,7 @@ export default function AttendanceReviewPage() {
                         </td>
                       )}
                       <td className="px-3 py-2 tabular-nums">{fmtDate(r.work_date)}</td>
+                      <td className="px-3 py-2 tabular-nums text-[#6B7280]">{fmtTime(r.created_at)}</td>
                       <td className="px-3 py-2 font-medium">
                         {r.worker_name}
                         {r.worker_phone && <span className="ml-1 text-[10px] text-[#9CA3AF] font-mono">{formatPhone(r.worker_phone)}</span>}

@@ -14,6 +14,7 @@ import {
   HardHat,
   Building2,
   Store,
+  Layers,
   BellOff,
   ClipboardCheck,
   LogOut as LogOutIcon,
@@ -57,16 +58,17 @@ const groups: Group[] = [
     label: '마스터 데이터',
     items: [
       { label: '작업자', href: '/workers', icon: Users },
-      { label: '소장', href: '/managers', icon: HardHat },
+      { label: '팀장', href: '/managers', icon: HardHat },
       { label: '협력사', href: '/subcontractors', icon: HardHat },
       { label: '현장', href: '/worksites', icon: Building2 },
       { label: '거래처', href: '/vendors', icon: Store },
+      { label: '매사 단가', href: '/masonry-prices', icon: Layers },
     ],
   },
   {
     label: '모니터링',
     items: [
-      { label: '소장출역 검토', href: '/monitoring/attendance-review', icon: ClipboardCheck },
+      { label: '팀장출역 검토', href: '/monitoring/attendance-review', icon: ClipboardCheck },
       { label: '앱 종료 알림', href: '/monitoring/offline', icon: BellOff },
       { label: '이탈 기록', href: '/monitoring/departures', icon: LogOutIcon },
     ],

@@ -21,7 +21,7 @@ export async function PATCH(
     .select('id, phone, auth_user_id, pin')
     .eq('id', id)
     .single();
-  if (curErr || !current) return NextResponse.json({ error: '소장을 찾을 수 없음' }, { status: 404 });
+  if (curErr || !current) return NextResponse.json({ error: '팀장을 찾을 수 없음' }, { status: 404 });
 
   const patch: Record<string, unknown> = {};
   if (typeof body?.name === 'string' && body.name.trim()) patch.name = body.name.trim();
