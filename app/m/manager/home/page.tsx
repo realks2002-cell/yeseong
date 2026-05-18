@@ -12,6 +12,7 @@ type PendingItem = {
   source: string;
   worker_name: string;
   worker_phone: string | null;
+  worker_trade: string | null;
   worksite_id: string;
   worksite_name: string;
   subcontractor_name: string | null;
@@ -223,7 +224,10 @@ function PendingCard({
   return (
     <div className="flex items-center gap-2 rounded-[5px] bg-white px-3 py-2 ring-1 ring-zinc-200">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-zinc-900">{item.worker_name}</p>
+        <p className="truncate text-sm font-bold text-zinc-900">
+          {item.worker_name}
+          {item.worker_trade && <span className="ml-1.5 text-[11px] font-medium text-zinc-400">{item.worker_trade}</span>}
+        </p>
         <p className="text-[10px] text-zinc-400 tabular-nums">{formatTime(item.created_at)}</p>
       </div>
       <p className="shrink-0 text-base font-bold tabular-nums text-blue-900">{item.hours}일</p>
