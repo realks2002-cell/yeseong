@@ -61,7 +61,7 @@ export default async function PayrollIndexPage() {
             <h1 className="text-2xl font-bold tracking-tight">노임대장</h1>
             <p className="text-sm text-[#6B7280] mt-1">현장을 선택하여 월별 노임대장을 관리하세요.</p>
           </div>
-          <ZipAllButton yyyymm={ym} />
+          <ZipAllButton yyyymm={ym} subcontractors={Array.from(new Set(Array.from(subsByWorksite.values()).flat())).sort()} />
         </div>
 
         {error && (

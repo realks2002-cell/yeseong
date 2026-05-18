@@ -61,6 +61,7 @@ function toFillWorker(s: Slot, slotIdx: number): FillWorker {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const yyyymm = url.searchParams.get('yyyymm') ?? '';
+  const subFilter = url.searchParams.get('subcontractor') ?? '';
   if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
     return new NextResponse('invalid yyyymm', { status: 400 });
   }
@@ -108,6 +109,8 @@ export async function GET(req: Request) {
     }
 
     for (const [subName, groupSlots] of groups) {
+      // 협력사 필터가 있으면 해당 협력사만 처리
+      if (subFilter && subName !== subFilter) continue;
       if (groupSlots.length > 32) {
         warnings.push(`${data.worksite.name} / ${subName}: 슬롯 ${groupSlots.length}명 (32 초과로 스킵)`);
         continue;
@@ -140,7 +143,7 @@ export async function GET(req: Request) {
   }
 
   const zipBuf = await zip.generateAsync({ type: 'nodebuffer' });
-  const zipFilename = safeFileName(`노임대장_전체_${yyyymm}.zip`);
+  const zipFilename = safeFileName(subFilter ? `노임대장_${subFilter}_${yyyymm}.zip` : `노임대장_전체_${yyyymm}.zip`);
   const encoded = encodeURIComponent(zipFilename);
   return new NextResponse(new Uint8Array(zipBuf), {
     status: 200,
