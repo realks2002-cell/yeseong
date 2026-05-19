@@ -15,7 +15,9 @@ import {
   Building2,
   Store,
   Layers,
+  Megaphone,
   Package,
+  Bell,
   BellOff,
   ClipboardCheck,
   LogOut as LogOutIcon,
@@ -65,6 +67,13 @@ const groups: Group[] = [
       { label: '거래처', href: '/vendors', icon: Store },
       { label: '품목', href: '/items', icon: Package },
       { label: '매사 단가', href: '/masonry-prices', icon: Layers },
+    ],
+  },
+  {
+    label: '커뮤니케이션',
+    items: [
+      { label: '알림 발송', href: '/notifications', icon: Bell },
+      { label: '인앱 공지', href: '/announcements', icon: Megaphone },
     ],
   },
   {

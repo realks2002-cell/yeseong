@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, CheckCheck, ClipboardCheck, X } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
+import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 
 type PendingItem = {
@@ -209,6 +210,8 @@ export default function ManagerHomePage() {
           onConfirm={(reason) => reject(rejectTarget, reason)}
         />
       )}
+
+      <AnnouncementPopup />
     </MobileShell>
   );
 }

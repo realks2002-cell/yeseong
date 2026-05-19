@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, AlertTriangle } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
+import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
@@ -152,6 +153,8 @@ export default function HomePage() {
           onConfirm={() => submit(confirm)}
         />
       )}
+
+      <AnnouncementPopup />
     </MobileShell>
   );
 }
