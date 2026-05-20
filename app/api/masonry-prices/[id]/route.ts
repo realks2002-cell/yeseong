@@ -11,9 +11,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!body) return NextResponse.json({ error: 'invalid body' }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
-  if (typeof body.category === 'string' && ['조적', '미장'].includes(body.category)) {
-    patch.category = body.category;
-    patch.unit = body.category === '조적' ? '장' : '㎡';
+  if ('worksite_id' in body) {
+    if (typeof body.worksite_id !== 'string' || !body.worksite_id) {
+      return NextResponse.json({ error: '현장을 선택하세요' }, { status: 400 });
+    }
+    patch.worksite_id = body.worksite_id;
   }
   if (typeof body.type_name === 'string') {
     const v = body.type_name.trim();
@@ -41,7 +43,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (error) {
     if (error.code === '23505') {
-      return NextResponse.json({ error: '이미 동일한 종류/규격이 등록되어 있습니다' }, { status: 409 });
+      return NextResponse.json({ error: '해당 현장에 동일 종류·규격이 이미 등록되어 있습니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
