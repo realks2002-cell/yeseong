@@ -4,7 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { formatRrnPlain } from '@/lib/crypto/rrn';
-import { GRADES } from '@/lib/constants/trades';
+import { GRADES, WAGE_TYPES } from '@/lib/constants/trades';
+
+function formatPhoneOpt(phone: string): string {
+  const d = phone.replace(/\D/g, '');
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return phone;
+}
 
 const RRN_PATTERN = /^\d{6}-?\d{7}$/;
 
@@ -41,6 +48,7 @@ export type Worker = {
   created_at: string;
   auth_user_id: string | null;
   team_leader_id: string | null;
+  team_leader_name?: string | null;
 };
 
 export type WorkerInput = {
@@ -55,8 +63,11 @@ export type WorkerInput = {
   phone: string | null;
   address: string | null;
   skill_grade: string | null;
+  wage_type: string | null;
   team_leader_id: string | null;
 };
+
+export type TeamLeaderOption = { id: string; name: string; phone: string | null };
 
 type Props = {
   initial?: Worker;
@@ -65,13 +76,16 @@ type Props = {
   title: string;
   existingBanks?: string[];
   workers?: Worker[];
+  teamLeaders?: TeamLeaderOption[];
 };
 
-export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks = [], workers = [] }: Props) {
+// form 내부 state — default_wage는 빈칸/0 구분 위해 null 허용 (저장 시 0으로 변환)
+type FormState = Omit<WorkerInput, 'default_wage'> & { default_wage: number | null };
+
+export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks = [], teamLeaders = [] }: Props) {
   const bankOptions = Array.from(new Set([...KOREAN_BANKS, ...existingBanks.filter(Boolean)]));
   const isEdit = !!initial;
-  const teamLeaders = workers.filter((w) => w.skill_grade === '팀장' && w.id !== initial?.id);
-  const [form, setForm] = useState<WorkerInput>(() => buildInitial(initial));
+  const [form, setForm] = useState<FormState>(() => buildInitial(initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
@@ -82,7 +96,7 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
     setSubmitErr(null);
   }, [initial]);
 
-  function set<K extends keyof WorkerInput>(key: K, value: WorkerInput[K]) {
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -109,7 +123,10 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
     } else if (rrnChanged && rrnTrimmed.length > 0) {
       if (!RRN_PATTERN.test(normalizeRrn(rrnTrimmed))) next.rrn = '주민번호 형식: 000000-0000000';
     }
-    if (!Number.isFinite(form.default_wage) || form.default_wage < 0) next.default_wage = '0 이상';
+    // default_wage: null(빈칸) 또는 0 이상 허용. 음수만 거부.
+    if (form.default_wage !== null && (!Number.isFinite(form.default_wage) || form.default_wage < 0)) {
+      next.default_wage = '0 이상';
+    }
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -119,7 +136,7 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
         ...form,
         name: form.name.trim(),
         rrn: rrnChanged && rrnTrimmed ? normalizeRrn(rrnTrimmed) : '',
-        default_wage: Math.floor(form.default_wage),
+        default_wage: Math.floor(form.default_wage ?? 0),
       });
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : '저장 실패');
@@ -150,13 +167,9 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
           <Field label="구분">
             <select
               value={form.skill_grade ?? ''}
-              onChange={(e) => {
-                const v = e.target.value || null;
-                set('skill_grade', v);
-                if (v === '팀장') set('team_leader_id', null);
-              }}
+              onChange={(e) => set('skill_grade', e.target.value || null)}
               disabled={loading}
-              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
             >
               <option value="">선택</option>
               {GRADES.map((g) => (
@@ -173,36 +186,50 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
             />
           </Field>
 
-          {form.skill_grade !== '팀장' && (
-            <Field label="팀장">
-              <select
-                value={form.team_leader_id ?? ''}
-                onChange={(e) => set('team_leader_id', e.target.value || null)}
-                disabled={loading}
-                className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">없음</option>
-                {teamLeaders.map((tl) => (
-                  <option key={tl.id} value={tl.id}>{tl.name}</option>
-                ))}
-              </select>
-            </Field>
-          )}
+          <Field label="팀장">
+            <select
+              value={form.team_leader_id ?? ''}
+              onChange={(e) => set('team_leader_id', e.target.value || null)}
+              disabled={loading}
+              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+            >
+              <option value="">없음</option>
+              {teamLeaders.map((tl) => (
+                <option key={tl.id} value={tl.id}>
+                  {tl.name}{tl.phone ? ` (${formatPhoneOpt(tl.phone)})` : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           <Field label="성명" required error={errors.name}>
             <Input value={form.name} onChange={(e) => set('name', e.target.value)} disabled={loading} />
           </Field>
-          <Field label="기본 일당 (원)" required error={errors.default_wage}>
+          <Field label="기본 일당 (원)" error={errors.default_wage}>
             <Input
               type="number"
-              value={form.default_wage || ''}
-              onChange={(e) => set('default_wage', e.target.value === '' ? 0 : Number(e.target.value))}
-              placeholder="270000"
+              value={form.default_wage ?? ''}
+              onChange={(e) => set('default_wage', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="270000 (월급/일급은 0)"
               min={0}
               step={10000}
               className="text-right tabular-nums"
               disabled={loading}
             />
+          </Field>
+
+          <Field label="급여형태">
+            <select
+              value={form.wage_type ?? ''}
+              onChange={(e) => set('wage_type', e.target.value || null)}
+              disabled={loading}
+              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+            >
+              <option value="">선택</option>
+              {WAGE_TYPES.map((w) => (
+                <option key={w} value={w}>{w}</option>
+              ))}
+            </select>
           </Field>
 
           <Field
@@ -268,6 +295,20 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
             />
           </Field>
 
+          {isEdit && (
+            <Field label="PIN (앱 비밀번호)">
+              <div className="flex h-9 items-center gap-2">
+                {initial?.pin ? (
+                  <span className="inline-block rounded-[5px] bg-[#273F4F] px-2.5 py-1 font-mono text-sm tabular-nums text-white">
+                    {initial.pin}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[#9CA3AF]">앱 가입 시 작업자가 설정</span>
+                )}
+              </div>
+            </Field>
+          )}
+
           {submitErr && <p className="col-span-2 text-sm text-red-600">{submitErr}</p>}
 
           <div className="col-span-2 flex justify-end gap-2 pt-2">
@@ -280,19 +321,21 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
   );
 }
 
-function buildInitial(initial?: Worker): WorkerInput {
+function buildInitial(initial?: Worker): FormState {
   return {
     employee_code: initial?.employee_code ?? null,
     name: initial?.name ?? '',
     rrn: initial?.rrn_plain ? formatRrnPlain(initial.rrn_plain) : '',
     default_trade: initial?.default_trade ?? null,
-    default_wage: initial?.default_wage ?? 0,
+    // null: 미입력(빈칸 + placeholder), 0: 명시적 0 (월급/일급), 양수: 일당
+    default_wage: initial?.default_wage ?? null,
     bank_name: initial?.bank_name ?? null,
     account_number: initial?.account_number ?? null,
     account_holder: initial?.account_holder ?? null,
     phone: initial?.phone ?? null,
     address: initial?.address ?? null,
     skill_grade: initial?.skill_grade ?? null,
+    wage_type: initial?.wage_type ?? null,
     team_leader_id: initial?.team_leader_id ?? null,
   };
 }

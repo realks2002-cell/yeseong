@@ -17,14 +17,15 @@ create unique index yeseong_masonry_prices_unique
   where is_active = true;
 
 -- 시드: 고천초등학교 현장이 있으면 2건 INSERT (중복 무시)
+-- 부위·규격은 '보통' / '특수' 2종으로 고정
 insert into yeseong_masonry_prices (category, type_name, size_spec, unit, unit_price, worksite_id)
-select '조적', '시멘트벽돌', '일반', '장', 150, ws.id
+select '조적', '시멘트벽돌', '보통', '장', 150, ws.id
 from yeseong_worksites ws
 where ws.name like '고천초등학교%'
 on conflict do nothing;
 
 insert into yeseong_masonry_prices (category, type_name, size_spec, unit, unit_price, worksite_id)
-select '조적', '시멘트벽돌', '주방', '장', 180, ws.id
+select '조적', '시멘트벽돌', '특수', '장', 180, ws.id
 from yeseong_worksites ws
 where ws.name like '고천초등학교%'
 on conflict do nothing;

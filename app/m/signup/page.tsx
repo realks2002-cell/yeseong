@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Hammer } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp, Hammer, Check } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone, normalizePhone, phoneToEmail, pinToPassword } from '@/lib/auth/phone-email';
@@ -11,6 +11,7 @@ import { TRADES, GRADES } from '@/lib/constants/trades';
 type Mode =
   | 'phone'
   | 'login_pin'
+  | 'signup_consent'
   | 'signup_pin1'
   | 'signup_pin2'
   | 'signup_identity'
@@ -22,8 +23,12 @@ type Mode =
   | 'signup_belonging';
 
 type Option = { id: string; name: string };
+type TeamLeader = { id: string; name: string; phone: string | null };
+
+const CONSENT_VERSION = '1.0';
 
 const SIGNUP_STEPS: Mode[] = [
+  'signup_consent',
   'signup_pin1',
   'signup_pin2',
   'signup_identity',
@@ -46,17 +51,18 @@ const FIELD_TO_MODE: Record<string, Mode> = {
   belonging: 'signup_belonging',
 };
 
-function buildFlow(missing: string[], isForeign: boolean): Mode[] {
-  const flow: Mode[] = ['signup_pin1', 'signup_pin2'];
+function buildFlow(missing: string[], isForeign: boolean, isPartial: boolean): Mode[] {
+  const flow: Mode[] = ['signup_consent', 'signup_pin1', 'signup_pin2'];
   for (const key of ['identity', 'rrn', 'foreign', 'address', 'account', 'work', 'belonging']) {
     if (key === 'foreign') {
-      // 외국인 추가정보는 isForeign일 때만 (서버가 missing에 넣었거나 사용자 토글 시)
-      if (isForeign && (missing.includes('foreign') || missing.includes('rrn'))) {
+      // partial이면 외국인 단계도 항상 보여줌 (Review 또는 Input)
+      if (isForeign && (isPartial || missing.includes('foreign') || missing.includes('rrn'))) {
         flow.push(FIELD_TO_MODE.foreign);
       }
       continue;
     }
-    if (missing.includes(key)) flow.push(FIELD_TO_MODE[key]);
+    // partial이면 모든 단계 흐름에 포함 (missing이면 InputStep, 아니면 ReviewStep)
+    if (isPartial || missing.includes(key)) flow.push(FIELD_TO_MODE[key]);
   }
   return flow;
 }
@@ -106,8 +112,17 @@ export default function SignupPage() {
   // 소속
   const [worksites, setWorksites] = useState<Option[]>([]);
   const [subcontractors, setSubcontractors] = useState<Option[]>([]);
+  const [teamLeaders, setTeamLeaders] = useState<TeamLeader[]>([]);
   const [worksiteId, setWorksiteId] = useState<string>('');
   const [subcontractorId, setSubcontractorId] = useState<string>('');
+  const [teamLeaderName, setTeamLeaderName] = useState<string>('');
+  const [teamLeaderId, setTeamLeaderId] = useState<string>('');
+
+  // 동의 (PIPA)
+  const [consentPersonal, setConsentPersonal] = useState(false);
+  const [consentRrn, setConsentRrn] = useState(false);
+  const [consentForeignId, setConsentForeignId] = useState(false);
+  const [consentThirdParty, setConsentThirdParty] = useState(false);
 
   const [signupBusy, setSignupBusy] = useState(false);
   const [signupError, setSignupError] = useState<string | undefined>();
@@ -116,6 +131,16 @@ export default function SignupPage() {
   const [missingFields, setMissingFields] = useState<string[]>([
     'identity', 'rrn', 'address', 'account', 'work', 'belonging',
   ]);
+
+  // DB에 이미 있는 정보 (확인 단계용)
+  type Prefilled = {
+    rrn_prefix?: string | null;
+    rrn_gender_digit?: string | null;
+    default_worksite_id?: string | null;
+    default_subcontractor_id?: string | null;
+    team_leader_id?: string | null;
+  } | null;
+  const [prefilled, setPrefilled] = useState<Prefilled>(null);
 
   const phoneValid = normalizePhone(phone).length >= 10;
   const rrnValid = normalizePhone(rrn).length === 13;
@@ -148,17 +173,19 @@ export default function SignupPage() {
     })();
   }, [mode, loginPin, phone, sb, router, loginBusy]);
 
-  // belonging 화면 진입 시 옵션 로드
+  // belonging 화면 진입 또는 prefilled 정보 표시를 위해 옵션 로드
   useEffect(() => {
-    if (mode !== 'signup_belonging') return;
+    if (mode !== 'signup_belonging' && !prefilled) return;
+    if (worksites.length > 0) return;
     (async () => {
       const res = await fetch('/api/m/options', { credentials: 'include' });
       if (!res.ok) return;
       const j = await res.json();
       setWorksites(j.worksites ?? []);
       setSubcontractors(j.subcontractors ?? []);
+      setTeamLeaders(j.teamLeaders ?? []);
     })();
-  }, [mode]);
+  }, [mode, prefilled, worksites.length]);
 
   const onPhoneNext = async () => {
     if (!phoneValid || phoneBusy) return;
@@ -182,11 +209,27 @@ export default function SignupPage() {
       }
       if (j.mode === 'signup_partial') {
         setMissingFields(j.missing ?? []);
-        if (j.prefilled?.name) setName(j.prefilled.name);
-        if (typeof j.prefilled?.is_foreign === 'boolean') setIsForeign(j.prefilled.is_foreign);
+        const p = j.prefilled ?? {};
+        setPrefilled(p);
+        if (p.name) setName(p.name);
+        if (typeof p.is_foreign === 'boolean') setIsForeign(p.is_foreign);
+        if (p.name_english) setNameEnglish(p.name_english);
+        if (p.nationality) setNationality(p.nationality);
+        if (p.visa_status) setVisaStatus(p.visa_status);
+        if (p.address) setAddress(p.address);
+        if (p.bank_name) setBankName(p.bank_name);
+        if (p.account_number) setAccountNumber(p.account_number);
+        if (p.account_holder) setAccountHolder(p.account_holder);
+        if (typeof p.default_wage === 'number' && p.default_wage > 0) setDefaultWage(String(p.default_wage));
+        if (p.skill_grade) setSkillGrade(p.skill_grade);
+        if (p.default_trade) setDefaultTrade(p.default_trade);
+        if (p.default_worksite_id) setWorksiteId(p.default_worksite_id);
+        if (p.default_subcontractor_id) setSubcontractorId(p.default_subcontractor_id);
+        if (p.team_leader_id) setTeamLeaderId(p.team_leader_id);
       } else {
         // signup_new
         setMissingFields(j.missing ?? ['identity', 'rrn', 'address', 'account', 'work', 'belonging']);
+        setPrefilled(null);
       }
       setMode('signup_pin1');
     } finally {
@@ -194,8 +237,8 @@ export default function SignupPage() {
     }
   };
 
-  // missingFields + isForeign 기반 동적 흐름
-  const flow = buildFlow(missingFields, isForeign);
+  // missingFields + isForeign 기반 동적 흐름. partial이면 모든 단계 Review로 보임.
+  const flow = buildFlow(missingFields, isForeign, prefilled !== null);
 
   const goNext = () => {
     const idx = flow.indexOf(mode);
@@ -204,10 +247,14 @@ export default function SignupPage() {
 
   const back = () => {
     if (mode === 'phone') return;
-    if (mode === 'login_pin' || mode === 'signup_pin1') {
+    if (mode === 'login_pin' || mode === 'signup_consent') {
       setLoginPin('');
-      setPin1('');
       setMode('phone');
+      return;
+    }
+    if (mode === 'signup_pin1') {
+      setPin1('');
+      setMode('signup_consent');
       return;
     }
     if (mode === 'signup_pin2') {
@@ -221,7 +268,7 @@ export default function SignupPage() {
 
   const submitSignup = async () => {
     if (signupBusy) return;
-    if (missingFields.includes('belonging') && (!worksiteId || !subcontractorId)) return;
+    if (missingFields.includes('belonging') && (!worksiteId || !subcontractorId || !teamLeaderId)) return;
     setSignupBusy(true);
     setSignupError(undefined);
     try {
@@ -262,9 +309,19 @@ export default function SignupPage() {
         p_nationality: nationality.trim() || null,
         p_visa_status: visaStatus.trim() || null,
         p_skill_grade: skillGrade || null,
+        p_consent_personal: consentPersonal,
+        p_consent_rrn: consentRrn,
+        p_consent_foreign_id: consentForeignId,
+        p_consent_third_party: consentThirdParty,
+        p_consent_version: CONSENT_VERSION,
+        p_team_leader_id: teamLeaderId || null,
       });
       if (rpcErr) {
-        setSignupError('프로필 저장 실패: ' + rpcErr.message);
+        const msg = rpcErr.message;
+        if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요해요');
+        else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요해요');
+        else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요해요');
+        else setSignupError('프로필 저장 실패: ' + msg);
         return;
       }
 
@@ -272,6 +329,7 @@ export default function SignupPage() {
         const { error: defErr } = await sb.rpc('yeseong_mobile_set_defaults', {
           p_worksite_id: worksiteId,
           p_subcontractor_id: subcontractorId,
+          p_team_leader_id: teamLeaderId || null,
         });
         if (defErr) {
           setSignupError('소속 저장 실패: ' + defErr.message);
@@ -327,6 +385,16 @@ export default function SignupPage() {
           />
         )}
 
+        {mode === 'signup_consent' && (
+          <ConsentStep
+            consentPersonal={consentPersonal} setConsentPersonal={setConsentPersonal}
+            consentRrn={consentRrn} setConsentRrn={setConsentRrn}
+            consentForeignId={consentForeignId} setConsentForeignId={setConsentForeignId}
+            consentThirdParty={consentThirdParty} setConsentThirdParty={setConsentThirdParty}
+            onNext={goNext}
+          />
+        )}
+
         {mode === 'signup_pin1' && (
           <PinStep
             title={<>사용할 PIN<br />4자리를 만들어주세요</>}
@@ -349,78 +417,351 @@ export default function SignupPage() {
         )}
 
         {mode === 'signup_identity' && (
-          <IdentityStep
-            name={name}
-            setName={setName}
-            isForeign={isForeign}
-            setIsForeign={setIsForeign}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('identity') ? (
+            <IdentityStep
+              name={name}
+              setName={setName}
+              isForeign={isForeign}
+              setIsForeign={setIsForeign}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="신원 확인"
+              items={[
+                { label: '성명', value: name },
+                { label: '구분', value: isForeign ? '외국인' : '내국인' },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_rrn' && (
-          <RrnStep
-            isForeign={isForeign}
-            rrn={rrn}
-            setRrn={setRrn}
-            valid={rrnValid}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('rrn') ? (
+            <RrnStep
+              isForeign={isForeign}
+              rrn={rrn}
+              setRrn={setRrn}
+              valid={rrnValid}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title={isForeign ? '외국인등록번호 확인' : '주민번호 확인'}
+              items={[
+                {
+                  label: '번호',
+                  value: prefilled?.rrn_prefix
+                    ? `${prefilled.rrn_prefix}-${prefilled.rrn_gender_digit ?? '*'}******`
+                    : null,
+                },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_foreign' && (
-          <ForeignStep
-            nameEnglish={nameEnglish} setNameEnglish={setNameEnglish}
-            nationality={nationality} setNationality={setNationality}
-            visaStatus={visaStatus} setVisaStatus={setVisaStatus}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('foreign') ? (
+            <ForeignStep
+              nameEnglish={nameEnglish} setNameEnglish={setNameEnglish}
+              nationality={nationality} setNationality={setNationality}
+              visaStatus={visaStatus} setVisaStatus={setVisaStatus}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="외국인 추가정보 확인"
+              items={[
+                { label: '영문명', value: nameEnglish },
+                { label: '국적', value: nationality },
+                { label: '체류자격', value: visaStatus },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_address' && (
-          <AddressStep
-            address={address}
-            setAddress={setAddress}
-            valid={address.trim().length > 0}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('address') ? (
+            <AddressStep
+              address={address}
+              setAddress={setAddress}
+              valid={address.trim().length > 0}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="주소 확인"
+              items={[{ label: '주소', value: address }]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_account' && (
-          <AccountStep
-            bankName={bankName} setBankName={setBankName}
-            bankCustom={bankCustom} setBankCustom={setBankCustom}
-            accountNumber={accountNumber} setAccountNumber={setAccountNumber}
-            accountHolder={accountHolder} setAccountHolder={setAccountHolder}
-            valid={accountValid}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('account') ? (
+            <AccountStep
+              bankName={bankName} setBankName={setBankName}
+              bankCustom={bankCustom} setBankCustom={setBankCustom}
+              accountNumber={accountNumber} setAccountNumber={setAccountNumber}
+              accountHolder={accountHolder} setAccountHolder={setAccountHolder}
+              valid={accountValid}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="계좌 확인"
+              items={[
+                { label: '은행', value: bankName },
+                { label: '계좌번호', value: accountNumber },
+                { label: '예금주', value: accountHolder },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_work' && (
-          <WorkStep
-            defaultWage={defaultWage} setDefaultWage={setDefaultWage}
-            skillGrade={skillGrade} setSkillGrade={setSkillGrade}
-            defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
-            tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
-            valid={wageValid && skillGrade.length > 0 && defaultTrade.trim().length > 0}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('work') ? (
+            <WorkStep
+              defaultWage={defaultWage} setDefaultWage={setDefaultWage}
+              skillGrade={skillGrade} setSkillGrade={setSkillGrade}
+              defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
+              tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
+              valid={wageValid && skillGrade.length > 0 && defaultTrade.trim().length > 0}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="직무 · 일당 확인"
+              items={[
+                { label: '구분', value: skillGrade },
+                { label: '공종', value: defaultTrade },
+                { label: '기본 일당', value: defaultWage ? `${Number(defaultWage).toLocaleString()}원` : null },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_belonging' && (
-          <BelongingStep
-            worksites={worksites}
-            subcontractors={subcontractors}
-            worksiteId={worksiteId} setWorksiteId={setWorksiteId}
-            subcontractorId={subcontractorId} setSubcontractorId={setSubcontractorId}
-            onSubmit={submitSignup}
-            busy={signupBusy}
-            error={signupError}
-          />
+          missingFields.includes('belonging') ? (
+            <BelongingStep
+              worksites={worksites}
+              subcontractors={subcontractors}
+              teamLeaders={teamLeaders}
+              worksiteId={worksiteId} setWorksiteId={setWorksiteId}
+              subcontractorId={subcontractorId} setSubcontractorId={setSubcontractorId}
+              teamLeaderName={teamLeaderName} setTeamLeaderName={setTeamLeaderName}
+              teamLeaderId={teamLeaderId} setTeamLeaderId={setTeamLeaderId}
+              onSubmit={submitSignup}
+              busy={signupBusy}
+              error={signupError}
+            />
+          ) : (
+            <ReviewStep
+              title="소속 확인"
+              items={[
+                { label: '현장', value: worksites.find((w) => w.id === worksiteId)?.name ?? null },
+                { label: '협력사', value: subcontractors.find((s) => s.id === subcontractorId)?.name ?? null },
+                { label: '팀장', value: teamLeaders.find((t) => t.id === teamLeaderId)?.name ?? null },
+              ]}
+              onNext={submitSignup}
+              isLast
+            />
+          )
         )}
       </div>
     </MobileShell>
+  );
+}
+
+function ConsentStep({
+  consentPersonal, setConsentPersonal,
+  consentRrn, setConsentRrn,
+  consentForeignId, setConsentForeignId,
+  consentThirdParty, setConsentThirdParty,
+  onNext,
+}: {
+  consentPersonal: boolean;
+  setConsentPersonal: (v: boolean) => void;
+  consentRrn: boolean;
+  setConsentRrn: (v: boolean) => void;
+  consentForeignId: boolean;
+  setConsentForeignId: (v: boolean) => void;
+  consentThirdParty: boolean;
+  setConsentThirdParty: (v: boolean) => void;
+  onNext: () => void;
+}) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const allRequired = consentPersonal && consentRrn && consentForeignId;
+  const allChecked = allRequired && consentThirdParty;
+  const valid = consentPersonal && consentRrn; // 외국인 동의는 가입 마지막에 RPC가 강제
+
+  const setAll = (v: boolean) => {
+    setConsentPersonal(v);
+    setConsentRrn(v);
+    setConsentForeignId(v);
+    setConsentThirdParty(v);
+  };
+
+  return (
+    <>
+      <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
+        서비스 이용을<br />위해 동의해주세요
+      </h1>
+      <p className="mt-4 text-sm text-zinc-500">노임대장 작성·임금 지급을 위한 동의입니다.</p>
+
+      <div className="mt-8">
+        <ConsentRow
+          label="모두 동의합니다"
+          checked={allChecked}
+          onToggle={() => setAll(!allChecked)}
+          emphasis
+        />
+        <div className="my-3 h-px bg-zinc-100" />
+
+        <ConsentItem
+          openKey="personal" openCurrent={openKey} setOpen={setOpenKey}
+          label="(필수) 개인정보 수집·이용 동의"
+          checked={consentPersonal} onToggle={() => setConsentPersonal(!consentPersonal)}
+          body={
+            <>
+              <p><b>수집 항목:</b> 이름, 전화번호, 주소, 계좌정보, 일당, 공종, 등급</p>
+              <p><b>이용 목적:</b> 출역 관리, 임금 지급, 노임대장 작성</p>
+              <p><b>보유 기간:</b> 퇴직 후 5년 (근로기준법 제42조)</p>
+              <p className="text-zinc-500">동의를 거부할 권리가 있으나, 거부 시 서비스 이용이 제한됩니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="rrn" openCurrent={openKey} setOpen={setOpenKey}
+          label="(필수) 주민등록번호 수집·이용 동의"
+          checked={consentRrn} onToggle={() => setConsentRrn(!consentRrn)}
+          body={
+            <>
+              <p><b>수집 항목:</b> 주민등록번호</p>
+              <p><b>수집 근거:</b> 소득세법 제145조, 근로기준법 제48조</p>
+              <p><b>이용 목적:</b> 노임대장 작성, 원천세 신고</p>
+              <p><b>보유 기간:</b> 퇴직 후 5년</p>
+              <p className="text-zinc-500">개인정보보호법 제24조의2에 따라 별도 동의를 받습니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="foreign" openCurrent={openKey} setOpen={setOpenKey}
+          label="(외국인 필수) 외국인등록번호 수집·이용 동의"
+          checked={consentForeignId} onToggle={() => setConsentForeignId(!consentForeignId)}
+          body={
+            <>
+              <p><b>수집 항목:</b> 외국인등록번호, 국적, 비자종류</p>
+              <p><b>수집 근거:</b> 외국인근로자의 고용 등에 관한 법률</p>
+              <p><b>이용 목적:</b> 외국인 노임대장 작성, 고용 신고</p>
+              <p><b>보유 기간:</b> 퇴직 후 5년</p>
+              <p className="text-zinc-500">외국인이신 경우에만 적용됩니다. 내국인은 영향 없습니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="third" openCurrent={openKey} setOpen={setOpenKey}
+          label="(선택) 노임대장 제3자 제공 동의"
+          checked={consentThirdParty} onToggle={() => setConsentThirdParty(!consentThirdParty)}
+          body={
+            <>
+              <p><b>제공받는 자:</b> 발주처, 원청사, 고용노동부, 국세청</p>
+              <p><b>제공 항목:</b> 노임대장에 포함된 개인정보</p>
+              <p><b>제공 목적:</b> 공사 보고, 법정 신고</p>
+              <p className="text-zinc-500">동의하지 않아도 가입은 가능합니다.</p>
+            </>
+          }
+        />
+      </div>
+
+      <NextButton valid={valid} onNext={onNext} label="다음" />
+    </>
+  );
+}
+
+function ConsentRow({
+  label, checked, onToggle, emphasis,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  emphasis?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-3 py-3 text-left"
+    >
+      <span
+        className={
+          'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ' +
+          (checked ? 'bg-blue-900 text-white' : 'bg-zinc-200 text-zinc-400')
+        }
+      >
+        <Check className="h-4 w-4" strokeWidth={3} />
+      </span>
+      <span className={'flex-1 ' + (emphasis ? 'text-lg font-bold text-zinc-900' : 'text-base font-semibold text-zinc-800')}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
+function ConsentItem({
+  openKey, openCurrent, setOpen,
+  label, checked, onToggle, body,
+}: {
+  openKey: string;
+  openCurrent: string | null;
+  setOpen: (k: string | null) => void;
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  body: React.ReactNode;
+}) {
+  const isOpen = openCurrent === openKey;
+  return (
+    <div>
+      <div className="flex items-center gap-3 py-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex flex-1 items-center gap-3 text-left"
+        >
+          <span
+            className={
+              'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition ' +
+              (checked ? 'bg-blue-900 text-white' : 'bg-zinc-200 text-zinc-400')
+            }
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          </span>
+          <span className="text-sm font-semibold text-zinc-800">{label}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(isOpen ? null : openKey)}
+          className="inline-flex h-8 w-8 items-center justify-center text-zinc-400"
+          aria-label="약관 보기"
+        >
+          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      </div>
+      {isOpen && (
+        <div className="mb-2 ml-9 space-y-1 rounded-[5px] bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-700">
+          {body}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -848,28 +1189,61 @@ function WorkStep({
 }
 
 function BelongingStep({
-  worksites, subcontractors,
+  worksites, subcontractors, teamLeaders,
   worksiteId, setWorksiteId,
   subcontractorId, setSubcontractorId,
+  teamLeaderName, setTeamLeaderName,
+  teamLeaderId, setTeamLeaderId,
   onSubmit, busy, error,
 }: {
   worksites: Option[];
   subcontractors: Option[];
+  teamLeaders: TeamLeader[];
   worksiteId: string;
   setWorksiteId: (v: string) => void;
   subcontractorId: string;
   setSubcontractorId: (v: string) => void;
+  teamLeaderName: string;
+  setTeamLeaderName: (v: string) => void;
+  teamLeaderId: string;
+  setTeamLeaderId: (v: string) => void;
   onSubmit: () => void;
   busy: boolean;
   error?: string;
 }) {
-  const ready = !!worksiteId && !!subcontractorId && !busy;
+  // 1차 드롭다운에 들어갈 유니크 팀장 이름
+  const uniqueNames = useMemo(
+    () => [...new Set(teamLeaders.map((t) => t.name))].sort(),
+    [teamLeaders],
+  );
+  // 선택된 이름의 동명이인 후보
+  const candidates = useMemo(
+    () => teamLeaders.filter((t) => t.name === teamLeaderName),
+    [teamLeaders, teamLeaderName],
+  );
+  const hasDuplicate = candidates.length > 1;
+
+  // 이름 바뀌면 id 초기화. 동명이인 없으면 단일 후보로 자동 결정
+  useEffect(() => {
+    if (!teamLeaderName) {
+      setTeamLeaderId('');
+      return;
+    }
+    if (candidates.length === 1) {
+      setTeamLeaderId(candidates[0].id);
+    } else {
+      setTeamLeaderId('');
+    }
+  }, [teamLeaderName, candidates, setTeamLeaderId]);
+
+  const ready = !!worksiteId && !!subcontractorId && !!teamLeaderId && !busy;
+
   return (
     <>
       <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
         소속을<br />선택해주세요
       </h1>
-      <p className="mt-4 text-sm text-zinc-500">현장이나 소속이 바뀌면 내 정보에서 변경할 수 있어요.</p>
+      <p className="mt-4 text-sm text-zinc-500">소속이 바뀌면 내 정보에서 변경할 수 있어요.</p>
       <div className="mt-8 space-y-6">
         <Field label="소속">
           <select
@@ -895,10 +1269,78 @@ function BelongingStep({
             ))}
           </select>
         </Field>
+        <Field label="팀장">
+          <select
+            value={teamLeaderName}
+            onChange={(e) => setTeamLeaderName(e.target.value)}
+            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+          >
+            <option value="">선택하세요</option>
+            {uniqueNames.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+          {hasDuplicate && (
+            <div className="mt-3">
+              <p className="text-sm font-semibold text-zinc-500 mb-2">동명이인이 있어요. 전화번호로 다시 선택해주세요.</p>
+              <select
+                value={teamLeaderId}
+                onChange={(e) => setTeamLeaderId(e.target.value)}
+                className="w-full rounded-[5px] bg-white px-5 py-4 text-base font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+              >
+                <option value="">전화번호 선택</option>
+                {candidates.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.phone ? formatPhoneDisplay(c.phone) : '연락처 미등록'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </Field>
       </div>
       {error && <p className="mt-4 text-base font-semibold text-red-800">{error}</p>}
       <NextButton valid={ready} onNext={onSubmit} label={busy ? '가입 중...' : '가입 완료'} />
     </>
+  );
+}
+
+function formatPhoneDisplay(phone: string): string {
+  const d = phone.replace(/\D/g, '');
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return phone;
+}
+
+function ReviewStep({
+  title,
+  items,
+  onNext,
+  isLast,
+}: {
+  title: string;
+  items: { label: string; value: string | null }[];
+  onNext: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <p className="mt-1.5 text-sm text-[#6B7280]">이미 등록된 정보입니다. 확인 후 다음을 눌러주세요.</p>
+      </div>
+      <div className="rounded-[8px] border border-[#D7D7D7] bg-[#F5F5F5] p-4">
+        <div className="space-y-2.5">
+          {items.map((it) => (
+            <div key={it.label} className="flex items-start justify-between gap-3 text-sm">
+              <span className="shrink-0 text-[#6B7280]">{it.label}</span>
+              <span className="text-right text-[#091413]">{it.value && it.value.trim() !== '' ? it.value : '-'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <NextButton valid={true} onNext={onNext} label={isLast ? '가입 완료' : '다음'} />
+    </div>
   );
 }
 

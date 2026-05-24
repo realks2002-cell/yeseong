@@ -11,7 +11,9 @@ import {
   UserPlus,
   Trash2,
   X,
+  Package,
 } from 'lucide-react';
+import { MasonryVolumeModal, type MasonryPriceOption, type ExistingVolume } from '@/components/masonry-volume-modal';
 
 type Worker = {
   id: string;
@@ -19,6 +21,7 @@ type Worker = {
   name: string;
   default_trade: string | null;
   default_wage: number;
+  wage_type: string | null;
 };
 
 type Subcontractor = { id: string; name: string };
@@ -50,18 +53,24 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [volumes, setVolumes] = useState<ExistingVolume[]>([]);
+  const [prices, setPrices] = useState<MasonryPriceOption[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [volumeSlot, setVolumeSlot] = useState<Slot | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4, r5a, r5b] = await Promise.all([
       fetch(`/api/payroll/${siteId}/${yearMonth}`, { cache: 'no-store' }),
       fetch(`/api/workers`, { cache: 'no-store' }),
       fetch(`/api/subcontractors`, { cache: 'no-store' }),
+      fetch(`/api/payroll/${siteId}/${yearMonth}/volumes`, { cache: 'no-store' }),
+      fetch(`/api/masonry-prices?category=조적&worksiteId=${siteId}`, { cache: 'no-store' }),
+      fetch(`/api/masonry-prices?category=미장&worksiteId=${siteId}`, { cache: 'no-store' }),
     ]);
     if (!r1.ok) {
       setError(`노임대장 로드 실패: ${r1.status}`);
@@ -78,8 +87,13 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     const data = await r1.json();
     const workersAll = await r2.json();
     const subs = await r3.json();
+    const vols: ExistingVolume[] = r4.ok ? await r4.json() : [];
+    const pricesJoki: MasonryPriceOption[] = r5a.ok ? await r5a.json() : [];
+    const pricesMij: MasonryPriceOption[] = r5b.ok ? await r5b.json() : [];
     setSlots(data.slots ?? []);
     setAttendance(data.attendance ?? []);
+    setVolumes(vols);
+    setPrices([...pricesJoki, ...pricesMij]);
     setAllWorkers(workersAll ?? []);
     setSubcontractors(subs ?? []);
     setLoaded(true);
@@ -98,6 +112,25 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
 
   const enrolledWorkerIds = useMemo(() => new Set(slots.map((s) => s.worker.id)), [slots]);
   const subMap = useMemo(() => new Map(subcontractors.map((s) => [s.id, s.name])), [subcontractors]);
+
+  // payroll_worker_id → sum(amount)
+  const volumeSumMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const v of volumes) {
+      m.set(v.payroll_worker_id, (m.get(v.payroll_worker_id) ?? 0) + v.amount);
+    }
+    return m;
+  }, [volumes]);
+
+  const volumesByWorker = useMemo(() => {
+    const m = new Map<string, ExistingVolume[]>();
+    for (const v of volumes) {
+      const arr = m.get(v.payroll_worker_id) ?? [];
+      arr.push(v);
+      m.set(v.payroll_worker_id, arr);
+    }
+    return m;
+  }, [volumes]);
 
   async function setCell(slotId: string, day: number, hours: number | null) {
     const newHours = hours ?? 0;
@@ -268,15 +301,16 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
               ))}
               <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-14 text-center">공수</th>
               <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-14 text-center">일수</th>
+              <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-28 text-center">성과(원)</th>
               <th className="border-l border-[#D7D7D7] px-2 py-2 font-medium text-[#4B5563] w-10"></th>
             </tr>
           </thead>
           <tbody>
             {!loaded ? (
-              <tr><td colSpan={6 + totalDays} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+              <tr><td colSpan={9 + totalDays} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
             ) : slots.length === 0 ? (
               <tr>
-                <td colSpan={6 + totalDays} className="py-12 text-center text-[#9CA3AF]">
+                <td colSpan={9 + totalDays} className="py-12 text-center text-[#9CA3AF]">
                   아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
                 </td>
               </tr>
@@ -284,11 +318,16 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
               slots.map((s, idx) => {
                 const sum = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
                 const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`)).filter((v) => v != null && v > 0).length;
+                const isPerformance = s.worker.wage_type === '월급/일급';
+                const isMonthly = s.worker.wage_type === '월급';
+                const rowBg = isPerformance ? 'bg-[#FFE4C4]/40 hover:bg-[#FFE4C4]/60' : isMonthly ? 'bg-[#FFF9C4]/40 hover:bg-[#FFF9C4]/60' : 'hover:bg-[#F5F5F5]/50';
+                const stickyBg = isPerformance ? 'bg-[#FFEDD5]' : isMonthly ? 'bg-[#FEF9C3]' : 'bg-white';
+                const volumeAmount = volumeSumMap.get(s.id) ?? 0;
                 return (
-                  <tr key={s.id} className="border-b border-[#D7D7D7] hover:bg-[#F5F5F5]/50">
-                    <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[#6B7280] tabular-nums">{idx + 1}</td>
-                    <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium text-center">{s.worker.name}</td>
-                    <td className="sticky left-[152px] z-10 bg-white px-1.5 py-1 text-center">
+                  <tr key={s.id} className={`border-b border-[#D7D7D7] ${rowBg}`}>
+                    <td className={`sticky left-0 z-10 ${stickyBg} px-3 py-2 text-[#6B7280] tabular-nums`}>{idx + 1}</td>
+                    <td className={`sticky left-10 z-10 ${stickyBg} px-3 py-2 font-medium text-center`}>{s.worker.name}</td>
+                    <td className={`sticky left-[152px] z-10 ${stickyBg} px-1.5 py-1 text-center`}>
                       <SubcontractorSelect
                         value={s.subcontractor?.id ?? ''}
                         options={subcontractors}
@@ -314,6 +353,19 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                     })}
                     <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
                     <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[#4B5563]">{days || ''}</td>
+                    <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center text-[12px]">
+                      {isPerformance ? (
+                        <button
+                          onClick={() => setVolumeSlot(s)}
+                          className="inline-flex items-center gap-1 rounded-[5px] border border-[#FE7743] bg-white px-2 py-1 text-[11px] font-medium text-[#FE7743] hover:bg-[#FFF1E6] tabular-nums"
+                        >
+                          <Package className="h-3 w-3" />
+                          {volumeAmount > 0 ? `${volumeAmount.toLocaleString()}` : '입력'}
+                        </button>
+                      ) : (
+                        <span className="text-[#D7D7D7]">-</span>
+                      )}
+                    </td>
                     <td className="border-l border-[#D7D7D7] px-1 py-2 text-center">
                       <button
                         className="rounded p-1 text-[#9CA3AF] hover:bg-red-50 hover:text-red-600"
@@ -337,6 +389,12 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                   {slots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
                 </td>
                 <td className="border-l border-[#D7D7D7] bg-[#F5F5F5]"></td>
+                <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[12px]">
+                  {(() => {
+                    const total = slots.reduce((sum, sl) => sum + (volumeSumMap.get(sl.id) ?? 0), 0);
+                    return total > 0 ? total.toLocaleString() : '';
+                  })()}
+                </td>
                 <td className="border-l border-[#D7D7D7]"></td>
               </tr>
             )}
@@ -357,6 +415,21 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
           onClose={() => setShowAddModal(false)}
           onAdd={enrollWorkers}
           remainingSlots={26 - slots.length}
+        />
+      )}
+      {volumeSlot && (
+        <MasonryVolumeModal
+          workerName={volumeSlot.worker.name}
+          payrollWorkerId={volumeSlot.id}
+          siteId={siteId}
+          yearMonth={yearMonth}
+          existing={volumesByWorker.get(volumeSlot.id) ?? []}
+          prices={prices}
+          onClose={() => setVolumeSlot(null)}
+          onSaved={() => {
+            setVolumeSlot(null);
+            load();
+          }}
         />
       )}
     </main>

@@ -25,8 +25,10 @@ type Slot = {
     phone: string | null;
     default_trade: string | null;
     default_wage: number;
+    wage_type: string | null;
   };
   attendance: Array<{ work_date: string; hours: number }>;
+  volumes: Array<{ category: string; type_name: string | null; size_spec: string | null; quantity: number; unit_price: number; amount: number }>;
 };
 
 type PayrollData = {
@@ -51,10 +53,12 @@ function toFillWorker(s: Slot, slotIdx: number): FillWorker {
     accountHolder: s.worker.account_holder,
     phone: s.worker.phone,
     dailyWage: s.worker.default_wage,
+    wageType: s.worker.wage_type,
     attendance: s.attendance.map((a) => ({
       day: parseInt(a.work_date.split('-')[2], 10),
       hours: a.hours,
     })),
+    volumes: s.volumes ?? [],
   };
 }
 

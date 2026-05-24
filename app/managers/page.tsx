@@ -3,13 +3,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Search, X, HardHat, UserPlus, Pencil, Trash2 } from 'lucide-react';
+import { Search, X, UserPlus, Pencil, Trash2 } from 'lucide-react';
 
 type Manager = {
   id: string;
   name: string;
-  phone: string;
+  phone: string | null;
   pin: string | null;
+  default_trade: string | null;
   created_at: string;
   yeseong_site_manager_assignments:
     | Array<{ worksite_id: string; yeseong_worksites: { id: string; name: string } | null }>
@@ -34,16 +35,12 @@ type ManagerInput = {
   worksite_ids: string[];
 };
 
-function formatPhone(phone: string): string {
+function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return '-';
   const d = phone.replace(/\D/g, '');
   if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
   return phone;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function ManagersPage() {
@@ -61,7 +58,7 @@ export default function ManagersPage() {
     const digits = raw.replace(/\D/g, '');
     return list.filter((m) => {
       if (m.name?.toLowerCase().includes(raw)) return true;
-      if (digits && m.phone.replace(/\D/g, '').includes(digits)) return true;
+      if (digits && m.phone?.replace(/\D/g, '').includes(digits)) return true;
       const sites = getAssignments(m)
         .map((a) => a.yeseong_worksites?.name ?? '')
         .join(' ');
@@ -112,6 +109,20 @@ export default function ManagersPage() {
     load();
   }
 
+  async function handleWorksiteChange(m: Manager, worksiteId: string) {
+    const r = await fetch(`/api/managers/${m.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ worksite_ids: worksiteId ? [worksiteId] : [] }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '현장 변경 실패');
+      return;
+    }
+    load();
+  }
+
   async function handleDelete(m: Manager) {
     if (!confirm(`"${m.name}" 팀장을 삭제할까요?`)) return;
     const r = await fetch(`/api/managers/${m.id}`, { method: 'DELETE' });
@@ -147,7 +158,7 @@ export default function ManagersPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 · 전화번호 · 현장으로 검색"
-            className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
           />
           {query && (
             <button
@@ -170,10 +181,10 @@ export default function ManagersPage() {
                 <tr className="text-left text-xs">
                   <th className="w-10 px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">성명</th>
+                  <th className="px-3 py-2 font-medium">직종</th>
                   <th className="px-3 py-2 font-medium">전화번호</th>
                   <th className="px-3 py-2 font-medium text-center">PIN</th>
                   <th className="px-3 py-2 font-medium">담당 현장</th>
-                  <th className="px-3 py-2 font-medium">가입일</th>
                   <th className="w-20 px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
@@ -198,11 +209,9 @@ export default function ManagersPage() {
                     return (
                       <tr key={m.id} className="hover:bg-[#F5F5F5]">
                         <td className="px-3 py-2 tabular-nums text-[#6B7280]">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium">
-                          <span className="inline-flex items-center gap-1.5">
-                            <HardHat className="h-3.5 w-3.5 text-[#9CA3AF]" />
-                            {m.name}
-                          </span>
+                        <td className="px-3 py-2 font-medium">{m.name}</td>
+                        <td className="px-3 py-2 text-xs text-[#4B5563]">
+                          {m.default_trade ?? <span className="text-[#D7D7D7]">-</span>}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs">{formatPhone(m.phone)}</td>
                         <td className="px-3 py-2 text-center font-mono tabular-nums">
@@ -213,22 +222,17 @@ export default function ManagersPage() {
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          {sites.length === 0 ? (
-                            <span className="text-xs text-[#9CA3AF]">미배정</span>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {sites.map((s) => (
-                                <span
-                                  key={s.id}
-                                  className="rounded-full bg-[#F5F5F5] px-2 py-0.5 text-[11px] text-[#091413]"
-                                >
-                                  {s.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <select
+                            value={sites[0]?.id ?? ''}
+                            onChange={(e) => handleWorksiteChange(m, e.target.value)}
+                            className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-xs outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
+                          >
+                            <option value="">미배정</option>
+                            {worksites.map((w) => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                          </select>
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-[#4B5563]">{formatDate(m.created_at)}</td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-0.5">
                             <button
@@ -271,7 +275,7 @@ export default function ManagersPage() {
           worksites={worksites}
           initial={{
             name: editing.name,
-            phone: editing.phone,
+            phone: editing.phone ?? '',
             pin: editing.pin ?? '',
             worksite_ids: getAssignments(editing).map((a) => a.worksite_id),
           }}
@@ -299,13 +303,9 @@ function ManagerForm({
   const [name, setName] = useState(initial?.name ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [pin, setPin] = useState(initial?.pin ?? '');
-  const [worksiteIds, setWorksiteIds] = useState<string[]>(initial?.worksite_ids ?? []);
+  const [worksiteId, setWorksiteId] = useState<string>(initial?.worksite_ids?.[0] ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  function toggle(id: string) {
-    setWorksiteIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -315,7 +315,12 @@ function ManagerForm({
     if (pin && !/^\d{4}$/.test(pin)) return setErr('PIN은 4자리 숫자');
     setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), phone, pin, worksite_ids: worksiteIds });
+      await onSubmit({
+        name: name.trim(),
+        phone,
+        pin,
+        worksite_ids: worksiteId ? [worksiteId] : [],
+      });
     } catch (e) {
       setErr(e instanceof Error ? e.message : '저장 실패');
       setSubmitting(false);
@@ -341,7 +346,7 @@ function ManagerForm({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-[#447D9B]"
             />
           </div>
           <div>
@@ -350,7 +355,7 @@ function ManagerForm({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="010-0000-0000"
-              className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-[#447D9B]"
             />
           </div>
           <div>
@@ -361,7 +366,7 @@ function ManagerForm({
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="0000"
-              className="w-32 rounded-[5px] border border-[#D7D7D7] px-3 py-2 font-mono text-sm outline-none focus:border-blue-500"
+              className="w-32 rounded-[5px] border border-[#D7D7D7] px-3 py-2 font-mono text-sm outline-none focus:border-[#447D9B]"
             />
             <p className="mt-1 text-[11px] text-[#6B7280]">
               비워두면 모바일 앱에서 직접 가입할 수 있는 shell만 생성됩니다.
@@ -369,25 +374,16 @@ function ManagerForm({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[#4B5563]">담당 현장</label>
-            <div className="max-h-40 overflow-y-auto rounded-[5px] border border-[#D7D7D7] p-2">
-              {worksites.length === 0 ? (
-                <p className="px-1 py-2 text-xs text-[#9CA3AF]">현장이 없습니다.</p>
-              ) : (
-                worksites.map((w) => (
-                  <label
-                    key={w.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-[#F5F5F5]"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={worksiteIds.includes(w.id)}
-                      onChange={() => toggle(w.id)}
-                    />
-                    <span className="text-sm">{w.name}</span>
-                  </label>
-                ))
-              )}
-            </div>
+            <select
+              value={worksiteId}
+              onChange={(e) => setWorksiteId(e.target.value)}
+              className="w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-2 text-sm outline-none focus:border-[#447D9B]"
+            >
+              <option value="">미배정</option>
+              {worksites.map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 

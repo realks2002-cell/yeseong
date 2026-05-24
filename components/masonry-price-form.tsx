@@ -20,13 +20,18 @@ export type MasonryPrice = {
 };
 
 export type MasonryPriceInput = {
+  category: '조적' | '미장';
   worksite_id: string;
   type_name: string;
   size_spec: string | null;
   unit_price: number;
 };
 
+const BRICK_TYPES = ['치장벽돌', '시멘트벽돌'] as const;
+const BRICK_SIZES = ['보통', '특수'] as const;
+
 type Props = {
+  category: '조적' | '미장';
   initial?: MasonryPrice;
   worksites: Worksite[];
   onSubmit: (input: MasonryPriceInput) => Promise<void>;
@@ -34,33 +39,35 @@ type Props = {
   title: string;
 };
 
-export function MasonryPriceForm({ initial, worksites, onSubmit, onCancel, title }: Props) {
+export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCancel, title }: Props) {
   const [worksiteId, setWorksiteId] = useState(initial?.worksite_id ?? '');
-  const [typeName, setTypeName] = useState(initial?.type_name ?? '시멘트벽돌');
-  const [sizeSpec, setSizeSpec] = useState(initial?.size_spec ?? '');
+  const [typeName, setTypeName] = useState<string>(initial?.type_name ?? BRICK_TYPES[0]);
+  const [sizeSpec, setSizeSpec] = useState<string>(initial?.size_spec ?? BRICK_SIZES[0]);
   const [unitPrice, setUnitPrice] = useState(initial?.unit_price ?? 0);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setWorksiteId(initial?.worksite_id ?? '');
-    setTypeName(initial?.type_name ?? '시멘트벽돌');
-    setSizeSpec(initial?.size_spec ?? '');
+    setTypeName(initial?.type_name ?? BRICK_TYPES[0]);
+    setSizeSpec(initial?.size_spec ?? BRICK_SIZES[0]);
     setUnitPrice(initial?.unit_price ?? 0);
   }, [initial]);
+
+  const unitLabel = category === '조적' ? '장' : '㎡';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     if (!worksiteId) return setErr('현장을 선택하세요');
-    if (!typeName.trim()) return setErr('벽돌 종류를 입력하세요');
     if (!unitPrice || unitPrice < 0) return setErr('단가를 입력하세요');
     setLoading(true);
     try {
       await onSubmit({
+        category,
         worksite_id: worksiteId,
-        type_name: typeName.trim(),
-        size_spec: sizeSpec.trim() || null,
+        type_name: category === '조적' ? typeName : '미장',
+        size_spec: category === '조적' ? sizeSpec : null,
         unit_price: Math.floor(unitPrice),
       });
     } catch (e) {
@@ -95,29 +102,40 @@ export function MasonryPriceForm({ initial, worksites, onSubmit, onCancel, title
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">벽돌 종류 *</label>
-            <Input
-              value={typeName}
-              onChange={(e) => setTypeName(e.target.value)}
-              placeholder="예: 시멘트벽돌, 적벽돌"
-              disabled={loading}
-            />
-          </div>
+          {category === '조적' && (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">벽돌 종류 *</label>
+                <select
+                  value={typeName}
+                  onChange={(e) => setTypeName(e.target.value)}
+                  disabled={loading}
+                  className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
+                >
+                  {BRICK_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">부위·규격 *</label>
+                <select
+                  value={sizeSpec}
+                  onChange={(e) => setSizeSpec(e.target.value)}
+                  disabled={loading}
+                  className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
+                >
+                  {BRICK_SIZES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">부위·규격</label>
-            <Input
-              value={sizeSpec}
-              onChange={(e) => setSizeSpec(e.target.value)}
-              placeholder="예: 일반 / 주방 / 190×90×57"
-              disabled={loading}
-            />
-            <p className="text-xs text-[#6B7280]">동일 현장 안에서 부위별 단가가 다르면 구분 (예: 일반/주방)</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">단가 (원/장) *</label>
+            <label className="text-sm font-medium">단가 (원/{unitLabel}) *</label>
             <Input
               type="number"
               value={unitPrice || ''}
@@ -129,7 +147,7 @@ export function MasonryPriceForm({ initial, worksites, onSubmit, onCancel, title
               disabled={loading}
             />
             {unitPrice > 0 && (
-              <p className="text-xs text-[#6B7280]">{unitPrice.toLocaleString()}원/장</p>
+              <p className="text-xs text-[#6B7280]">{unitPrice.toLocaleString()}원/{unitLabel}</p>
             )}
           </div>
 

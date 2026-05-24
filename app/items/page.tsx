@@ -103,7 +103,7 @@ export default function ItemsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="품번 · 품목 · 규격으로 검색"
-            className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
           />
           {query && (
             <button type="button" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5]">
@@ -219,7 +219,7 @@ function ItemForm({ title, vendors, initial, onSubmit, onCancel }: {
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
               disabled={loading}
-              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
             >
               <option value="">선택 안 함</option>
               {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}

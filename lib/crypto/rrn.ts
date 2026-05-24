@@ -41,3 +41,14 @@ export function formatRrnPlain(rrn: string | null | undefined): string {
   if (d.length !== 13) return rrn;
   return `${d.slice(0, 6)}-${d.slice(6)}`;
 }
+
+// 표시용 통합: plain이 있으면 정규화(평문), 없으면 마스킹된 prefix-gender
+export function formatRrnDisplay(
+  plain: string | null | undefined,
+  prefix: string | null | undefined,
+  genderDigit: string | null | undefined,
+): string {
+  if (plain) return formatRrnPlain(plain);
+  if (prefix && genderDigit) return maskFromParts(prefix, genderDigit);
+  return '-';
+}

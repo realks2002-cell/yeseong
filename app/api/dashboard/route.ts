@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { currentYearMonth } from '@/lib/utils/date';
 
 export const runtime = 'nodejs';
-
-type SlotRow = {
-  daily_wage: number;
-  trade: string | null;
-  worker: { default_trade: string | null } | null;
-  attendance: { hours: number }[];
-};
 
 export async function GET(req: Request) {
   const sb = await getServerSupabase();
@@ -16,7 +10,7 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
-  const yearMonth = url.searchParams.get('yearMonth') ?? defaultYearMonth();
+  const yearMonth = url.searchParams.get('yearMonth') ?? currentYearMonth();
   if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
     return NextResponse.json({ error: 'invalid yearMonth' }, { status: 400 });
   }
@@ -82,7 +76,3 @@ export async function GET(req: Request) {
   });
 }
 
-function defaultYearMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}

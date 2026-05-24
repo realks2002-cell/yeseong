@@ -3,39 +3,38 @@ import { useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { WorkerForm, type Worker, type WorkerInput } from '@/components/worker-form';
-import { maskFromParts } from '@/lib/crypto/rrn';
+import { WorkerForm, type Worker, type WorkerInput, type TeamLeaderOption } from '@/components/worker-form';
+import { WAGE_TYPES } from '@/lib/constants/trades';
+import { formatRrnDisplay } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
 import { Search, UserPlus, Pencil, Trash2, X, Smartphone, Download } from 'lucide-react';
 
-function formatRrn(plain: string | null, prefix: string | null, gender: string | null): string {
-  if (plain) {
-    const d = plain.replace(/\D/g, '');
-    if (d.length === 13) return `${d.slice(0, 6)}-${d.slice(6)}`;
-    return plain;
-  }
-  return prefix && gender ? maskFromParts(prefix, gender) : '-';
-}
-
 export default function WorkersPage() {
   const [list, setList] = useState<Worker[] | null>(null);
+  const [teamLeaders, setTeamLeaders] = useState<TeamLeaderOption[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [wageTypeFilter, setWageTypeFilter] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
 
   const filtered = useMemo(() => {
     if (!list) return null;
     const raw = query.trim();
-    if (!raw) return list;
     const lower = raw.toLowerCase();
     const digits = raw.replace(/\D/g, '');
     return list.filter((w) => {
-      // 이름 부분일치 (한글·영문·국어)
+      if (wageTypeFilter) {
+        if (wageTypeFilter === '__none__') {
+          if (w.wage_type) return false;
+        } else if (w.wage_type !== wageTypeFilter) {
+          return false;
+        }
+      }
+      if (!raw) return true;
       if (w.name?.toLowerCase().includes(lower)) return true;
       if (w.name_english?.toLowerCase().includes(lower)) return true;
-      // 숫자 입력 시 전번/주민번호
       if (digits.length > 0) {
         const phone = (w.phone ?? '').replace(/\D/g, '');
         if (phone && phone.includes(digits)) return true;
@@ -45,17 +44,28 @@ export default function WorkersPage() {
       }
       return false;
     });
-  }, [list, query]);
+  }, [list, query, wageTypeFilter]);
 
   async function load() {
     setError(null);
-    const r = await fetch('/api/workers', { cache: 'no-store' });
-    if (!r.ok) {
+    const [wr, mr] = await Promise.all([
+      fetch('/api/workers', { cache: 'no-store' }),
+      fetch('/api/managers', { cache: 'no-store' }),
+    ]);
+    if (!wr.ok) {
       setError('목록을 불러오지 못했습니다');
       setList([]);
       return;
     }
-    setList(await r.json());
+    setList(await wr.json());
+    if (mr.ok) {
+      const mgrs = await mr.json();
+      setTeamLeaders(
+        (Array.isArray(mgrs) ? mgrs : []).map((m: { id: string; name: string; phone: string | null }) => ({
+          id: m.id, name: m.name, phone: m.phone,
+        })),
+      );
+    }
   }
 
   useEffect(() => {
@@ -105,7 +115,7 @@ export default function WorkersPage() {
             <p className="text-sm text-[#6B7280] mt-1">
               총 {list?.length ?? '...'}명
               {list && ` · 앱 가입 ${list.filter((w) => w.auth_user_id).length}명`}
-              {query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}
+              {(query || wageTypeFilter) && filtered ? ` · 검색결과 ${filtered.length}명` : ''}
             </p>
           </div>
           <div className="flex gap-2">
@@ -145,23 +155,48 @@ export default function WorkersPage() {
           </div>
         </div>
 
-        <div className="mb-4 relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="이름 · 전화번호 · 주민번호로 검색"
-            className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-          {query && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative max-w-md flex-1 min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="이름 · 전화번호 · 주민번호로 검색"
+              className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                aria-label="검색어 지우기"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <select
+            value={wageTypeFilter}
+            onChange={(e) => setWageTypeFilter(e.target.value)}
+            aria-label="급여형태 필터"
+            className="h-10 rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+          >
+            <option value="">급여형태 (전체)</option>
+            {WAGE_TYPES.map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+            <option value="__none__">미설정</option>
+          </select>
+          {wageTypeFilter && (
             <button
               type="button"
-              onClick={() => setQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
-              aria-label="검색어 지우기"
+              onClick={() => setWageTypeFilter('')}
+              className="inline-flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-xs text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
+              aria-label="급여형태 필터 해제"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" />
+              해제
             </button>
           )}
         </div>
@@ -174,7 +209,6 @@ export default function WorkersPage() {
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
-                  <th className="px-3 py-2 font-medium">사번</th>
                   <th className="px-3 py-2 font-medium">성명</th>
                   <th className="px-3 py-2 font-medium">팀장</th>
                   <th className="px-3 py-2 font-medium">구분</th>
@@ -182,11 +216,12 @@ export default function WorkersPage() {
                   <th className="px-3 py-2 font-medium">주민번호</th>
                   <th className="px-3 py-2 font-medium">은행</th>
                   <th className="px-3 py-2 font-medium">계좌</th>
+                  <th className="px-3 py-2 font-medium">예금주</th>
                   <th className="px-3 py-2 font-medium">연락처</th>
                   <th className="px-3 py-2 font-medium">주소</th>
                   <th className="px-3 py-2 font-medium text-center">앱</th>
-                  <th className="px-3 py-2 font-medium text-center">PIN</th>
                   <th className="px-3 py-2 font-medium text-right">기본일당</th>
+                  <th className="px-3 py-2 font-medium">급여형태</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
@@ -201,24 +236,26 @@ export default function WorkersPage() {
                   filtered.map((w, i) => (
                     <tr key={w.id} className="hover:bg-[#F5F5F5]">
                       <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
-                      <td className="px-3 py-2 font-mono text-[#4B5563]">{w.employee_code ?? '-'}</td>
                       <td className="px-3 py-2 font-medium">
                         {w.name}
                         {w.name_english && <span className="ml-1 text-[10px] text-[#9CA3AF]">({w.name_english})</span>}
                       </td>
                       <td className="px-3 py-2">
-                        {w.team_leader_id
-                          ? list?.find((l) => l.id === w.team_leader_id)?.name ?? <span className="text-[#D7D7D7]">-</span>
-                          : <span className="text-[#D7D7D7]">-</span>}
+                        {w.team_leader_name
+                          ? w.team_leader_name
+                          : w.skill_grade === '팀장'
+                            ? <span className="font-medium text-[#447D9B]">팀장</span>
+                            : <span className="text-[#D7D7D7]">-</span>}
                       </td>
                       <td className="px-3 py-2">{w.skill_grade ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2">{w.default_trade ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2 font-mono text-[#091413]">
-                        {formatRrn(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit)}
+                        {formatRrnDisplay(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit)}
                         {w.is_foreign && <span className="ml-1 rounded bg-amber-50 px-1 py-0.5 text-[9px] text-amber-700">외</span>}
                       </td>
                       <td className="px-3 py-2">{w.bank_name ?? '-'}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-[#4B5563]">{w.account_number ?? '-'}</td>
+                      <td className="px-3 py-2 text-[11px] text-[#4B5563]">{w.account_holder ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2 font-mono text-[11px]">{w.phone ? formatPhone(w.phone) : '-'}</td>
                       <td className="px-3 py-2 align-top max-w-[180px]" title={w.address ?? undefined}>
                         {w.address ? (
@@ -237,11 +274,11 @@ export default function WorkersPage() {
                           <span className="text-[10px] text-[#D7D7D7]" title="앱 미가입">미가입</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-center font-mono tabular-nums">
-                        {w.pin ? <span className="rounded bg-[#273F4F] px-1.5 py-0.5 text-white text-[11px]">{w.pin}</span> : <span className="text-[#D7D7D7]">-</span>}
-                      </td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         {w.default_wage ? `${w.default_wage.toLocaleString()}원` : <span className="text-[#9CA3AF]">-</span>}
+                      </td>
+                      <td className="px-3 py-2 text-[11px] text-[#4B5563]">
+                        {w.wage_type ?? <span className="text-[#D7D7D7]">-</span>}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
@@ -277,6 +314,7 @@ export default function WorkersPage() {
           onCancel={() => setShowAdd(false)}
           existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
           workers={list ?? []}
+          teamLeaders={teamLeaders}
         />
       )}
       {editing && (
@@ -287,6 +325,7 @@ export default function WorkersPage() {
           onCancel={() => setEditing(null)}
           existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
           workers={list ?? []}
+          teamLeaders={teamLeaders}
         />
       )}
     </AdminShell>

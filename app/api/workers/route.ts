@@ -14,13 +14,19 @@ export async function GET() {
       address, bank_name, account_number, account_holder, phone,
       default_wage, default_trade, skill_grade, wage_type,
       first_work_date, nationality, visa_status, is_active, created_at,
-      auth_user_id, team_leader_id
+      auth_user_id, team_leader_id,
+      team_leader:yeseong_site_managers!yeseong_workers_team_leader_id_fkey(id, name)
     `)
     .eq('is_active', true)
     .order('name');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  // team_leader join → team_leader_name 평면 필드로
+  const flat = (data ?? []).map((w) => {
+    const leader = Array.isArray(w.team_leader) ? w.team_leader[0] : w.team_leader;
+    return { ...w, team_leader_name: leader?.name ?? null };
+  });
+  return NextResponse.json(flat);
 }
 
 export async function POST(req: Request) {
@@ -50,6 +56,9 @@ export async function POST(req: Request) {
     p_phone: str(body.phone),
     p_default_wage: num(body.default_wage),
     p_default_trade: str(body.default_trade),
+    p_skill_grade: str(body.skill_grade),
+    p_wage_type: str(body.wage_type),
+    p_team_leader_id: str(body.team_leader_id),
   });
 
   if (error) {
@@ -57,14 +66,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '이미 등록된 사번 또는 동일인입니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // skill_grade, team_leader_id는 RPC에 없으므로 별도 update
-  const patch: Record<string, unknown> = {};
-  if (typeof body.skill_grade === 'string' && body.skill_grade.trim()) patch.skill_grade = body.skill_grade.trim();
-  if (typeof body.team_leader_id === 'string' && body.team_leader_id.trim()) patch.team_leader_id = body.team_leader_id.trim();
-  if (Object.keys(patch).length > 0) {
-    await sb.from('yeseong_workers').update(patch).eq('id', data);
   }
 
   return NextResponse.json({ id: data }, { status: 201 });

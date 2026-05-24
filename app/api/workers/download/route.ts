@@ -25,16 +25,16 @@ export async function GET() {
 
   const workers = data ?? [];
 
-  // 팀장 이름 lookup map (비활성 팀장도 포함)
-  const leaderMap = new Map(workers.map((w) => [w.id, w.name]));
-  const missingLeaderIds = workers
-    .map((w) => w.team_leader_id)
-    .filter((id): id is string => !!id && !leaderMap.has(id));
-  if (missingLeaderIds.length > 0) {
+  // 팀장 이름 lookup — team_leader_id는 yeseong_site_managers.id 참조
+  const leaderIds = [...new Set(
+    workers.map((w) => w.team_leader_id).filter((id): id is string => !!id)
+  )];
+  const leaderMap = new Map<string, string>();
+  if (leaderIds.length > 0) {
     const { data: leaders } = await sb
-      .from('yeseong_workers')
+      .from('yeseong_site_managers')
       .select('id, name')
-      .in('id', [...new Set(missingLeaderIds)]);
+      .in('id', leaderIds);
     leaders?.forEach((l) => leaderMap.set(l.id, l.name));
   }
 
@@ -69,7 +69,9 @@ export async function GET() {
       w.employee_code ?? '',
       w.name,
       w.name_english ?? '',
-      w.team_leader_id ? (leaderMap.get(w.team_leader_id) ?? '') : '',
+      w.team_leader_id
+        ? (leaderMap.get(w.team_leader_id) ?? '')
+        : (w.skill_grade === '팀장' ? '팀장' : ''),
       w.skill_grade ?? '',
       w.default_trade ?? '',
       rrn,

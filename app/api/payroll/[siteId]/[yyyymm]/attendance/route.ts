@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { periodRange } from '@/lib/utils/date';
 
 // PATCH: 출역 셀 단일 저장 — { payroll_worker_id, day, hours }
 // hours = 0 이면 DELETE, 그 외엔 UPSERT (체크 조건 0 < h <= 3.0)
@@ -31,10 +30,9 @@ export async function PATCH(
     return NextResponse.json({ error: 'hours 범위 0~3.0' }, { status: 400 });
   }
 
-  const { start } = periodRange(yyyymm);
-  const workDate = new Date(start);
-  workDate.setDate(start.getDate() + (day - 1));
-  const workDateStr = workDate.toISOString().slice(0, 10);
+  // 'YYYY-MM-DD' 직접 빌드 — TZ 무관
+  const [y, m] = yyyymm.split('-').map(Number);
+  const workDateStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
   if (hours === 0) {
     const { error } = await sb

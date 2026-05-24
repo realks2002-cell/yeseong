@@ -5,11 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Building2, Calendar, ChevronRight, MapPin } from 'lucide-react';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { ZipAllButton } from './zip-all-button';
-
-function currentYearMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
+import { currentYearMonth } from '@/lib/utils/date';
 
 type SlotRow = {
   period_id: string;

@@ -283,9 +283,9 @@ export default function AnnouncementsPage() {
                   <span className="text-sm font-bold text-white">공지사항</span>
                 </div>
                 <div className="px-4 py-3">
-                  <h3 className="text-base font-bold text-zinc-900">{title || '제목'}</h3>
+                  <h3 className="text-base font-bold text-[#091413]">{title || '제목'}</h3>
                   <div
-                    className="mt-2 whitespace-pre-wrap text-zinc-700 leading-relaxed"
+                    className="mt-2 whitespace-pre-wrap text-[#4B5563] leading-relaxed"
                     style={{ fontSize: `${fontSize}px` }}
                   >
                     {content || '내용이 여기에 표시됩니다.'}
@@ -306,7 +306,7 @@ export default function AnnouncementsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 h-10 rounded-[5px] bg-zinc-100 text-sm font-bold text-zinc-700"
+                className="flex-1 h-10 rounded-[5px] bg-[#F5F5F5] text-sm font-bold text-[#4B5563]"
               >
                 취소
               </button>
@@ -330,7 +330,7 @@ export default function AnnouncementsPage() {
               {items.map((a) => (
                 <div
                   key={a.id}
-                  className={`rounded-[5px] border px-4 py-3 ${a.is_active ? 'border-[#D7D7D7] bg-white' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}
+                  className={`rounded-[5px] border px-4 py-3 ${a.is_active ? 'border-[#D7D7D7] bg-white' : 'border-[#D7D7D7] bg-[#F5F5F5] opacity-60'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">

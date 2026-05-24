@@ -15,7 +15,7 @@ import {
   MapPin,
   Building2,
 } from 'lucide-react';
-import { formatYearMonth, shiftMonth } from '@/lib/utils/date';
+import { currentYearMonth, formatYearMonth, shiftMonth } from '@/lib/utils/date';
 
 type Worksite = { id: string; name: string; address: string | null; is_active: boolean };
 type Trade = { trade: string; hours: number };
@@ -31,11 +31,6 @@ type Dashboard = {
   worksites: Worksite[];
   tradeBreakdown: Trade[];
 };
-
-function currentYearMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 function formatKRW(n: number): string {
   return n.toLocaleString();

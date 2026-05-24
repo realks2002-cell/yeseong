@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Save, X } from 'lucide-react';
+import Link from 'next/link';
+import { Pencil, Save, X, ChevronRight, MapPin } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone } from '@/lib/auth/phone-email';
@@ -20,6 +21,7 @@ type Me = {
     account_holder: string | null;
     address: string | null;
   } | null;
+  worksites: Array<{ id: string; name: string }>;
 };
 
 export default function ManagerMePage() {
@@ -274,6 +276,41 @@ export default function ManagerMePage() {
           </p>
         </section>
       )}
+
+      <section className="px-7 pb-10">
+        <h2 className="text-lg font-bold text-zinc-900">담당 현장</h2>
+        <ul className="mt-3 rounded-[5px] bg-white ring-1 ring-zinc-200 divide-y divide-zinc-100">
+          {me.worksites.map((w) => (
+            <li key={w.id} className="px-5 py-4 text-base font-semibold text-zinc-800">
+              {w.name}
+            </li>
+          ))}
+          {me.worksites.length === 0 && (
+            <li className="px-5 py-6 text-center text-sm text-zinc-400">
+              담당 현장이 없어요
+            </li>
+          )}
+        </ul>
+
+        <Link
+          href="/m/manager/assignments"
+          className="mt-3 flex h-[60px] w-full items-center justify-between rounded-[5px] bg-zinc-50 px-5 text-base font-bold text-zinc-700 ring-1 ring-zinc-200 active:scale-[0.99]"
+        >
+          담당 현장 변경
+          <ChevronRight className="h-5 w-5 text-zinc-400" />
+        </Link>
+
+        <Link
+          href="/m/manager/site-gps"
+          className="mt-2 flex h-[60px] w-full items-center justify-between rounded-[5px] bg-emerald-50 px-5 text-base font-bold text-emerald-800 ring-1 ring-emerald-200 active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            현장 위치 등록
+          </span>
+          <ChevronRight className="h-5 w-5 text-emerald-400" />
+        </Link>
+      </section>
     </MobileShell>
   );
 }

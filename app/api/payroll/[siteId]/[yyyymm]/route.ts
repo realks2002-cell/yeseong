@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { periodRange } from '@/lib/utils/date';
+import { periodRangeIso } from '@/lib/utils/date';
 
 // GET: 현장+년월 노임대장 조회. period 없으면 자동 생성.
 export async function GET(
@@ -24,10 +24,8 @@ export async function GET(
     .single();
   if (wsErr || !ws) return NextResponse.json({ error: 'worksite not found' }, { status: 404 });
 
-  // period upsert
-  const { start, end } = periodRange(yyyymm);
-  const startStr = start.toISOString().slice(0, 10);
-  const endStr = end.toISOString().slice(0, 10);
+  // period upsert (타임존 무관 문자열 빌드)
+  const { start: startStr, end: endStr } = periodRangeIso(yyyymm);
 
   const { data: period, error: pErr } = await sb
     .from('yeseong_payroll_periods')
@@ -46,7 +44,7 @@ export async function GET(
       id, slot_number, daily_wage, trade,
       worker:yeseong_workers (
         id, employee_code, name, name_english,
-        default_trade, skill_grade, default_wage,
+        default_trade, skill_grade, default_wage, wage_type,
         rrn_prefix, rrn_gender_digit,
         bank_name, account_number, account_holder, phone, address
       ),

@@ -12,16 +12,20 @@ export async function GET() {
   const { data, error } = await sb
     .from('yeseong_site_managers')
     .select(`
-      id, phone, name, pin, created_at,
+      id, phone, name, pin, default_trade, created_at,
       yeseong_site_manager_assignments(
         worksite_id,
         yeseong_worksites(id, name)
       )
     `)
-    .order('created_at', { ascending: false });
+    .order('name', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  // 한글 가나다 순으로 정확히 정렬 (Postgres ORDER BY는 locale에 따라 흔들릴 수 있어 보강)
+  const sorted = (data ?? []).slice().sort((a: { name: string }, b: { name: string }) =>
+    (a.name ?? '').localeCompare(b.name ?? '', 'ko'),
+  );
+  return NextResponse.json(sorted);
 }
 
 export async function POST(req: Request) {

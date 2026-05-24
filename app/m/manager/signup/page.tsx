@@ -20,13 +20,30 @@ type Mode =
   | 'signup_account'
   | 'signup_work';
 
+type Prefilled = {
+  name: string | null;
+  name_english?: string | null;
+  is_foreign: boolean;
+  nationality?: string | null;
+  visa_status?: string | null;
+  rrn_prefix?: string | null;
+  rrn_gender_digit?: string | null;
+  address?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  account_holder?: string | null;
+  default_wage?: number | null;
+  skill_grade?: string | null;
+  default_trade?: string | null;
+};
+
 type CheckResult = {
   has_worker: boolean;
   worker_has_auth: boolean;
   worker_name: string | null;
   has_manager: boolean;
   missing: string[];
-  prefilled: { name: string | null; is_foreign: boolean } | null;
+  prefilled: Prefilled | null;
 };
 
 const FIELD_TO_MODE: Record<string, Mode> = {
@@ -39,16 +56,16 @@ const FIELD_TO_MODE: Record<string, Mode> = {
 };
 
 // 매니저는 belonging 없음. work까지가 마지막.
-function buildFlow(missing: string[], isForeign: boolean): Mode[] {
+function buildFlow(missing: string[], isForeign: boolean, isPartial: boolean): Mode[] {
   const flow: Mode[] = ['signup_pin1', 'signup_pin2'];
   for (const key of ['identity', 'rrn', 'foreign', 'address', 'account', 'work']) {
     if (key === 'foreign') {
-      if (isForeign && (missing.includes('foreign') || missing.includes('rrn'))) {
+      if (isForeign && (isPartial || missing.includes('foreign') || missing.includes('rrn'))) {
         flow.push(FIELD_TO_MODE.foreign);
       }
       continue;
     }
-    if (missing.includes(key)) flow.push(FIELD_TO_MODE[key]);
+    if (isPartial || missing.includes(key)) flow.push(FIELD_TO_MODE[key]);
   }
   return flow;
 }
@@ -91,6 +108,7 @@ export default function ManagerSignupPage() {
   const [missingFields, setMissingFields] = useState<string[]>([
     'identity', 'rrn', 'address', 'account', 'work',
   ]);
+  const [prefilled, setPrefilled] = useState<Prefilled | null>(null);
 
   const phoneValid = normalizePhone(phone).length >= 10;
   const rrnValid = normalizePhone(rrn).length === 13;
@@ -140,11 +158,25 @@ export default function ManagerSignupPage() {
       }
       if (r.has_worker) {
         setMatchedName(r.worker_name);
-        if (r.prefilled?.name) setName(r.prefilled.name);
-        if (typeof r.prefilled?.is_foreign === 'boolean') setIsForeign(r.prefilled.is_foreign);
+        const p = r.prefilled ?? null;
+        setPrefilled(p);
+        if (p) {
+          if (p.name) setName(p.name);
+          if (typeof p.is_foreign === 'boolean') setIsForeign(p.is_foreign);
+          if (p.name_english) setNameEnglish(p.name_english);
+          if (p.nationality) setNationality(p.nationality);
+          if (p.visa_status) setVisaStatus(p.visa_status);
+          if (p.address) setAddress(p.address);
+          if (p.bank_name) setBankName(p.bank_name);
+          if (p.account_number) setAccountNumber(p.account_number);
+          if (p.account_holder) setAccountHolder(p.account_holder);
+          if (typeof p.default_wage === 'number' && p.default_wage > 0) setDefaultWage(String(p.default_wage));
+          if (p.default_trade) setDefaultTrade(p.default_trade);
+        }
         setMissingFields(r.missing ?? []);
       } else {
         setMissingFields(r.missing ?? ['identity','rrn','address','account','work']);
+        setPrefilled(null);
       }
       setMode('signup_pin1');
     } finally {
@@ -152,7 +184,7 @@ export default function ManagerSignupPage() {
     }
   };
 
-  const flow = buildFlow(missingFields, isForeign);
+  const flow = buildFlow(missingFields, isForeign, prefilled !== null);
 
   const goNext = () => {
     const idx = flow.indexOf(mode);
@@ -293,60 +325,132 @@ export default function ManagerSignupPage() {
         )}
 
         {mode === 'signup_identity' && (
-          <IdentityStep
-            name={name} setName={setName}
-            isForeign={isForeign} setIsForeign={setIsForeign}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('identity') ? (
+            <IdentityStep
+              name={name} setName={setName}
+              isForeign={isForeign} setIsForeign={setIsForeign}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="신원 확인"
+              items={[
+                { label: '성명', value: name },
+                { label: '구분', value: isForeign ? '외국인' : '내국인' },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_rrn' && (
-          <RrnStep
-            isForeign={isForeign}
-            rrn={rrn} setRrn={setRrn}
-            valid={rrnValid}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('rrn') ? (
+            <RrnStep
+              isForeign={isForeign}
+              rrn={rrn} setRrn={setRrn}
+              valid={rrnValid}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title={isForeign ? '외국인등록번호 확인' : '주민번호 확인'}
+              items={[
+                {
+                  label: '번호',
+                  value: prefilled?.rrn_prefix
+                    ? `${prefilled.rrn_prefix}-${prefilled.rrn_gender_digit ?? '*'}******`
+                    : null,
+                },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_foreign' && (
-          <ForeignStep
-            nameEnglish={nameEnglish} setNameEnglish={setNameEnglish}
-            nationality={nationality} setNationality={setNationality}
-            visaStatus={visaStatus} setVisaStatus={setVisaStatus}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('foreign') ? (
+            <ForeignStep
+              nameEnglish={nameEnglish} setNameEnglish={setNameEnglish}
+              nationality={nationality} setNationality={setNationality}
+              visaStatus={visaStatus} setVisaStatus={setVisaStatus}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="외국인 추가정보 확인"
+              items={[
+                { label: '영문명', value: nameEnglish },
+                { label: '국적', value: nationality },
+                { label: '체류자격', value: visaStatus },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_address' && (
-          <AddressStep
-            address={address} setAddress={setAddress}
-            valid={address.trim().length > 0}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('address') ? (
+            <AddressStep
+              address={address} setAddress={setAddress}
+              valid={address.trim().length > 0}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="주소 확인"
+              items={[{ label: '주소', value: address }]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_account' && (
-          <AccountStep
-            bankName={bankName} setBankName={setBankName}
-            bankCustom={bankCustom} setBankCustom={setBankCustom}
-            accountNumber={accountNumber} setAccountNumber={setAccountNumber}
-            accountHolder={accountHolder} setAccountHolder={setAccountHolder}
-            valid={accountValid}
-            onNext={goNextOrSubmit}
-          />
+          missingFields.includes('account') ? (
+            <AccountStep
+              bankName={bankName} setBankName={setBankName}
+              bankCustom={bankCustom} setBankCustom={setBankCustom}
+              accountNumber={accountNumber} setAccountNumber={setAccountNumber}
+              accountHolder={accountHolder} setAccountHolder={setAccountHolder}
+              valid={accountValid}
+              onNext={goNextOrSubmit}
+            />
+          ) : (
+            <ReviewStep
+              title="계좌 확인"
+              items={[
+                { label: '은행', value: bankName },
+                { label: '계좌번호', value: accountNumber },
+                { label: '예금주', value: accountHolder },
+              ]}
+              onNext={goNextOrSubmit}
+            />
+          )
         )}
 
         {mode === 'signup_work' && (
-          <WorkStep
-            defaultWage={defaultWage} setDefaultWage={setDefaultWage}
-            defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
-            tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
-            valid={wageValid && defaultTrade.trim().length > 0}
-            busy={signupBusy}
-            error={signupError}
-            onSubmit={submitSignup}
-          />
+          missingFields.includes('work') ? (
+            <WorkStep
+              defaultWage={defaultWage} setDefaultWage={setDefaultWage}
+              defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
+              tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
+              valid={wageValid && defaultTrade.trim().length > 0}
+              busy={signupBusy}
+              error={signupError}
+              onSubmit={submitSignup}
+            />
+          ) : (
+            <ReviewStep
+              title="직무 · 일당 확인"
+              items={[
+                { label: '공종', value: defaultTrade },
+                { label: '기본 일당', value: defaultWage ? `${Number(defaultWage).toLocaleString()}원` : null },
+              ]}
+              onNext={submitSignup}
+              isLast
+              busy={signupBusy}
+              error={signupError}
+            />
+          )
         )}
       </div>
     </MobileShell>
@@ -752,6 +856,47 @@ function WorkStep({
       {error && <p className="mt-4 text-base font-semibold text-red-800">{error}</p>}
       <NextButton valid={valid && !busy} onNext={onSubmit} label={busy ? '가입 중...' : '가입 완료'} />
     </>
+  );
+}
+
+function ReviewStep({
+  title,
+  items,
+  onNext,
+  isLast,
+  busy,
+  error,
+}: {
+  title: string;
+  items: { label: string; value: string | null }[];
+  onNext: () => void;
+  isLast?: boolean;
+  busy?: boolean;
+  error?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <p className="mt-1.5 text-sm text-[#6B7280]">이미 등록된 정보입니다. 확인 후 다음을 눌러주세요.</p>
+      </div>
+      <div className="rounded-[8px] border border-[#D7D7D7] bg-[#F5F5F5] p-4">
+        <div className="space-y-2.5">
+          {items.map((it) => (
+            <div key={it.label} className="flex items-start justify-between gap-3 text-sm">
+              <span className="shrink-0 text-[#6B7280]">{it.label}</span>
+              <span className="text-right text-[#091413]">{it.value && it.value.trim() !== '' ? it.value : '-'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <NextButton
+        valid={!busy}
+        onNext={onNext}
+        label={isLast ? (busy ? '가입 중...' : '가입 완료') : '다음'}
+      />
+    </div>
   );
 }
 

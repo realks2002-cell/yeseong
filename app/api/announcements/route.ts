@@ -32,19 +32,33 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { title, content, targetType, targetValue, fontSize, expiresAt } = body;
 
-  if (!title || !content) {
+  if (typeof title !== 'string' || !title.trim() || typeof content !== 'string' || !content.trim()) {
     return NextResponse.json({ error: '제목과 내용은 필수입니다.' }, { status: 400 });
+  }
+
+  const VALID_TARGET_TYPES = ['all', 'leaders', 'team', 'phone'] as const;
+  const tt = typeof targetType === 'string' && (VALID_TARGET_TYPES as readonly string[]).includes(targetType)
+    ? targetType
+    : 'all';
+
+  const fs = typeof fontSize === 'number' && Number.isFinite(fontSize) && fontSize >= 10 && fontSize <= 32
+    ? Math.floor(fontSize)
+    : 16;
+
+  // team / phone 같은 타겟은 target_value 필수
+  if ((tt === 'team' || tt === 'phone') && (typeof targetValue !== 'string' || !targetValue.trim())) {
+    return NextResponse.json({ error: '대상 값(target_value)이 필요합니다.' }, { status: 400 });
   }
 
   const { data, error } = await sb
     .from('yeseong_announcements')
     .insert({
-      title,
-      body: content,
-      target_type: targetType ?? 'all',
-      target_value: targetValue ?? null,
-      font_size: fontSize ?? 16,
-      expires_at: expiresAt ?? null,
+      title: title.trim(),
+      body: content.trim(),
+      target_type: tt,
+      target_value: typeof targetValue === 'string' && targetValue.trim() ? targetValue.trim() : null,
+      font_size: fs,
+      expires_at: typeof expiresAt === 'string' && expiresAt ? expiresAt : null,
       is_active: true,
       created_by: user.id,
     })

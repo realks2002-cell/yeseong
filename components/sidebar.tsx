@@ -20,6 +20,7 @@ import {
   Bell,
   BellOff,
   ClipboardCheck,
+  History,
   LogOut as LogOutIcon,
   KeyRound,
   type LucideIcon,
@@ -80,6 +81,7 @@ const groups: Group[] = [
     label: '모니터링',
     items: [
       { label: '팀장출역 검토', href: '/monitoring/attendance-review', icon: ClipboardCheck },
+      { label: '변경 이력', href: '/admin/audit-log', icon: History },
       { label: '앱 종료 알림', href: '/monitoring/offline', icon: BellOff },
       { label: '이탈 기록', href: '/monitoring/departures', icon: LogOutIcon },
     ],

@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     'address', 'bank_name', 'account_number', 'account_holder', 'phone',
     'default_wage', 'default_trade', 'skill_grade', 'wage_type',
     'first_work_date', 'nationality', 'visa_status', 'is_active',
-    'team_leader_id',
+    'team_leader_id', 'default_worksite_id',
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
