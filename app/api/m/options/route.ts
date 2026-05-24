@@ -10,7 +10,7 @@ export async function GET() {
   const [worksites, subcontractors, teamLeaders] = await Promise.all([
     sb.from('yeseong_worksites').select('id, name').eq('is_active', true).order('name'),
     sb.from('yeseong_subcontractors').select('id, name').eq('is_active', true).order('name'),
-    sb.from('yeseong_site_managers').select('id, name, phone').order('name'),
+    sb.from('yeseong_site_managers').select('id, name, phone').eq('is_active', true).order('name'),
   ]);
 
   if (worksites.error) return NextResponse.json({ error: worksites.error.message }, { status: 500 });

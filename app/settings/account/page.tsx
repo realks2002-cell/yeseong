@@ -4,12 +4,13 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, Pencil, Trash2, X } from 'lucide-react';
+import { UserPlus, Pencil, RotateCcw, Trash2, X } from 'lucide-react';
 
 type Admin = {
   id: string;
   login_id: string;
   email: string;
+  is_active: boolean;
   created_at: string;
   last_sign_in_at: string | null;
   is_self: boolean;
@@ -21,30 +22,46 @@ export default function AccountPage() {
   const [list, setList] = useState<Admin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<FormMode>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
-    const r = await fetch('/api/admins', { cache: 'no-store' });
+    const r = await fetch(`/api/admins${showArchived ? '?includeArchived=true' : ''}`, { cache: 'no-store' });
     if (!r.ok) {
       setError('목록을 불러오지 못했습니다');
       setList([]);
       return;
     }
     setList(await r.json());
-  }, []);
+  }, [showArchived]);
 
   useEffect(() => { load(); }, [load]);
 
   async function handleDelete(a: Admin) {
     if (a.is_self) {
-      alert('본인은 삭제할 수 없습니다');
+      alert('본인은 비활성 처리할 수 없습니다');
       return;
     }
-    if (!confirm(`관리자 "${a.login_id}"를 삭제할까요?`)) return;
+    if (!confirm(`관리자 "${a.login_id}"를 비활성 처리할까요?\n과거 작업 기록은 그대로 유지되고, 로그인만 차단됩니다.`)) return;
     const r = await fetch(`/api/admins/${a.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
-      alert(j.error ?? '삭제 실패');
+      alert(j.error ?? '비활성 처리 실패');
+      return;
+    }
+    load();
+  }
+
+  async function handleRestore(a: Admin) {
+    if (!confirm(`관리자 "${a.login_id}"를 복원할까요?`)) return;
+    const r = await fetch(`/api/admins/${a.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '복원 실패');
       return;
     }
     load();
@@ -60,10 +77,21 @@ export default function AccountPage() {
               총 {list?.length ?? '...'}명. 여러 관리자가 동시에 접속할 수 있습니다.
             </p>
           </div>
-          <Button onClick={() => setForm({ kind: 'add' })}>
-            <UserPlus className="h-4 w-4" />
-            관리자 추가
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-[#4B5563] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded border-[#D7D7D7]"
+              />
+              보관함 보기
+            </label>
+            <Button onClick={() => setForm({ kind: 'add' })}>
+              <UserPlus className="h-4 w-4" />
+              관리자 추가
+            </Button>
+          </div>
         </div>
 
         {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
@@ -77,17 +105,18 @@ export default function AccountPage() {
                   <th className="px-4 py-3 font-medium">ID</th>
                   <th className="px-4 py-3 font-medium">마지막 로그인</th>
                   <th className="px-4 py-3 font-medium">생성일</th>
+                  <th className="px-4 py-3 font-medium w-20">상태</th>
                   <th className="px-4 py-3 font-medium w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-[#9CA3AF]">관리자가 없습니다.</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-[#9CA3AF]">관리자가 없습니다.</td></tr>
                 ) : (
                   list.map((a, i) => (
-                    <tr key={a.id} className="hover:bg-[#F5F5F5]">
+                    <tr key={a.id} className={`hover:bg-[#F5F5F5] ${!a.is_active ? 'text-[#9CA3AF]' : ''}`}>
                       <td className="px-4 py-3 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-4 py-3 font-medium">
                         {a.login_id}
@@ -96,23 +125,43 @@ export default function AccountPage() {
                       <td className="px-4 py-3 text-[#4B5563] tabular-nums">{formatDate(a.last_sign_in_at)}</td>
                       <td className="px-4 py-3 text-[#4B5563] tabular-nums">{formatDate(a.created_at)}</td>
                       <td className="px-4 py-3">
+                        {a.is_active ? (
+                          <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">활성</span>
+                        ) : (
+                          <span className="rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] text-[#6B7280]">보관됨</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          <button
-                            className="rounded p-1.5 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
-                            onClick={() => setForm({ kind: 'edit', admin: a })}
-                            aria-label="수정"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            className="rounded p-1.5 text-[#6B7280] hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                            onClick={() => handleDelete(a)}
-                            disabled={a.is_self}
-                            aria-label="삭제"
-                            title={a.is_self ? '본인은 삭제할 수 없습니다' : '삭제'}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {a.is_active ? (
+                            <>
+                              <button
+                                className="rounded p-1.5 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                                onClick={() => setForm({ kind: 'edit', admin: a })}
+                                aria-label="수정"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                className="rounded p-1.5 text-[#6B7280] hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                onClick={() => handleDelete(a)}
+                                disabled={a.is_self}
+                                aria-label="비활성"
+                                title={a.is_self ? '본인은 비활성 처리할 수 없습니다' : '비활성 처리'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="rounded p-1.5 text-[#6B7280] hover:bg-emerald-50 hover:text-emerald-700"
+                              onClick={() => handleRestore(a)}
+                              aria-label="복원"
+                              title="복원"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

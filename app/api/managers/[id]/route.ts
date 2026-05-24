@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { normalizePhone, phoneToManagerEmail, pinToPassword } from '@/lib/auth/phone-email';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
+import { SOFT_DELETE_BAN_DURATION, UNBAN_DURATION } from '@/lib/auth/ban';
 
 export const runtime = 'nodejs';
 
@@ -12,19 +14,27 @@ export async function PATCH(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const admin = getServiceSupabase();
 
   const { data: current, error: curErr } = await admin
     .from('yeseong_site_managers')
-    .select('id, phone, auth_user_id, pin')
+    .select('id, phone, auth_user_id, pin, is_active')
     .eq('id', id)
     .single();
   if (curErr || !current) return NextResponse.json({ error: '팀장을 찾을 수 없음' }, { status: 404 });
 
   const patch: Record<string, unknown> = {};
   if (typeof body?.name === 'string' && body.name.trim()) patch.name = body.name.trim();
+
+  // is_active 토글 — 복원/비활성 둘 다 PATCH 한 경로로 처리 (subcontractors 패턴)
+  let activeChange: boolean | null = null;
+  if (typeof body?.is_active === 'boolean') {
+    activeChange = body.is_active;
+    patch.is_active = body.is_active;
+  }
 
   let newPhone: string | null = null;
   if (typeof body?.phone === 'string') {
@@ -82,6 +92,14 @@ export async function PATCH(
     if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
   }
 
+  // is_active 변경 시 auth.users 로그인 차단 동기화
+  if (activeChange !== null && current.auth_user_id) {
+    const { error: banErr } = await admin.auth.admin.updateUserById(current.auth_user_id, {
+      ban_duration: activeChange ? UNBAN_DURATION : SOFT_DELETE_BAN_DURATION,
+    });
+    if (banErr) return NextResponse.json({ error: `로그인 ${activeChange ? '복원' : '차단'} 실패: ${banErr.message}` }, { status: 500 });
+  }
+
   // 담당 현장 갱신 (전체 교체)
   if (Array.isArray(body?.worksite_ids)) {
     const worksiteIds = body.worksite_ids.filter((v: unknown) => typeof v === 'string') as string[];
@@ -96,6 +114,8 @@ export async function PATCH(
   return NextResponse.json({ ok: true });
 }
 
+// 소프트 삭제: row + auth.users 보존, is_active=false 로 비활성 + 로그인 차단
+// 과거 attendance.approved_by, workers.team_leader_id 등 참조 데이터의 감사 흔적 유지
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -104,6 +124,7 @@ export async function DELETE(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const admin = getServiceSupabase();
 
@@ -112,12 +133,19 @@ export async function DELETE(
     .select('auth_user_id')
     .eq('id', id)
     .single();
+  if (!current) return NextResponse.json({ error: '팀장을 찾을 수 없음' }, { status: 404 });
 
-  const { error } = await admin.from('yeseong_site_managers').delete().eq('id', id);
+  const { error } = await admin
+    .from('yeseong_site_managers')
+    .update({ is_active: false })
+    .eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (current?.auth_user_id) {
-    await admin.auth.admin.deleteUser(current.auth_user_id);
+  if (current.auth_user_id) {
+    const { error: banErr } = await admin.auth.admin.updateUserById(current.auth_user_id, {
+      ban_duration: SOFT_DELETE_BAN_DURATION,
+    });
+    if (banErr) return NextResponse.json({ error: `로그인 차단 실패: ${banErr.message}` }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

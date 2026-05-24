@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Search, X, UserPlus, Pencil, Trash2 } from 'lucide-react';
+import { Search, X, UserPlus, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 
 type Manager = {
   id: string;
@@ -11,6 +11,7 @@ type Manager = {
   phone: string | null;
   pin: string | null;
   default_trade: string | null;
+  is_active: boolean;
   created_at: string;
   yeseong_site_manager_assignments:
     | Array<{ worksite_id: string; yeseong_worksites: { id: string; name: string } | null }>
@@ -50,6 +51,7 @@ export default function ManagersPage() {
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Manager | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -67,10 +69,10 @@ export default function ManagersPage() {
     });
   }, [list, query]);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError(null);
     const [mRes, wRes] = await Promise.all([
-      fetch('/api/managers', { cache: 'no-store' }),
+      fetch(`/api/managers${showArchived ? '?includeArchived=true' : ''}`, { cache: 'no-store' }),
       fetch('/api/worksites', { cache: 'no-store' }),
     ]);
     if (!mRes.ok) {
@@ -80,11 +82,11 @@ export default function ManagersPage() {
     }
     setList(await mRes.json());
     if (wRes.ok) setWorksites(await wRes.json());
-  }
+  }, [showArchived]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   async function handleAdd(input: ManagerInput) {
     const r = await fetch('/api/managers', {
@@ -124,11 +126,26 @@ export default function ManagersPage() {
   }
 
   async function handleDelete(m: Manager) {
-    if (!confirm(`"${m.name}" 팀장을 삭제할까요?`)) return;
+    if (!confirm(`"${m.name}" 팀장을 비활성 처리할까요?\n과거 출역 승인 기록은 그대로 유지되고, 목록과 모바일 로그인에서만 차단됩니다.`)) return;
     const r = await fetch(`/api/managers/${m.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
-      alert(j.error ?? '삭제 실패');
+      alert(j.error ?? '비활성 처리 실패');
+      return;
+    }
+    load();
+  }
+
+  async function handleRestore(m: Manager) {
+    if (!confirm(`"${m.name}" 팀장을 복원할까요?`)) return;
+    const r = await fetch(`/api/managers/${m.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '복원 실패');
       return;
     }
     load();
@@ -145,10 +162,21 @@ export default function ManagersPage() {
               관리자가 직접 추가/수정하거나 팀장 앱에서 가입한 사용자가 노출됩니다.
             </p>
           </div>
-          <Button onClick={() => setShowAdd(true)}>
-            <UserPlus className="h-4 w-4" />
-            팀장 추가
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-[#4B5563] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded border-[#D7D7D7]"
+              />
+              보관함 보기
+            </label>
+            <Button onClick={() => setShowAdd(true)}>
+              <UserPlus className="h-4 w-4" />
+              팀장 추가
+            </Button>
+          </div>
         </div>
 
         <div className="relative mb-4 max-w-md">
@@ -207,9 +235,14 @@ export default function ManagersPage() {
                       .map((a) => a.yeseong_worksites)
                       .filter((s): s is { id: string; name: string } => s !== null);
                     return (
-                      <tr key={m.id} className="hover:bg-[#F5F5F5]">
+                      <tr key={m.id} className={`hover:bg-[#F5F5F5] ${!m.is_active ? 'text-[#9CA3AF]' : ''}`}>
                         <td className="px-3 py-2 tabular-nums text-[#6B7280]">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium">{m.name}</td>
+                        <td className="px-3 py-2 font-medium">
+                          {m.name}
+                          {!m.is_active && (
+                            <span className="ml-2 rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] text-[#6B7280]">보관됨</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-xs text-[#4B5563]">
                           {m.default_trade ?? <span className="text-[#D7D7D7]">-</span>}
                         </td>
@@ -222,33 +255,51 @@ export default function ManagersPage() {
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          <select
-                            value={sites[0]?.id ?? ''}
-                            onChange={(e) => handleWorksiteChange(m, e.target.value)}
-                            className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-xs outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
-                          >
-                            <option value="">미배정</option>
-                            {worksites.map((w) => (
-                              <option key={w.id} value={w.id}>{w.name}</option>
-                            ))}
-                          </select>
+                          {m.is_active ? (
+                            <select
+                              value={sites[0]?.id ?? ''}
+                              onChange={(e) => handleWorksiteChange(m, e.target.value)}
+                              className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-xs outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
+                            >
+                              <option value="">미배정</option>
+                              {worksites.map((w) => (
+                                <option key={w.id} value={w.id}>{w.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-[#9CA3AF]">{sites[0]?.name ?? '미배정'}</span>
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-0.5">
-                            <button
-                              className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
-                              onClick={() => setEditing(m)}
-                              aria-label="수정"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
-                              onClick={() => handleDelete(m)}
-                              aria-label="삭제"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {m.is_active ? (
+                              <>
+                                <button
+                                  className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                                  onClick={() => setEditing(m)}
+                                  aria-label="수정"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
+                                  onClick={() => handleDelete(m)}
+                                  aria-label="비활성"
+                                  title="비활성 처리"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="rounded p-1 text-[#6B7280] hover:bg-emerald-50 hover:text-emerald-700"
+                                onClick={() => handleRestore(m)}
+                                aria-label="복원"
+                                title="복원"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

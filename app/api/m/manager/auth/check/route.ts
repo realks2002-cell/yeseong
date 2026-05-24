@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     .from('yeseong_site_managers')
     .select('id')
     .eq('phone', p)
+    .eq('is_active', true)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

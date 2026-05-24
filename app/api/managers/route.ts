@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { normalizePhone, phoneToManagerEmail, pinToPassword } from '@/lib/auth/phone-email';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(req: Request) {
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { data, error } = await sb
+  const url = new URL(req.url);
+  const includeArchived = url.searchParams.get('includeArchived') === 'true';
+
+  let query = sb
     .from('yeseong_site_managers')
     .select(`
-      id, phone, name, pin, default_trade, created_at,
+      id, phone, name, pin, default_trade, is_active, created_at,
       yeseong_site_manager_assignments(
         worksite_id,
         yeseong_worksites(id, name)
@@ -20,11 +25,17 @@ export async function GET() {
     `)
     .order('name', { ascending: true });
 
+  if (!includeArchived) query = query.eq('is_active', true);
+
+  const { data, error } = await query;
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   // 한글 가나다 순으로 정확히 정렬 (Postgres ORDER BY는 locale에 따라 흔들릴 수 있어 보강)
-  const sorted = (data ?? []).slice().sort((a: { name: string }, b: { name: string }) =>
-    (a.name ?? '').localeCompare(b.name ?? '', 'ko'),
-  );
+  // 비활성은 뒤로 빼서 가독성 확보
+  const sorted = (data ?? []).slice().sort((a: { name: string; is_active: boolean }, b: { name: string; is_active: boolean }) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+    return (a.name ?? '').localeCompare(b.name ?? '', 'ko');
+  });
   return NextResponse.json(sorted);
 }
 
@@ -32,6 +43,7 @@ export async function POST(req: Request) {
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
@@ -50,13 +62,21 @@ export async function POST(req: Request) {
 
   const admin = getServiceSupabase();
 
-  // 동일 phone 중복 체크
+  // 동일 phone 중복 체크 — 비활성 팀장과 충돌 시 친절한 안내
   const { data: existing } = await admin
     .from('yeseong_site_managers')
-    .select('id')
+    .select('id, is_active')
     .eq('phone', phone)
     .maybeSingle();
-  if (existing) return NextResponse.json({ error: '이미 등록된 전화번호' }, { status: 409 });
+  if (existing) {
+    if (!existing.is_active) {
+      return NextResponse.json(
+        { error: '비활성 처리된 팀장과 동일한 전화번호입니다. 보관함 보기에서 복원하세요.' },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: '이미 등록된 전화번호' }, { status: 409 });
+  }
 
   // PIN이 있으면 auth.users도 함께 생성 (모바일 앱 로그인 가능 상태)
   let authUserId: string | null = null;
