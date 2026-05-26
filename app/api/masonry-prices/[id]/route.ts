@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { MASONRY_UNITS } from '@/lib/constants/masonry';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,6 +26,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if ('size_spec' in body) {
     patch.size_spec = typeof body.size_spec === 'string' && body.size_spec.trim() ? body.size_spec.trim() : null;
   }
+  if (typeof body.unit === 'string' && (MASONRY_UNITS as readonly string[]).includes(body.unit)) {
+    patch.unit = body.unit;
+  }
   if (typeof body.unit_price === 'number' && Number.isFinite(body.unit_price)) {
     patch.unit_price = Math.floor(body.unit_price);
   }
@@ -43,7 +47,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (error) {
     if (error.code === '23505') {
-      return NextResponse.json({ error: '해당 현장에 동일 종류·규격이 이미 등록되어 있습니다' }, { status: 409 });
+      return NextResponse.json({ error: '해당 현장에 동일 항목(종류·규격·단위)이 이미 등록되어 있습니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

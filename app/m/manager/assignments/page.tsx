@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, Save } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 
 type Option = { id: string; name: string };
 type Me = {
@@ -27,9 +28,23 @@ export default function ManagerAssignmentsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [readOnly, setReadOnly] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    const mirror = getMirrorId();
+    if (mirror) {
+      setReadOnly(true);
+      try {
+        const me = await mirrorFetch<Me>('me', mirror);
+        setAll(me.worksites ?? []);
+        setSelected(me.worksites[0]?.id ?? null);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+      setLoading(false);
+      return;
+    }
     const { data: { user } } = await sb.auth.getUser();
     if (!user) {
       router.replace('/m/manager/signup');
@@ -53,7 +68,7 @@ export default function ManagerAssignmentsPage() {
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
-    if (busy || !selected) return;
+    if (readOnly || busy || !selected) return;
     setBusy(true);
     setError(undefined);
     const { error: rpcErr } = await sb.rpc('yeseong_manager_set_assignments', {
@@ -134,16 +149,16 @@ export default function ManagerAssignmentsPage() {
         <div className="mt-auto pt-10">
           <button
             onClick={save}
-            disabled={busy || !selected}
+            disabled={readOnly || busy || !selected}
             className={
               'flex h-[78px] w-full items-center justify-center gap-2 rounded-[5px] text-2xl font-bold transition ' +
-              (busy || !selected
+              (readOnly || busy || !selected
                 ? 'bg-zinc-100 text-zinc-400'
                 : 'bg-blue-900 text-white active:scale-[0.98]')
             }
           >
             <Save className="h-6 w-6" />
-            {busy ? '저장 중...' : '현장 저장'}
+            {readOnly ? '보기 전용' : busy ? '저장 중...' : '현장 저장'}
           </button>
         </div>
       </div>

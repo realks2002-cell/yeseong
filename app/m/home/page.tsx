@@ -19,6 +19,7 @@ type Me = {
   worker: { id: string; name: string; phone: string | null; default_trade: string | null; default_worksite_id: string | null; default_subcontractor_id: string | null };
   worksite: { id: string; name: string } | null;
   subcontractor: { id: string; name: string } | null;
+  team_leader: { id: string; name: string } | null;
   recent: Array<{ work_date: string; hours: number; approval_status: AttendanceStatus; rejection_reason: string | null }>;
 };
 
@@ -98,18 +99,16 @@ export default function HomePage() {
     );
   }
 
-  if (!me?.worksite || !me?.subcontractor) {
+  if (!me?.worksite) {
     return (
       <MobileShell showTabs activeTab="home">
         <div className="px-7 pt-10">
-          <h1 className="text-2xl font-bold text-zinc-900">현장과 소속을 먼저 설정해주세요</h1>
-          <p className="mt-3 text-base text-zinc-500">내 정보 화면에서 변경할 수 있어요.</p>
-          <button
-            onClick={() => router.push('/m/profile')}
-            className="mt-8 h-[68px] w-full rounded-[5px] bg-blue-900 text-xl font-bold text-white"
-          >
-            내 정보로 이동
-          </button>
+          <h1 className="text-2xl font-bold text-zinc-900">현장이 아직 설정되지 않았어요</h1>
+          <p className="mt-3 text-base leading-relaxed text-zinc-500">
+            {me?.team_leader
+              ? '팀장님이 현장을 설정하면 자동으로 표시돼요. 관리자에게 문의해주세요.'
+              : '아직 팀장이 배정되지 않았어요. 관리자에게 문의해주세요.'}
+          </p>
         </div>
       </MobileShell>
     );
@@ -127,9 +126,11 @@ export default function HomePage() {
             </span>
           )}
         </h1>
-        <p className="mt-2 text-base font-semibold text-zinc-500">
-          현장 : {me.worksite.name} ({me.subcontractor.name})
-        </p>
+        <div className="mt-2 space-y-0.5 text-base font-semibold text-zinc-500">
+          <p>현장 : {me.worksite.name}</p>
+          <p>소속 : {me.subcontractor?.name ?? '-'}</p>
+          <p>팀장 : {me.team_leader?.name ?? '-'}</p>
+        </div>
       </div>
 
       {isRejected && todayRecord && (

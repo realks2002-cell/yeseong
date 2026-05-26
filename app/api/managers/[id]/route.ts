@@ -109,6 +109,22 @@ export async function PATCH(
       const { error: asErr } = await admin.from('yeseong_site_manager_assignments').insert(rows);
       if (asErr) return NextResponse.json({ error: asErr.message }, { status: 500 });
     }
+
+    // 팀장도 작업자 — 담당 현장을 성과 입력 기본 현장으로 동기화 (worker는 phone으로 연결)
+    await admin
+      .from('yeseong_workers')
+      .update({ default_worksite_id: worksiteIds.length > 0 ? worksiteIds[0] : null })
+      .eq('phone', current.phone);
+  }
+
+  // 팀장 협력사 갱신 — 팀원이 팀장 협력사를 따라감 (worker.default_subcontractor_id)
+  if (body != null && 'subcontractor_id' in body) {
+    const subcontractorId: string | null =
+      typeof body.subcontractor_id === 'string' && body.subcontractor_id ? body.subcontractor_id : null;
+    await admin
+      .from('yeseong_workers')
+      .update({ default_subcontractor_id: subcontractorId })
+      .eq('phone', current.phone);
   }
 
   return NextResponse.json({ ok: true });

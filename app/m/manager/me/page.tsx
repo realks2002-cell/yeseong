@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Pencil, Save, X, ChevronRight, MapPin } from 'lucide-react';
+import { Pencil, Save, X, ChevronRight, ChevronDown, ChevronUp, MapPin, Users } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { getMirrorId, mirrorFetch, withMirror } from '@/lib/manager/mirror';
 import { formatPhone } from '@/lib/auth/phone-email';
 import { KOREAN_BANKS } from '@/lib/constants/banks';
 
@@ -16,6 +17,7 @@ type Me = {
     phone: string | null;
     default_trade: string | null;
     default_wage: number;
+    default_worksite_id: string | null;
     bank_name: string | null;
     account_number: string | null;
     account_holder: string | null;
@@ -24,11 +26,15 @@ type Me = {
   worksites: Array<{ id: string; name: string }>;
 };
 
+type TeamMember = { id: string; name: string; phone: string | null; default_trade: string | null };
+
 export default function ManagerMePage() {
   const router = useRouter();
   const sb = getBrowserSupabase();
 
   const [me, setMe] = useState<Me | null>(null);
+  const [team, setTeam] = useState<TeamMember[] | null>(null);
+  const [teamOpen, setTeamOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
     default_trade: '',
@@ -42,21 +48,41 @@ export default function ManagerMePage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const [readOnly, setReadOnly] = useState(false);
+  const [mirrorId, setMirrorId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) {
-      router.replace('/m/manager/signup');
-      return;
+    const mirror = getMirrorId();
+    let meData: Me | null;
+    let teamData: TeamMember[] | null;
+    if (mirror) {
+      setReadOnly(true);
+      setMirrorId(mirror);
+      try {
+        meData = await mirrorFetch<Me | null>('me', mirror);
+        teamData = await mirrorFetch<TeamMember[]>('team', mirror);
+      } catch (e) {
+        setError((e as Error).message);
+        return;
+      }
+    } else {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) {
+        router.replace('/m/manager/signup');
+        return;
+      }
+      const { data, error: rpcErr } = await sb.rpc('yeseong_manager_get_me');
+      if (rpcErr) {
+        setError(rpcErr.message);
+        return;
+      }
+      meData = data as unknown as Me | null;
+      const { data: td } = await sb.rpc('yeseong_manager_list_team_members');
+      teamData = td as unknown as TeamMember[] | null;
     }
-    const { data, error: rpcErr } = await sb.rpc('yeseong_manager_get_me');
-    if (rpcErr) {
-      setError(rpcErr.message);
-      return;
-    }
-    const meData = data as unknown as Me | null;
     if (!meData?.manager) {
-      router.replace('/m/manager/signup');
+      if (mirror) setError('팀장 정보를 찾을 수 없어요');
+      else router.replace('/m/manager/signup');
       return;
     }
     setMe(meData);
@@ -72,12 +98,13 @@ export default function ManagerMePage() {
       });
       setBankCustom(bn !== '' && !(KOREAN_BANKS as readonly string[]).includes(bn));
     }
+    setTeam(teamData ?? []);
   }, [sb, router]);
 
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
-    if (busy) return;
+    if (readOnly || busy) return;
     if (!form.name.trim()) {
       setError('이름을 입력해주세요');
       return;
@@ -100,6 +127,21 @@ export default function ManagerMePage() {
     }
     setMsg('저장되었어요');
     setEditing(false);
+    await load();
+  };
+
+  const setDefaultWorksite = async (worksiteId: string) => {
+    if (readOnly) return;
+    setError(undefined);
+    setMsg(undefined);
+    const { error: rpcErr } = await sb.rpc('yeseong_manager_set_default_worksite', {
+      p_worksite_id: worksiteId || null,
+    });
+    if (rpcErr) {
+      setError(rpcErr.message);
+      return;
+    }
+    setMsg('기본 현장이 저장되었어요');
     await load();
   };
 
@@ -136,13 +178,45 @@ export default function ManagerMePage() {
         <h1 className="text-[34px] font-bold text-zinc-900">내 정보</h1>
       </div>
 
-      <section className="mx-7 mb-8 rounded-[5px] bg-blue-900 p-6 text-center text-white">
-        <p className="text-[26px] font-bold leading-tight">{me.worker?.name ?? me.manager.name}</p>
-        <p className="mt-1 text-lg font-semibold text-blue-200">
-          {formatPhone(me.manager.phone)}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-blue-200">현장 팀장</p>
-      </section>
+      <div className="mx-7 mb-8">
+        <section className="rounded-[5px] bg-blue-900 p-6 text-white">
+          <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1">
+            <p className="text-[24px] font-bold leading-tight">{me.worker?.name ?? me.manager.name}</p>
+            <p className="text-lg font-semibold text-blue-200 tabular-nums">{formatPhone(me.manager.phone)}</p>
+          </div>
+          <button
+            onClick={() => setTeamOpen((v) => !v)}
+            aria-expanded={teamOpen}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] bg-white/15 py-3 text-base font-bold text-white ring-1 ring-white/25 active:scale-[0.99]"
+          >
+            <Users className="h-5 w-5" />
+            내 팀원 보기{team ? ` (${team.length})` : ''}
+            {teamOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+        </section>
+
+        {teamOpen && (
+          team && team.length > 0 ? (
+            <ul className="mt-2 divide-y divide-zinc-100 rounded-[5px] bg-white ring-1 ring-zinc-200">
+              {team.map((t) => (
+                <li key={t.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-base font-bold text-zinc-900">{t.name}</p>
+                    <p className="text-sm font-semibold text-zinc-500 tabular-nums">
+                      {t.phone ? formatPhone(t.phone) : '-'}
+                    </p>
+                  </div>
+                  <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.default_trade ?? '직종 미지정'}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 rounded-[5px] bg-zinc-50 py-6 text-center text-sm text-zinc-400 ring-1 ring-zinc-200">
+              등록된 팀원이 없어요
+            </p>
+          )
+        )}
+      </div>
 
       {me.worker ? (
         <section className="px-7 space-y-5 pb-10">
@@ -257,8 +331,9 @@ export default function ManagerMePage() {
             </div>
           ) : (
             <button
-              onClick={() => { setMsg(undefined); setError(undefined); setEditing(true); }}
-              className="flex h-[68px] w-full items-center justify-center gap-2 rounded-[5px] bg-blue-900 text-lg font-bold text-white"
+              onClick={() => { if (readOnly) return; setMsg(undefined); setError(undefined); setEditing(true); }}
+              disabled={readOnly}
+              className="flex h-[68px] w-full items-center justify-center gap-2 rounded-[5px] bg-blue-900 text-lg font-bold text-white disabled:bg-zinc-200 disabled:text-zinc-400"
             >
               <Pencil className="h-5 w-5" />
               수정
@@ -274,6 +349,30 @@ export default function ManagerMePage() {
           <p className="mt-2 text-sm text-amber-700">
             관리자에게 작업자 등록을 요청하면<br />여기에 본인 정보가 표시됩니다
           </p>
+        </section>
+      )}
+
+      {me.worker && (
+        <section className="px-7 pb-8">
+          <h2 className="text-lg font-bold text-zinc-900">성과 입력 기본 현장</h2>
+          <p className="mt-1 text-sm text-zinc-500">매사 성과를 입력할 현장이에요</p>
+          {me.worksites.length === 0 ? (
+            <p className="mt-3 rounded-[5px] bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
+              담당 현장이 없어요. 아래에서 담당 현장을 먼저 추가하세요.
+            </p>
+          ) : (
+            <select
+              value={me.worker.default_worksite_id ?? ''}
+              onChange={(e) => setDefaultWorksite(e.target.value)}
+              disabled={readOnly}
+              className="mt-3 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none disabled:bg-zinc-50 disabled:text-zinc-500"
+            >
+              <option value="">선택 안 함</option>
+              {me.worksites.map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
+          )}
         </section>
       )}
 
@@ -293,7 +392,7 @@ export default function ManagerMePage() {
         </ul>
 
         <Link
-          href="/m/manager/assignments"
+          href={withMirror('/m/manager/assignments', mirrorId)}
           className="mt-3 flex h-[60px] w-full items-center justify-between rounded-[5px] bg-zinc-50 px-5 text-base font-bold text-zinc-700 ring-1 ring-zinc-200 active:scale-[0.99]"
         >
           담당 현장 변경
@@ -301,7 +400,7 @@ export default function ManagerMePage() {
         </Link>
 
         <Link
-          href="/m/manager/site-gps"
+          href={withMirror('/m/manager/site-gps', mirrorId)}
           className="mt-2 flex h-[60px] w-full items-center justify-between rounded-[5px] bg-emerald-50 px-5 text-base font-bold text-emerald-800 ring-1 ring-emerald-200 active:scale-[0.99]"
         >
           <span className="flex items-center gap-2">

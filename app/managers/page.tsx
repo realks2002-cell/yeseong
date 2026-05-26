@@ -13,6 +13,7 @@ type Manager = {
   default_trade: string | null;
   is_active: boolean;
   created_at: string;
+  subcontractor_id: string | null;
   yeseong_site_manager_assignments:
     | Array<{ worksite_id: string; yeseong_worksites: { id: string; name: string } | null }>
     | { worksite_id: string; yeseong_worksites: { id: string; name: string } | null }
@@ -28,12 +29,14 @@ function getAssignments(m: Manager): Assignment[] {
 }
 
 type Worksite = { id: string; name: string };
+type Subcontractor = { id: string; name: string };
 
 type ManagerInput = {
   name: string;
   phone: string;
   pin: string;
   worksite_ids: string[];
+  subcontractor_id: string | null;
 };
 
 function formatPhone(phone: string | null | undefined): string {
@@ -47,6 +50,7 @@ function formatPhone(phone: string | null | undefined): string {
 export default function ManagersPage() {
   const [list, setList] = useState<Manager[] | null>(null);
   const [worksites, setWorksites] = useState<Worksite[]>([]);
+  const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -71,9 +75,10 @@ export default function ManagersPage() {
 
   const load = useCallback(async () => {
     setError(null);
-    const [mRes, wRes] = await Promise.all([
+    const [mRes, wRes, sRes] = await Promise.all([
       fetch(`/api/managers${showArchived ? '?includeArchived=true' : ''}`, { cache: 'no-store' }),
       fetch('/api/worksites', { cache: 'no-store' }),
+      fetch('/api/subcontractors', { cache: 'no-store' }),
     ]);
     if (!mRes.ok) {
       setError('목록을 불러오지 못했습니다');
@@ -82,6 +87,7 @@ export default function ManagersPage() {
     }
     setList(await mRes.json());
     if (wRes.ok) setWorksites(await wRes.json());
+    if (sRes.ok) setSubcontractors(await sRes.json());
   }, [showArchived]);
 
   useEffect(() => {
@@ -125,6 +131,20 @@ export default function ManagersPage() {
     load();
   }
 
+  async function handleSubcontractorChange(m: Manager, subcontractorId: string) {
+    const r = await fetch(`/api/managers/${m.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subcontractor_id: subcontractorId || null }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '협력사 변경 실패');
+      return;
+    }
+    load();
+  }
+
   async function handleDelete(m: Manager) {
     if (!confirm(`"${m.name}" 팀장을 비활성 처리할까요?\n과거 출역 승인 기록은 그대로 유지되고, 목록과 모바일 로그인에서만 차단됩니다.`)) return;
     const r = await fetch(`/api/managers/${m.id}`, { method: 'DELETE' });
@@ -153,7 +173,7 @@ export default function ManagersPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-7xl p-6">
+      <div className="max-w-7xl p-6">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">현장 팀장</h1>
@@ -204,15 +224,15 @@ export default function ManagersPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-[11px]">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-xs">
+                <tr className="text-left text-[11px]">
                   <th className="w-10 px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">성명</th>
                   <th className="px-3 py-2 font-medium">직종</th>
                   <th className="px-3 py-2 font-medium">전화번호</th>
-                  <th className="px-3 py-2 font-medium text-center">PIN</th>
                   <th className="px-3 py-2 font-medium">담당 현장</th>
+                  <th className="px-3 py-2 font-medium">협력사</th>
                   <th className="w-20 px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
@@ -243,23 +263,16 @@ export default function ManagersPage() {
                             <span className="ml-2 rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] text-[#6B7280]">보관됨</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs text-[#4B5563]">
+                        <td className="px-3 py-2 text-[#4B5563]">
                           {m.default_trade ?? <span className="text-[#D7D7D7]">-</span>}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs">{formatPhone(m.phone)}</td>
-                        <td className="px-3 py-2 text-center font-mono tabular-nums">
-                          {m.pin ? (
-                            <span className="rounded bg-[#273F4F] px-1.5 py-0.5 text-[11px] text-white">{m.pin}</span>
-                          ) : (
-                            <span className="text-[#D7D7D7]">-</span>
-                          )}
-                        </td>
+                        <td className="px-3 py-2 font-mono">{formatPhone(m.phone)}</td>
                         <td className="px-3 py-2">
                           {m.is_active ? (
                             <select
                               value={sites[0]?.id ?? ''}
                               onChange={(e) => handleWorksiteChange(m, e.target.value)}
-                              className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-xs outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
+                              className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-[11px] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
                             >
                               <option value="">미배정</option>
                               {worksites.map((w) => (
@@ -267,7 +280,25 @@ export default function ManagersPage() {
                               ))}
                             </select>
                           ) : (
-                            <span className="text-xs text-[#9CA3AF]">{sites[0]?.name ?? '미배정'}</span>
+                            <span className="text-[#9CA3AF]">{sites[0]?.name ?? '미배정'}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {m.is_active ? (
+                            <select
+                              value={m.subcontractor_id ?? ''}
+                              onChange={(e) => handleSubcontractorChange(m, e.target.value)}
+                              className="min-w-40 rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-[11px] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
+                            >
+                              <option value="">미지정</option>
+                              {subcontractors.map((s) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-[#9CA3AF]">
+                              {subcontractors.find((s) => s.id === m.subcontractor_id)?.name ?? '미지정'}
+                            </span>
                           )}
                         </td>
                         <td className="px-3 py-2">
@@ -316,6 +347,7 @@ export default function ManagersPage() {
         <ManagerForm
           title="팀장 추가"
           worksites={worksites}
+          subcontractors={subcontractors}
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
         />
@@ -324,11 +356,13 @@ export default function ManagersPage() {
         <ManagerForm
           title={`${editing.name} 수정`}
           worksites={worksites}
+          subcontractors={subcontractors}
           initial={{
             name: editing.name,
             phone: editing.phone ?? '',
             pin: editing.pin ?? '',
             worksite_ids: getAssignments(editing).map((a) => a.worksite_id),
+            subcontractor_id: editing.subcontractor_id,
           }}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
@@ -341,12 +375,14 @@ export default function ManagersPage() {
 function ManagerForm({
   title,
   worksites,
+  subcontractors,
   initial,
   onSubmit,
   onCancel,
 }: {
   title: string;
   worksites: Worksite[];
+  subcontractors: Subcontractor[];
   initial?: ManagerInput;
   onSubmit: (input: ManagerInput) => Promise<void>;
   onCancel: () => void;
@@ -355,6 +391,7 @@ function ManagerForm({
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [pin, setPin] = useState(initial?.pin ?? '');
   const [worksiteId, setWorksiteId] = useState<string>(initial?.worksite_ids?.[0] ?? '');
+  const [subcontractorId, setSubcontractorId] = useState<string>(initial?.subcontractor_id ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -371,6 +408,7 @@ function ManagerForm({
         phone,
         pin,
         worksite_ids: worksiteId ? [worksiteId] : [],
+        subcontractor_id: subcontractorId || null,
       });
     } catch (e) {
       setErr(e instanceof Error ? e.message : '저장 실패');
@@ -435,6 +473,22 @@ function ManagerForm({
                 <option key={w.id} value={w.id}>{w.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">협력사</label>
+            <select
+              value={subcontractorId}
+              onChange={(e) => setSubcontractorId(e.target.value)}
+              className="w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-2 text-sm outline-none focus:border-[#447D9B]"
+            >
+              <option value="">미지정</option>
+              {subcontractors.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-[#6B7280]">
+              팀원(이 팀장 소속 작업자)이 이 협력사를 자동으로 따라갑니다.
+            </p>
           </div>
         </div>
 

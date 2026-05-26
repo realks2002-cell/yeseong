@@ -142,18 +142,27 @@ function fillWorker(sheet: ExcelJS.Worksheet, w: FillWorker): void {
   if (w.accountNumber !== null) sheet.getCell(`${WORKER_COLS.ACCOUNT}${headRow}`).value = w.accountNumber;
   if (w.accountHolder !== null) sheet.getCell(`${WORKER_COLS.HOLDER}${headRow}`).value = w.accountHolder;
   if (w.phone !== null) sheet.getCell(`${WORKER_COLS.PHONE}${headRow}`).value = formatPhone(w.phone);
-  sheet.getCell(`${WORKER_COLS.DAILY_WAGE}${headRow}`).value = w.dailyWage;
+  // 일당(AD): 월급/일급은 성과총액(노임대장 AE 수식을 덮어쓰므로 단가 칸엔 성과총액 표기),
+  //           그 외(일급·월급·null)는 DB 일당/월급액 그대로.
+  const volumesSum = (w.volumes ?? []).reduce((s, v) => s + v.amount, 0);
+  const adValue = w.wageType === '월급/일급' ? volumesSum : w.dailyWage;
+  sheet.getCell(`${WORKER_COLS.DAILY_WAGE}${headRow}`).value = adValue;
 
-  // 출역 — wage_type에 따라 표시 분기
-  //   일급/null: 공수 그대로 (앱 제출값)
-  //   월급/월급-일급: 출역일 모두 '1', 비출역 빈칸
+  // 출역 — 급여형태 무관하게 공수(0.5/1 등) 그대로. 월급·월급/일급은 신고용 표시일 뿐.
   for (const a of w.attendance) {
     const { row, col } = dayToCell(a.day, headRow);
-    const display = formatAttendanceCell(w.wageType, a.hours);
+    const display = formatAttendanceCell(a.hours);
     if (display === '') continue;
-    // 일자 셀은 숫자로 저장 (수식 호환). 일급은 소수도 가능, 월급류는 '1' 고정.
+    // 일자 셀은 숫자로 저장 (수식 호환).
     const numeric = Number(display);
     sheet.getCell(row, col).value = Number.isFinite(numeric) ? numeric : display;
+  }
+
+  // 임금총액(AE): 월급·월급/일급은 출역과 별개로 고정 → 기본 수식(AB×AD)을 덮어써서 = 일당셀 값.
+  //   월급 = DB 월급액, 월급/일급 = 성과총액. (일급/null은 수식 그대로 두어 출역합×일당)
+  if (w.wageType === '월급' || w.wageType === '월급/일급') {
+    sheet.getCell(`${WORKER_COLS.PAYOUT}${headRow}`).value = adValue;
+    sheet.getCell(`${WORKER_COLS.PAYOUT}${headRow + 1}`).value = adValue;
   }
 
   // 행 배경색 — 월급: 옅은 노랑, 월급/일급: 옅은 오렌지

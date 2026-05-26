@@ -142,7 +142,7 @@ export default function NotificationsPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-4xl p-6">
+      <div className="max-w-4xl p-6">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-[#273F4F]" />
           <h1 className="text-2xl font-bold tracking-tight">알림 발송</h1>
@@ -259,7 +259,7 @@ export default function NotificationsPage() {
             <p className="mt-4 text-center text-sm text-[#9CA3AF]">발송 이력이 없습니다.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-[11px]">
                 <thead>
                   <tr className="border-b border-[#D7D7D7] text-left text-[11px] font-semibold text-[#6B7280] uppercase">
                     <th className="py-2 pr-3">시간</th>

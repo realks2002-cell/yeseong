@@ -141,7 +141,7 @@ export default function AnnouncementsPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-4xl p-6">
+      <div className="max-w-4xl p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-[#273F4F]" />

@@ -256,7 +256,7 @@ export default function AttendanceReviewPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs whitespace-nowrap">
+            <table className="w-full text-[11px] whitespace-nowrap">
               <thead className="bg-[#F5F5F5] text-[#6B7280]">
                 <tr className="text-left text-[11px]">
                   {statusFilter === 'rejected' && (

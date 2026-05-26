@@ -59,7 +59,7 @@ export default function DashboardPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-7xl p-5 space-y-5">
+      <div className="max-w-7xl p-5 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs text-[#6B7280]">(주)예성건축</p>

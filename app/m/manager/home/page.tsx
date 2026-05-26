@@ -5,6 +5,7 @@ import { Check, CheckCheck, ClipboardCheck, X } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 
 type PendingItem = {
   attendance_id: string;
@@ -37,9 +38,22 @@ export default function ManagerHomePage() {
   const [rejectTarget, setRejectTarget] = useState<PendingItem | null>(null);
   const [approveAllBusy, setApproveAllBusy] = useState(false);
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    const mirror = getMirrorId();
+    if (mirror) {
+      setReadOnly(true);
+      try {
+        const list = await mirrorFetch<PendingItem[]>('pending', mirror);
+        setItems(list ?? []);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+      setLoading(false);
+      return;
+    }
     const { data: { user } } = await sb.auth.getUser();
     if (!user) {
       router.replace('/m/manager/signup');
@@ -75,7 +89,7 @@ export default function ManagerHomePage() {
   useEffect(() => { load(); }, [load]);
 
   const approve = async (item: PendingItem) => {
-    if (busyId) return;
+    if (readOnly || busyId) return;
     setBusyId(item.attendance_id);
     setError(undefined);
     const { error: rpcErr } = await sb.rpc('yeseong_manager_approve_attendance', {
@@ -92,7 +106,7 @@ export default function ManagerHomePage() {
   };
 
   const reject = async (item: PendingItem, reason: string) => {
-    if (busyId) return;
+    if (readOnly || busyId) return;
     setBusyId(item.attendance_id);
     setError(undefined);
     const { error: rpcErr } = await sb.rpc('yeseong_manager_approve_attendance', {
@@ -110,7 +124,7 @@ export default function ManagerHomePage() {
   };
 
   const approveAll = async () => {
-    if (approveAllBusy) return;
+    if (readOnly || approveAllBusy) return;
     setApproveAllBusy(true);
     setError(undefined);
     const { data, error: rpcErr } = await sb.rpc('yeseong_manager_approve_all_pending');
@@ -229,7 +243,7 @@ function PendingCard({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-zinc-900">
           {item.worker_name}
-          {item.worker_trade && <span className="ml-1.5 text-[11px] font-medium text-zinc-400">{item.worker_trade}</span>}
+          {item.worker_trade && <span className="ml-1.5 text-[11px] font-medium text-zinc-400">({item.worker_trade})</span>}
         </p>
         <p className="text-[10px] text-zinc-400 tabular-nums">{formatTime(item.created_at)}</p>
       </div>

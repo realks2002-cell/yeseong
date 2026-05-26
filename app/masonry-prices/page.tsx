@@ -4,18 +4,20 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MasonryPriceForm, type MasonryPrice, type MasonryPriceInput, type Worksite } from '@/components/masonry-price-form';
+import { MASONRY_CATEGORIES, categoryTypes, type MasonryCategory } from '@/lib/constants/masonry';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
-type Category = '조적' | '미장';
-
 export default function MasonryPricesPage() {
-  const [category, setCategory] = useState<Category>('조적');
+  const [category, setCategory] = useState<MasonryCategory>('조적');
   const [list, setList] = useState<MasonryPrice[] | null>(null);
   const [worksites, setWorksites] = useState<Worksite[]>([]);
   const [filterWorksiteId, setFilterWorksiteId] = useState<string>('');
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<MasonryPrice | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isBrick = category === '조적';
+  const hasTypes = categoryTypes(category) != null; // 미장: 종류+단위
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -30,7 +32,7 @@ export default function MasonryPricesPage() {
     setWorksites(data.filter((w) => w.is_active).map((w) => ({ id: w.id, name: w.name })));
   }
 
-  async function load(cat: Category) {
+  async function load(cat: MasonryCategory) {
     setError(null);
     setList(null);
     const r = await fetch(`/api/masonry-prices?category=${encodeURIComponent(cat)}`, { cache: 'no-store' });
@@ -75,9 +77,11 @@ export default function MasonryPricesPage() {
 
   async function handleDelete(p: MasonryPrice) {
     const ws = p.yeseong_worksites?.name ?? '';
-    const label = category === '조적'
+    const label = isBrick
       ? `${ws} · ${p.type_name}${p.size_spec ? ` (${p.size_spec})` : ''}`
-      : `${ws} · 미장`;
+      : hasTypes
+      ? `${ws} · ${category} ${p.type_name} (${p.unit})`
+      : `${ws} · ${category} (${p.unit})`;
     if (!confirm(`"${label}" 단가를 삭제하시겠습니까?`)) return;
     const r = await fetch(`/api/masonry-prices/${p.id}`, { method: 'DELETE' });
     if (!r.ok) {
@@ -88,17 +92,16 @@ export default function MasonryPricesPage() {
     load(category);
   }
 
-  const unitLabel = category === '조적' ? '장' : '㎡';
-  const headerCols = category === '조적' ? 6 : 4;
+  const headerCols = isBrick || hasTypes ? 6 : 5;
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-7xl p-6">
+      <div className="max-w-[960px] p-6">
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">조적·미장 단가</h1>
+            <h1 className="text-2xl font-bold tracking-tight">매사 단가</h1>
             <p className="text-sm text-[#6B7280] mt-1">
-              {category === '조적' ? '현장별 벽돌 장당 단가 관리' : '현장별 미장 ㎡당 단가 관리'}
+              {isBrick ? '현장별 조적 장당 단가 관리' : `현장별 ${category} 단위별 단가 관리`}
             </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
@@ -108,7 +111,7 @@ export default function MasonryPricesPage() {
         </div>
 
         <div className="mb-4 flex items-center gap-1 border-b border-[#D7D7D7]">
-          {(['조적', '미장'] as Category[]).map((c) => (
+          {MASONRY_CATEGORIES.map((c) => (
             <button
               key={c}
               onClick={() => {
@@ -145,18 +148,25 @@ export default function MasonryPricesPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-[11px]">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">현장</th>
-                  {category === '조적' && (
+                  {isBrick ? (
                     <>
-                      <th className="px-3 py-2 font-medium">벽돌</th>
-                      <th className="px-3 py-2 font-medium">부위·규격</th>
+                      <th className="px-3 py-2 font-medium">종류</th>
+                      <th className="px-3 py-2 font-medium">규격</th>
                     </>
+                  ) : hasTypes ? (
+                    <>
+                      <th className="px-3 py-2 font-medium">종류</th>
+                      <th className="px-3 py-2 font-medium">단위</th>
+                    </>
+                  ) : (
+                    <th className="px-3 py-2 font-medium">단위</th>
                   )}
-                  <th className="px-3 py-2 font-medium text-right">단가 (원/{unitLabel})</th>
+                  <th className="px-3 py-2 font-medium text-right">단가</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
@@ -170,14 +180,21 @@ export default function MasonryPricesPage() {
                     <tr key={p.id} className="hover:bg-[#F5F5F5]">
                       <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{p.yeseong_worksites?.name ?? '-'}</td>
-                      {category === '조적' && (
+                      {isBrick ? (
                         <>
                           <td className="px-3 py-2">{p.type_name}</td>
                           <td className="px-3 py-2 text-[#4B5563]">{p.size_spec ?? '-'}</td>
                         </>
+                      ) : hasTypes ? (
+                        <>
+                          <td className="px-3 py-2">{p.type_name}</td>
+                          <td className="px-3 py-2 text-[#4B5563]">{p.unit}</td>
+                        </>
+                      ) : (
+                        <td className="px-3 py-2">{p.unit}</td>
                       )}
                       <td className="px-3 py-2 text-right tabular-nums font-medium">
-                        {p.unit_price.toLocaleString()}원
+                        {p.unit_price.toLocaleString()}원/{p.unit}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
@@ -219,9 +236,11 @@ export default function MasonryPricesPage() {
         <MasonryPriceForm
           category={category}
           title={
-            category === '조적'
+            isBrick
               ? `${editing.yeseong_worksites?.name ?? ''} · ${editing.type_name} 수정`
-              : `${editing.yeseong_worksites?.name ?? ''} · 미장 단가 수정`
+              : hasTypes
+              ? `${editing.yeseong_worksites?.name ?? ''} · ${category} ${editing.type_name} (${editing.unit}) 수정`
+              : `${editing.yeseong_worksites?.name ?? ''} · ${category} (${editing.unit}) 수정`
           }
           worksites={worksites}
           initial={editing}

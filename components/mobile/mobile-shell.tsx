@@ -1,9 +1,10 @@
 'use client';
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Home, User, Wallet, ClipboardCheck, PackagePlus, Receipt, Building2, Package } from 'lucide-react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { getMirrorId, withMirror } from '@/lib/manager/mirror';
 
 type WorkerTab = 'home' | 'payroll' | 'volumes' | 'affiliation' | 'profile';
 type ManagerTab = 'home' | 'orders' | 'expenses' | 'volumes' | 'affiliation' | 'profile';
@@ -19,6 +20,10 @@ type Props = {
 const LOGOUT_HOLD_MS = 5000;
 
 export function MobileShell({ children, showTabs = false, activeTab, variant = 'worker' }: Props) {
+  // 관리자 미러 모드(?mirror=<id>): 탭 이동 시 파라미터 유지
+  const [mirror, setMirror] = useState<string | null>(null);
+  useEffect(() => { setMirror(getMirrorId()); }, []);
+
   return (
     <div className="min-h-svh bg-white flex items-center justify-center p-0 sm:p-6">
       <div className="relative w-full sm:max-w-[420px] sm:rounded-[40px] sm:ring-1 sm:ring-zinc-200 sm:shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:overflow-hidden bg-white min-h-svh sm:min-h-[860px] sm:max-h-[860px] flex flex-col">
@@ -34,11 +39,11 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
         )}
         {showTabs && variant === 'manager' && (
           <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
-            <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} />
-            <Tab href="/m/manager/orders" icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
-            <Tab href="/m/manager/expenses" icon={<Receipt className="h-6 w-6" />} label="비용" active={activeTab === 'expenses'} />
-            <Tab href="/m/manager/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-            <Tab href="/m/manager/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
+            <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
+            <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
+            <Tab href={withMirror('/m/manager/expenses', mirror)} icon={<Receipt className="h-6 w-6" />} label="비용" active={activeTab === 'expenses'} />
+            <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
+            <Tab href={withMirror('/m/manager/me', mirror)} icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
           </nav>
         )}
       </div>
@@ -62,13 +67,14 @@ function Tab({ href, icon, label, active }: { href: string; icon: ReactNode; lab
 }
 
 // 팀장앱 출역검토 탭 long-press(5초)로 로그아웃. 짧은 탭은 /m/manager/home 이동.
-function ManagerHomeTabWithLongPressLogout({ active }: { active: boolean }) {
+function ManagerHomeTabWithLongPressLogout({ active, mirror }: { active: boolean; mirror: string | null }) {
   const router = useRouter();
   const [pressing, setPressing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggered = useRef(false);
 
   const start = () => {
+    if (mirror) return; // 미러(보기 전용)에서는 로그아웃 비활성
     triggered.current = false;
     setPressing(true);
     timer.current = setTimeout(async () => {
@@ -94,7 +100,7 @@ function ManagerHomeTabWithLongPressLogout({ active }: { active: boolean }) {
       e.preventDefault();
       return;
     }
-    if (!active) router.push('/m/manager/home');
+    if (!active) router.push(withMirror('/m/manager/home', mirror));
   };
 
   return (

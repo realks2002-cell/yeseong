@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronDown, ChevronUp, Hammer, Check } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -16,14 +16,11 @@ type Mode =
   | 'signup_pin2'
   | 'signup_identity'
   | 'signup_rrn'
+  | 'signup_leader'
   | 'signup_foreign'
   | 'signup_address'
   | 'signup_account'
-  | 'signup_work'
-  | 'signup_belonging';
-
-type Option = { id: string; name: string };
-type TeamLeader = { id: string; name: string; phone: string | null };
+  | 'signup_work';
 
 const CONSENT_VERSION = '1.0';
 
@@ -33,30 +30,36 @@ const SIGNUP_STEPS: Mode[] = [
   'signup_pin2',
   'signup_identity',
   'signup_rrn',
+  'signup_leader',
   'signup_foreign',
   'signup_address',
   'signup_account',
   'signup_work',
-  'signup_belonging',
 ];
 
 // 결측 단계 키 ↔ Mode 매핑 (PIN은 항상 받음)
 const FIELD_TO_MODE: Record<string, Mode> = {
   identity: 'signup_identity',
   rrn: 'signup_rrn',
+  leader: 'signup_leader',
   foreign: 'signup_foreign',
   address: 'signup_address',
   account: 'signup_account',
   work: 'signup_work',
-  belonging: 'signup_belonging',
 };
 
 function buildFlow(missing: string[], isForeign: boolean, isPartial: boolean): Mode[] {
   const flow: Mode[] = ['signup_consent', 'signup_pin1', 'signup_pin2'];
-  for (const key of ['identity', 'rrn', 'foreign', 'address', 'account', 'work', 'belonging']) {
+  for (const key of ['identity', 'rrn', 'leader', 'foreign', 'address', 'account', 'work']) {
+    if (key === 'leader') {
+      // 팀장 선택은 missing에 'leader'가 있을 때만 (신규 흐름 전용). partial 흐름은 변경 없음.
+      if (missing.includes('leader')) flow.push(FIELD_TO_MODE.leader);
+      continue;
+    }
     if (key === 'foreign') {
-      // partial이면 외국인 단계도 항상 보여줌 (Review 또는 Input)
-      if (isForeign && (isPartial || missing.includes('foreign') || missing.includes('rrn'))) {
+      // partial이면 외국인 단계도 항상 보여줌 (Review 또는 Input).
+      // 신규(간소 등록)는 외국인 추가정보를 받지 않고 관리자가 /workers에서 보완.
+      if (isForeign && (isPartial || missing.includes('foreign'))) {
         flow.push(FIELD_TO_MODE.foreign);
       }
       continue;
@@ -109,14 +112,9 @@ export default function SignupPage() {
   const [defaultTrade, setDefaultTrade] = useState('');
   const [tradeCustom, setTradeCustom] = useState(false);
 
-  // 소속
-  const [worksites, setWorksites] = useState<Option[]>([]);
-  const [subcontractors, setSubcontractors] = useState<Option[]>([]);
-  const [teamLeaders, setTeamLeaders] = useState<TeamLeader[]>([]);
-  const [worksiteId, setWorksiteId] = useState<string>('');
-  const [subcontractorId, setSubcontractorId] = useState<string>('');
-  const [teamLeaderName, setTeamLeaderName] = useState<string>('');
-  const [teamLeaderId, setTeamLeaderId] = useState<string>('');
+  // 팀장 (신규 가입 시 선택)
+  const [teamLeaderId, setTeamLeaderId] = useState('');
+  const [teamLeaders, setTeamLeaders] = useState<{ id: string; name: string }[]>([]);
 
   // 동의 (PIPA)
   const [consentPersonal, setConsentPersonal] = useState(false);
@@ -127,18 +125,22 @@ export default function SignupPage() {
   const [signupBusy, setSignupBusy] = useState(false);
   const [signupError, setSignupError] = useState<string | undefined>();
 
+  useEffect(() => {
+    sb.rpc('yeseong_list_team_leaders').then(({ data }) => {
+      if (Array.isArray(data)) setTeamLeaders(data as { id: string; name: string }[]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // phone 매칭 결과 — 어떤 단계만 진행할지
   const [missingFields, setMissingFields] = useState<string[]>([
-    'identity', 'rrn', 'address', 'account', 'work', 'belonging',
+    'identity', 'rrn', 'address', 'account', 'work',
   ]);
 
   // DB에 이미 있는 정보 (확인 단계용)
   type Prefilled = {
     rrn_prefix?: string | null;
     rrn_gender_digit?: string | null;
-    default_worksite_id?: string | null;
-    default_subcontractor_id?: string | null;
-    team_leader_id?: string | null;
   } | null;
   const [prefilled, setPrefilled] = useState<Prefilled>(null);
 
@@ -172,20 +174,6 @@ export default function SignupPage() {
       router.refresh();
     })();
   }, [mode, loginPin, phone, sb, router, loginBusy]);
-
-  // belonging 화면 진입 또는 prefilled 정보 표시를 위해 옵션 로드
-  useEffect(() => {
-    if (mode !== 'signup_belonging' && !prefilled) return;
-    if (worksites.length > 0) return;
-    (async () => {
-      const res = await fetch('/api/m/options', { credentials: 'include' });
-      if (!res.ok) return;
-      const j = await res.json();
-      setWorksites(j.worksites ?? []);
-      setSubcontractors(j.subcontractors ?? []);
-      setTeamLeaders(j.teamLeaders ?? []);
-    })();
-  }, [mode, prefilled, worksites.length]);
 
   const onPhoneNext = async () => {
     if (!phoneValid || phoneBusy) return;
@@ -223,15 +211,12 @@ export default function SignupPage() {
         if (typeof p.default_wage === 'number' && p.default_wage > 0) setDefaultWage(String(p.default_wage));
         if (p.skill_grade) setSkillGrade(p.skill_grade);
         if (p.default_trade) setDefaultTrade(p.default_trade);
-        if (p.default_worksite_id) setWorksiteId(p.default_worksite_id);
-        if (p.default_subcontractor_id) setSubcontractorId(p.default_subcontractor_id);
-        if (p.team_leader_id) setTeamLeaderId(p.team_leader_id);
       } else {
         // signup_new
-        setMissingFields(j.missing ?? ['identity', 'rrn', 'address', 'account', 'work', 'belonging']);
+        setMissingFields(j.missing ?? ['identity', 'rrn', 'address', 'account', 'work']);
         setPrefilled(null);
       }
-      setMode('signup_pin1');
+      setMode('signup_consent');
     } finally {
       setPhoneBusy(false);
     }
@@ -239,6 +224,7 @@ export default function SignupPage() {
 
   // missingFields + isForeign 기반 동적 흐름. partial이면 모든 단계 Review로 보임.
   const flow = buildFlow(missingFields, isForeign, prefilled !== null);
+  const isLast = flow.indexOf(mode) === flow.length - 1;
 
   const goNext = () => {
     const idx = flow.indexOf(mode);
@@ -268,7 +254,6 @@ export default function SignupPage() {
 
   const submitSignup = async () => {
     if (signupBusy) return;
-    if (missingFields.includes('belonging') && (!worksiteId || !subcontractorId || !teamLeaderId)) return;
     setSignupBusy(true);
     setSignupError(undefined);
     try {
@@ -325,18 +310,6 @@ export default function SignupPage() {
         return;
       }
 
-      if (missingFields.includes('belonging')) {
-        const { error: defErr } = await sb.rpc('yeseong_mobile_set_defaults', {
-          p_worksite_id: worksiteId,
-          p_subcontractor_id: subcontractorId,
-          p_team_leader_id: teamLeaderId || null,
-        });
-        if (defErr) {
-          setSignupError('소속 저장 실패: ' + defErr.message);
-          return;
-        }
-      }
-
       router.replace('/m/home');
       router.refresh();
     } finally {
@@ -365,6 +338,12 @@ export default function SignupPage() {
           <ProgressDots mode={mode} flow={flow} />
           <span className="w-12" />
         </div>
+
+        {signupError && (
+          <p className="mt-6 rounded-[5px] bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-600">
+            {signupError}
+          </p>
+        )}
 
         {mode === 'phone' && (
           <PhoneStep
@@ -445,6 +424,7 @@ export default function SignupPage() {
               setRrn={setRrn}
               valid={rrnValid}
               onNext={goNextOrSubmit}
+              isLast={isLast}
             />
           ) : (
             <ReviewStep
@@ -460,6 +440,16 @@ export default function SignupPage() {
               onNext={goNextOrSubmit}
             />
           )
+        )}
+
+        {mode === 'signup_leader' && (
+          <LeaderStep
+            teamLeaders={teamLeaders}
+            teamLeaderId={teamLeaderId}
+            setTeamLeaderId={setTeamLeaderId}
+            onNext={goNextOrSubmit}
+            isLast={isLast}
+          />
         )}
 
         {mode === 'signup_foreign' && (
@@ -542,37 +532,11 @@ export default function SignupPage() {
                 { label: '기본 일당', value: defaultWage ? `${Number(defaultWage).toLocaleString()}원` : null },
               ]}
               onNext={goNextOrSubmit}
-            />
-          )
-        )}
-
-        {mode === 'signup_belonging' && (
-          missingFields.includes('belonging') ? (
-            <BelongingStep
-              worksites={worksites}
-              subcontractors={subcontractors}
-              teamLeaders={teamLeaders}
-              worksiteId={worksiteId} setWorksiteId={setWorksiteId}
-              subcontractorId={subcontractorId} setSubcontractorId={setSubcontractorId}
-              teamLeaderName={teamLeaderName} setTeamLeaderName={setTeamLeaderName}
-              teamLeaderId={teamLeaderId} setTeamLeaderId={setTeamLeaderId}
-              onSubmit={submitSignup}
-              busy={signupBusy}
-              error={signupError}
-            />
-          ) : (
-            <ReviewStep
-              title="소속 확인"
-              items={[
-                { label: '현장', value: worksites.find((w) => w.id === worksiteId)?.name ?? null },
-                { label: '협력사', value: subcontractors.find((s) => s.id === subcontractorId)?.name ?? null },
-                { label: '팀장', value: teamLeaders.find((t) => t.id === teamLeaderId)?.name ?? null },
-              ]}
-              onNext={submitSignup}
               isLast
             />
           )
         )}
+
       </div>
     </MobileShell>
   );
@@ -905,13 +869,14 @@ function IdentityStep({
 }
 
 function RrnStep({
-  isForeign, rrn, setRrn, valid, onNext,
+  isForeign, rrn, setRrn, valid, onNext, isLast,
 }: {
   isForeign: boolean;
   rrn: string;
   setRrn: (v: string) => void;
   valid: boolean;
   onNext: () => void;
+  isLast?: boolean;
 }) {
   const label = isForeign ? '외국인등록번호' : '주민등록번호';
   return (
@@ -932,7 +897,47 @@ function RrnStep({
           className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[28px] font-bold tracking-wide text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
         />
       </div>
-      <NextButton valid={valid} onNext={onNext} label="다음" />
+      <NextButton valid={valid} onNext={onNext} label={isLast ? '가입 완료' : '다음'} />
+    </>
+  );
+}
+
+function LeaderStep({
+  teamLeaders, teamLeaderId, setTeamLeaderId, onNext, isLast,
+}: {
+  teamLeaders: { id: string; name: string }[];
+  teamLeaderId: string;
+  setTeamLeaderId: (v: string) => void;
+  onNext: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <>
+      <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
+        소속 팀장을<br />선택해주세요
+      </h1>
+      <p className="mt-4 text-sm text-zinc-500">팀장에 따라 현장·협력사가 자동 설정됩니다.</p>
+      <div className="mt-8 flex flex-col gap-3 overflow-y-auto">
+        {teamLeaders.length === 0 ? (
+          <p className="text-zinc-400">등록된 팀장이 없습니다. 관리자에게 문의하세요.</p>
+        ) : (
+          teamLeaders.map((tl) => (
+            <button
+              key={tl.id}
+              type="button"
+              onClick={() => setTeamLeaderId(tl.id)}
+              className={
+                'flex h-[68px] items-center justify-between rounded-[5px] px-5 text-xl font-bold ring-2 transition ' +
+                (teamLeaderId === tl.id ? 'bg-blue-900 text-white ring-blue-900' : 'bg-white text-zinc-700 ring-zinc-200')
+              }
+            >
+              {tl.name}
+              {teamLeaderId === tl.id && <Check className="h-6 w-6" />}
+            </button>
+          ))
+        )}
+      </div>
+      <NextButton valid={!!teamLeaderId} onNext={onNext} label={isLast ? '가입 완료' : '다음'} />
     </>
   );
 }
@@ -1183,133 +1188,9 @@ function WorkStep({
           )}
         </Field>
       </div>
-      <NextButton valid={valid} onNext={onNext} label="다음" />
+      <NextButton valid={valid} onNext={onNext} label="가입 완료" />
     </>
   );
-}
-
-function BelongingStep({
-  worksites, subcontractors, teamLeaders,
-  worksiteId, setWorksiteId,
-  subcontractorId, setSubcontractorId,
-  teamLeaderName, setTeamLeaderName,
-  teamLeaderId, setTeamLeaderId,
-  onSubmit, busy, error,
-}: {
-  worksites: Option[];
-  subcontractors: Option[];
-  teamLeaders: TeamLeader[];
-  worksiteId: string;
-  setWorksiteId: (v: string) => void;
-  subcontractorId: string;
-  setSubcontractorId: (v: string) => void;
-  teamLeaderName: string;
-  setTeamLeaderName: (v: string) => void;
-  teamLeaderId: string;
-  setTeamLeaderId: (v: string) => void;
-  onSubmit: () => void;
-  busy: boolean;
-  error?: string;
-}) {
-  // 1차 드롭다운에 들어갈 유니크 팀장 이름
-  const uniqueNames = useMemo(
-    () => [...new Set(teamLeaders.map((t) => t.name))].sort(),
-    [teamLeaders],
-  );
-  // 선택된 이름의 동명이인 후보
-  const candidates = useMemo(
-    () => teamLeaders.filter((t) => t.name === teamLeaderName),
-    [teamLeaders, teamLeaderName],
-  );
-  const hasDuplicate = candidates.length > 1;
-
-  // 이름 바뀌면 id 초기화. 동명이인 없으면 단일 후보로 자동 결정
-  useEffect(() => {
-    if (!teamLeaderName) {
-      setTeamLeaderId('');
-      return;
-    }
-    if (candidates.length === 1) {
-      setTeamLeaderId(candidates[0].id);
-    } else {
-      setTeamLeaderId('');
-    }
-  }, [teamLeaderName, candidates, setTeamLeaderId]);
-
-  const ready = !!worksiteId && !!subcontractorId && !!teamLeaderId && !busy;
-
-  return (
-    <>
-      <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
-        소속을<br />선택해주세요
-      </h1>
-      <p className="mt-4 text-sm text-zinc-500">소속이 바뀌면 내 정보에서 변경할 수 있어요.</p>
-      <div className="mt-8 space-y-6">
-        <Field label="소속">
-          <select
-            value={subcontractorId}
-            onChange={(e) => setSubcontractorId(e.target.value)}
-            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
-          >
-            <option value="">선택하세요</option>
-            {subcontractors.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="현장">
-          <select
-            value={worksiteId}
-            onChange={(e) => setWorksiteId(e.target.value)}
-            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
-          >
-            <option value="">선택하세요</option>
-            {worksites.map((w) => (
-              <option key={w.id} value={w.id}>{w.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="팀장">
-          <select
-            value={teamLeaderName}
-            onChange={(e) => setTeamLeaderName(e.target.value)}
-            className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
-          >
-            <option value="">선택하세요</option>
-            {uniqueNames.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-          {hasDuplicate && (
-            <div className="mt-3">
-              <p className="text-sm font-semibold text-zinc-500 mb-2">동명이인이 있어요. 전화번호로 다시 선택해주세요.</p>
-              <select
-                value={teamLeaderId}
-                onChange={(e) => setTeamLeaderId(e.target.value)}
-                className="w-full rounded-[5px] bg-white px-5 py-4 text-base font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
-              >
-                <option value="">전화번호 선택</option>
-                {candidates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.phone ? formatPhoneDisplay(c.phone) : '연락처 미등록'}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </Field>
-      </div>
-      {error && <p className="mt-4 text-base font-semibold text-red-800">{error}</p>}
-      <NextButton valid={ready} onNext={onSubmit} label={busy ? '가입 중...' : '가입 완료'} />
-    </>
-  );
-}
-
-function formatPhoneDisplay(phone: string): string {
-  const d = phone.replace(/\D/g, '');
-  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
-  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
-  return phone;
 }
 
 function ReviewStep({

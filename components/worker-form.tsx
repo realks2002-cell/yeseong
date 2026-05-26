@@ -77,12 +77,13 @@ type Props = {
   existingBanks?: string[];
   workers?: Worker[];
   teamLeaders?: TeamLeaderOption[];
+  trades?: string[];
 };
 
 // form 내부 state — default_wage는 빈칸/0 구분 위해 null 허용 (저장 시 0으로 변환)
 type FormState = Omit<WorkerInput, 'default_wage'> & { default_wage: number | null };
 
-export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks = [], teamLeaders = [] }: Props) {
+export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks = [], teamLeaders = [], trades = [] }: Props) {
   const bankOptions = Array.from(new Set([...KOREAN_BANKS, ...existingBanks.filter(Boolean)]));
   const isEdit = !!initial;
   const [form, setForm] = useState<FormState>(() => buildInitial(initial));
@@ -178,12 +179,22 @@ export function WorkerForm({ initial, onSubmit, onCancel, title, existingBanks =
             </select>
           </Field>
           <Field label="공종">
-            <Input
+            <select
               value={form.default_trade ?? ''}
-              onChange={(e) => set('default_trade', nullable(e.target.value))}
-              placeholder="미장공, 줄눈공 등"
+              onChange={(e) => set('default_trade', e.target.value || null)}
               disabled={loading}
-            />
+              className="flex h-9 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+            >
+              <option value="">선택</option>
+              {Array.from(new Set([
+                ...trades,
+                ...(form.default_trade && !trades.includes(form.default_trade) ? [form.default_trade] : []),
+              ])).map((t) => (
+                <option key={t} value={t}>
+                  {t}{!trades.includes(t) ? ' (비표준)' : ''}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="팀장">

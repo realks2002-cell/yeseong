@@ -12,12 +12,14 @@ import { Search, UserPlus, Pencil, Trash2, X, Smartphone, Download } from 'lucid
 export default function WorkersPage() {
   const [list, setList] = useState<Worker[] | null>(null);
   const [teamLeaders, setTeamLeaders] = useState<TeamLeaderOption[]>([]);
+  const [trades, setTrades] = useState<string[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [wageTypeFilter, setWageTypeFilter] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
+  const [savingLeaderId, setSavingLeaderId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -48,9 +50,10 @@ export default function WorkersPage() {
 
   async function load() {
     setError(null);
-    const [wr, mr] = await Promise.all([
+    const [wr, mr, tr] = await Promise.all([
       fetch('/api/workers', { cache: 'no-store' }),
       fetch('/api/managers', { cache: 'no-store' }),
+      fetch('/api/trades', { cache: 'no-store' }),
     ]);
     if (!wr.ok) {
       setError('목록을 불러오지 못했습니다');
@@ -58,6 +61,10 @@ export default function WorkersPage() {
       return;
     }
     setList(await wr.json());
+    if (tr.ok) {
+      const ts = await tr.json();
+      setTrades((Array.isArray(ts) ? ts : []).map((t: { name: string }) => t.name));
+    }
     if (mr.ok) {
       const mgrs = await mr.json();
       setTeamLeaders(
@@ -104,6 +111,26 @@ export default function WorkersPage() {
       return;
     }
     load();
+  }
+
+  // 테이블에서 팀장 직접 변경 — 낙관적 업데이트 후 PATCH, 실패 시 롤백
+  async function handleLeaderChange(w: Worker, leaderId: string | null) {
+    if (leaderId === (w.team_leader_id ?? null)) return;
+    const prevId = w.team_leader_id ?? null;
+    const prevName = w.team_leader_name ?? null;
+    const newName = leaderId ? teamLeaders.find((t) => t.id === leaderId)?.name ?? prevName : null;
+    setSavingLeaderId(w.id);
+    setList((l) => l?.map((x) => (x.id === w.id ? { ...x, team_leader_id: leaderId, team_leader_name: newName } : x)) ?? null);
+    const r = await fetch(`/api/workers/${w.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_leader_id: leaderId }),
+    });
+    setSavingLeaderId(null);
+    if (!r.ok) {
+      setList((l) => l?.map((x) => (x.id === w.id ? { ...x, team_leader_id: prevId, team_leader_name: prevName } : x)) ?? null);
+      alert((await r.json().catch(() => ({}))).error ?? '팀장 변경 실패');
+    }
   }
 
   return (
@@ -205,7 +232,7 @@ export default function WorkersPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs whitespace-nowrap">
+            <table className="w-full text-[11px] whitespace-nowrap">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
@@ -213,11 +240,11 @@ export default function WorkersPage() {
                   <th className="px-3 py-2 font-medium">팀장</th>
                   <th className="px-3 py-2 font-medium">구분</th>
                   <th className="px-3 py-2 font-medium">직종</th>
+                  <th className="px-3 py-2 font-medium">연락처</th>
                   <th className="px-3 py-2 font-medium">주민번호</th>
                   <th className="px-3 py-2 font-medium">은행</th>
                   <th className="px-3 py-2 font-medium">계좌</th>
                   <th className="px-3 py-2 font-medium">예금주</th>
-                  <th className="px-3 py-2 font-medium">연락처</th>
                   <th className="px-3 py-2 font-medium">주소</th>
                   <th className="px-3 py-2 font-medium text-center">앱</th>
                   <th className="px-3 py-2 font-medium text-right">기본일당</th>
@@ -241,22 +268,49 @@ export default function WorkersPage() {
                         {w.name_english && <span className="ml-1 text-[10px] text-[#9CA3AF]">({w.name_english})</span>}
                       </td>
                       <td className="px-3 py-2">
-                        {w.team_leader_name
-                          ? w.team_leader_name
-                          : w.skill_grade === '팀장'
-                            ? <span className="font-medium text-[#447D9B]">팀장</span>
-                            : <span className="text-[#D7D7D7]">-</span>}
+                        {w.skill_grade === '팀장' ? (
+                          <span className="font-medium text-[#447D9B]">팀장</span>
+                        ) : (
+                          <select
+                            value={w.team_leader_id ?? ''}
+                            disabled={savingLeaderId === w.id}
+                            onChange={(e) => handleLeaderChange(w, e.target.value || null)}
+                            aria-label="팀장 선택"
+                            className="h-7 max-w-[120px] rounded-[5px] border border-[#D7D7D7] bg-white px-1.5 text-xs text-[#091413] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 disabled:opacity-50"
+                          >
+                            <option value="">없음</option>
+                            {/* 현재 배정된 팀장이 활성 목록에 없으면 옵션에 살려서 유실 방지 */}
+                            {w.team_leader_id && !teamLeaders.some((tl) => tl.id === w.team_leader_id) && (
+                              <option value={w.team_leader_id}>{w.team_leader_name ?? '(현재 팀장)'}</option>
+                            )}
+                            {teamLeaders.map((tl) => (
+                              <option key={tl.id} value={tl.id}>{tl.name}</option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="px-3 py-2">{w.skill_grade ?? <span className="text-[#D7D7D7]">-</span>}</td>
-                      <td className="px-3 py-2">{w.default_trade ?? <span className="text-[#D7D7D7]">-</span>}</td>
-                      <td className="px-3 py-2 font-mono text-[#091413]">
+                      <td className="px-3 py-2">
+                        {w.default_trade ? (
+                          trades.length > 0 && !trades.includes(w.default_trade) ? (
+                            <span className="font-medium text-red-600" title="직종 마스터에 없는 비표준 값입니다. 수정에서 표준 직종으로 변경하세요.">
+                              {w.default_trade}
+                            </span>
+                          ) : (
+                            w.default_trade
+                          )
+                        ) : (
+                          <span className="text-[#D7D7D7]">-</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">{w.phone ? formatPhone(w.phone) : '-'}</td>
+                      <td className="px-3 py-2">
                         {formatRrnDisplay(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit)}
                         {w.is_foreign && <span className="ml-1 rounded bg-amber-50 px-1 py-0.5 text-[9px] text-amber-700">외</span>}
                       </td>
                       <td className="px-3 py-2">{w.bank_name ?? '-'}</td>
-                      <td className="px-3 py-2 font-mono text-[11px] text-[#4B5563]">{w.account_number ?? '-'}</td>
-                      <td className="px-3 py-2 text-[11px] text-[#4B5563]">{w.account_holder ?? <span className="text-[#D7D7D7]">-</span>}</td>
-                      <td className="px-3 py-2 font-mono text-[11px]">{w.phone ? formatPhone(w.phone) : '-'}</td>
+                      <td className="px-3 py-2">{w.account_number ?? '-'}</td>
+                      <td className="px-3 py-2">{w.account_holder ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2 align-top max-w-[180px]" title={w.address ?? undefined}>
                         {w.address ? (
                           <div className="text-[10px] text-[#4B5563] leading-tight line-clamp-2 whitespace-normal break-keep">
@@ -277,7 +331,7 @@ export default function WorkersPage() {
                       <td className="px-3 py-2 text-right tabular-nums">
                         {w.default_wage ? `${w.default_wage.toLocaleString()}원` : <span className="text-[#9CA3AF]">-</span>}
                       </td>
-                      <td className="px-3 py-2 text-[11px] text-[#4B5563]">
+                      <td className="px-3 py-2">
                         {w.wage_type ?? <span className="text-[#D7D7D7]">-</span>}
                       </td>
                       <td className="px-3 py-2">
@@ -315,6 +369,7 @@ export default function WorkersPage() {
           existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
           workers={list ?? []}
           teamLeaders={teamLeaders}
+          trades={trades}
         />
       )}
       {editing && (
@@ -326,6 +381,7 @@ export default function WorkersPage() {
           existingBanks={list?.map((w) => w.bank_name).filter((b): b is string => !!b) ?? []}
           workers={list ?? []}
           teamLeaders={teamLeaders}
+          trades={trades}
         />
       )}
     </AdminShell>

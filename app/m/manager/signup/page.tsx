@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, HardHat } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp, HardHat, Check } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone, normalizePhone, phoneToManagerEmail, pinToPassword } from '@/lib/auth/phone-email';
@@ -11,6 +11,7 @@ import { TRADES } from '@/lib/constants/trades';
 type Mode =
   | 'phone'
   | 'login_pin'
+  | 'signup_consent'
   | 'signup_pin1'
   | 'signup_pin2'
   | 'signup_identity'
@@ -46,6 +47,8 @@ type CheckResult = {
   prefilled: Prefilled | null;
 };
 
+const CONSENT_VERSION = '1.0';
+
 const FIELD_TO_MODE: Record<string, Mode> = {
   identity: 'signup_identity',
   rrn: 'signup_rrn',
@@ -55,9 +58,9 @@ const FIELD_TO_MODE: Record<string, Mode> = {
   work: 'signup_work',
 };
 
-// 매니저는 belonging 없음. work까지가 마지막.
+// 매니저는 belonging 없음. work까지가 마지막. 동의가 맨 앞.
 function buildFlow(missing: string[], isForeign: boolean, isPartial: boolean): Mode[] {
-  const flow: Mode[] = ['signup_pin1', 'signup_pin2'];
+  const flow: Mode[] = ['signup_consent', 'signup_pin1', 'signup_pin2'];
   for (const key of ['identity', 'rrn', 'foreign', 'address', 'account', 'work']) {
     if (key === 'foreign') {
       if (isForeign && (isPartial || missing.includes('foreign') || missing.includes('rrn'))) {
@@ -101,6 +104,12 @@ export default function ManagerSignupPage() {
   const [defaultWage, setDefaultWage] = useState('');
   const [defaultTrade, setDefaultTrade] = useState('');
   const [tradeCustom, setTradeCustom] = useState(false);
+
+  // 동의 (PIPA)
+  const [consentPersonal, setConsentPersonal] = useState(false);
+  const [consentRrn, setConsentRrn] = useState(false);
+  const [consentForeignId, setConsentForeignId] = useState(false);
+  const [consentThirdParty, setConsentThirdParty] = useState(false);
 
   const [signupBusy, setSignupBusy] = useState(false);
   const [signupError, setSignupError] = useState<string | undefined>();
@@ -178,7 +187,7 @@ export default function ManagerSignupPage() {
         setMissingFields(r.missing ?? ['identity','rrn','address','account','work']);
         setPrefilled(null);
       }
-      setMode('signup_pin1');
+      setMode('signup_consent');
     } finally {
       setPhoneBusy(false);
     }
@@ -199,10 +208,11 @@ export default function ManagerSignupPage() {
 
   const back = () => {
     if (mode === 'phone') return;
-    if (mode === 'login_pin' || mode === 'signup_pin1') {
-      setLoginPin(''); setPin1(''); setMatchedName(null);
+    if (mode === 'login_pin' || mode === 'signup_consent') {
+      setLoginPin(''); setMatchedName(null);
       setMode('phone'); return;
     }
+    if (mode === 'signup_pin1') { setPin1(''); setMode('signup_consent'); return; }
     if (mode === 'signup_pin2') { setPin2(''); setMode('signup_pin1'); return; }
     const idx = flow.indexOf(mode);
     if (idx > 0) setMode(flow[idx - 1]);
@@ -246,9 +256,18 @@ export default function ManagerSignupPage() {
         p_name_english: nameEnglish.trim() || null,
         p_nationality: nationality.trim() || null,
         p_visa_status: visaStatus.trim() || null,
+        p_consent_personal: consentPersonal,
+        p_consent_rrn: consentRrn,
+        p_consent_foreign_id: consentForeignId,
+        p_consent_third_party: consentThirdParty,
+        p_consent_version: CONSENT_VERSION,
       });
       if (rpcErr) {
-        setSignupError('프로필 저장 실패: ' + rpcErr.message);
+        const msg = rpcErr.message;
+        if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요해요');
+        else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요해요');
+        else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요해요');
+        else setSignupError('프로필 저장 실패: ' + msg);
         return;
       }
       router.replace('/m/manager/assignments?first=1');
@@ -288,6 +307,16 @@ export default function ManagerSignupPage() {
             value={loginPin}
             onChange={setLoginPin}
             errorMessage={loginError}
+          />
+        )}
+
+        {mode === 'signup_consent' && (
+          <ConsentStep
+            consentPersonal={consentPersonal} setConsentPersonal={setConsentPersonal}
+            consentRrn={consentRrn} setConsentRrn={setConsentRrn}
+            consentForeignId={consentForeignId} setConsentForeignId={setConsentForeignId}
+            consentThirdParty={consentThirdParty} setConsentThirdParty={setConsentThirdParty}
+            onNext={goNext}
           />
         )}
 
@@ -454,6 +483,193 @@ export default function ManagerSignupPage() {
         )}
       </div>
     </MobileShell>
+  );
+}
+
+function ConsentStep({
+  consentPersonal, setConsentPersonal,
+  consentRrn, setConsentRrn,
+  consentForeignId, setConsentForeignId,
+  consentThirdParty, setConsentThirdParty,
+  onNext,
+}: {
+  consentPersonal: boolean;
+  setConsentPersonal: (v: boolean) => void;
+  consentRrn: boolean;
+  setConsentRrn: (v: boolean) => void;
+  consentForeignId: boolean;
+  setConsentForeignId: (v: boolean) => void;
+  consentThirdParty: boolean;
+  setConsentThirdParty: (v: boolean) => void;
+  onNext: () => void;
+}) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const allRequired = consentPersonal && consentRrn && consentForeignId;
+  const allChecked = allRequired && consentThirdParty;
+  const valid = consentPersonal && consentRrn; // 외국인 동의는 가입 마지막에 RPC가 강제
+
+  const setAll = (v: boolean) => {
+    setConsentPersonal(v);
+    setConsentRrn(v);
+    setConsentForeignId(v);
+    setConsentThirdParty(v);
+  };
+
+  return (
+    <>
+      <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
+        서비스 이용을<br />위해 동의해주세요
+      </h1>
+      <p className="mt-4 text-sm text-zinc-500">노임대장 작성·임금 지급을 위한 동의입니다.</p>
+
+      <div className="mt-8">
+        <ConsentRow
+          label="모두 동의합니다"
+          checked={allChecked}
+          onToggle={() => setAll(!allChecked)}
+          emphasis
+        />
+        <div className="my-3 h-px bg-zinc-100" />
+
+        <ConsentItem
+          openKey="personal" openCurrent={openKey} setOpen={setOpenKey}
+          label="(필수) 개인정보 수집·이용 동의"
+          checked={consentPersonal} onToggle={() => setConsentPersonal(!consentPersonal)}
+          body={
+            <>
+              <p><b>수집 항목:</b> 이름, 전화번호, 주소, 계좌정보, 일당, 공종</p>
+              <p><b>이용 목적:</b> 출역 관리, 임금 지급, 노임대장 작성</p>
+              <p><b>보유 기간:</b> 퇴직 후 5년 (근로기준법 제42조)</p>
+              <p className="text-zinc-500">동의를 거부할 권리가 있으나, 거부 시 서비스 이용이 제한됩니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="rrn" openCurrent={openKey} setOpen={setOpenKey}
+          label="(필수) 주민등록번호 수집·이용 동의"
+          checked={consentRrn} onToggle={() => setConsentRrn(!consentRrn)}
+          body={
+            <>
+              <p><b>수집 항목:</b> 주민등록번호</p>
+              <p><b>수집 근거:</b> 소득세법 제145조, 근로기준법 제48조</p>
+              <p><b>이용 목적:</b> 노임대장 작성, 원천세 신고</p>
+              <p><b>보유 기간:</b> 퇴직 후 5년</p>
+              <p className="text-zinc-500">개인정보보호법 제24조의2에 따라 별도 동의를 받습니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="foreign" openCurrent={openKey} setOpen={setOpenKey}
+          label="(외국인 필수) 외국인등록번호 수집·이용 동의"
+          checked={consentForeignId} onToggle={() => setConsentForeignId(!consentForeignId)}
+          body={
+            <>
+              <p><b>수집 항목:</b> 외국인등록번호, 국적, 비자종류</p>
+              <p><b>수집 근거:</b> 외국인근로자의 고용 등에 관한 법률</p>
+              <p><b>이용 목적:</b> 외국인 노임대장 작성, 고용 신고</p>
+              <p><b>보유 기간:</b> 퇴직 후 5년</p>
+              <p className="text-zinc-500">외국인이신 경우에만 적용됩니다. 내국인은 영향 없습니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="third" openCurrent={openKey} setOpen={setOpenKey}
+          label="(선택) 노임대장 제3자 제공 동의"
+          checked={consentThirdParty} onToggle={() => setConsentThirdParty(!consentThirdParty)}
+          body={
+            <>
+              <p><b>제공받는 자:</b> 발주처, 원청사, 고용노동부, 국세청</p>
+              <p><b>제공 항목:</b> 노임대장에 포함된 개인정보</p>
+              <p><b>제공 목적:</b> 공사 보고, 법정 신고</p>
+              <p className="text-zinc-500">동의하지 않아도 가입은 가능합니다.</p>
+            </>
+          }
+        />
+      </div>
+
+      <NextButton valid={valid} onNext={onNext} label="다음" />
+    </>
+  );
+}
+
+function ConsentRow({
+  label, checked, onToggle, emphasis,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  emphasis?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-3 py-3 text-left"
+    >
+      <span
+        className={
+          'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ' +
+          (checked ? 'bg-blue-900 text-white' : 'bg-zinc-200 text-zinc-400')
+        }
+      >
+        <Check className="h-4 w-4" strokeWidth={3} />
+      </span>
+      <span className={'flex-1 ' + (emphasis ? 'text-lg font-bold text-zinc-900' : 'text-base font-semibold text-zinc-800')}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
+function ConsentItem({
+  openKey, openCurrent, setOpen,
+  label, checked, onToggle, body,
+}: {
+  openKey: string;
+  openCurrent: string | null;
+  setOpen: (k: string | null) => void;
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  body: React.ReactNode;
+}) {
+  const isOpen = openCurrent === openKey;
+  return (
+    <div>
+      <div className="flex items-center gap-3 py-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex flex-1 items-center gap-3 text-left"
+        >
+          <span
+            className={
+              'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition ' +
+              (checked ? 'bg-blue-900 text-white' : 'bg-zinc-200 text-zinc-400')
+            }
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          </span>
+          <span className="text-sm font-semibold text-zinc-800">{label}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(isOpen ? null : openKey)}
+          className="inline-flex h-8 w-8 items-center justify-center text-zinc-400"
+          aria-label="약관 보기"
+        >
+          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      </div>
+      {isOpen && (
+        <div className="mb-2 ml-9 space-y-1 rounded-[5px] bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-700">
+          {body}
+        </div>
+      )}
+    </div>
   );
 }
 

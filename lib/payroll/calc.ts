@@ -15,13 +15,11 @@ export function calcWorkerTotal(input: {
   return Math.floor(attendance_sum * default_wage);
 }
 
-// 엑셀·UI 표시용: wage_type에 따라 일자 셀 표시 방식
-//   - 월급 / 월급/일급: 출역 있으면 '1', 없으면 ''
-//   - 일급 / null: 공수 숫자 (0.5/1/1.5 등) 그대로
-export function formatAttendanceCell(wage_type: string | null, hours: number): string {
+// 엑셀·UI 표시용: 출역 일자 셀 표시. 급여형태 무관하게 공수(0.5/1/1.5 등) 그대로.
+//   월급·월급/일급도 출역은 신고용이라 실제값을 표시(임금 계산과는 별개).
+export function formatAttendanceCell(hours: number): string {
   if (hours <= 0) return '';
-  if (wage_type === '월급' || wage_type === '월급/일급') return '1';
-  // numeric(3,1) — 소수 1자리. 1.0 → '1'로, 0.5/1.5는 그대로.
+  // numeric(3,1) — 소수 1자리. 1.0 → '1', 0.5/1.5는 그대로.
   const fixed = hours.toFixed(1);
   return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
 }

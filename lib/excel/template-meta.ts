@@ -36,6 +36,7 @@ export const WORKER_COLS = {
   HOLDER: 'J',
   PHONE: 'K',
   DAILY_WAGE: 'AD',
+  PAYOUT: 'AE',          // 임금총액 (기본 수식 AB×AD; 월급·월급/일급만 값으로 덮어씀)
 } as const;
 
 // 출역 그리드:

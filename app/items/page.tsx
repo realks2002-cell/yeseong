@@ -81,7 +81,7 @@ export default function ItemsPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-7xl p-6">
+      <div className="max-w-7xl p-6">
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">품목 마스터</h1>
@@ -116,7 +116,7 @@ export default function ItemsPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs whitespace-nowrap">
+            <table className="w-full text-[11px] whitespace-nowrap">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>

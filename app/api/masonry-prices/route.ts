@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { MASONRY_CATEGORIES, MASONRY_UNITS, BRICK_TYPES, brickSizes, categoryTypes } from '@/lib/constants/masonry';
 
-const BRICK_TYPES = ['치장벽돌', '시멘트벽돌'] as const;
-const BRICK_SIZES = ['보통', '특수'] as const;
+function parseCategory(v: unknown): string {
+  return typeof v === 'string' && (MASONRY_CATEGORIES as readonly string[]).includes(v) ? v : '조적';
+}
 
 export async function GET(req: Request) {
   const sb = await getServerSupabase();
@@ -10,7 +12,7 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
-  const category = url.searchParams.get('category') === '미장' ? '미장' : '조적';
+  const category = parseCategory(url.searchParams.get('category'));
   const worksiteId = url.searchParams.get('worksiteId');
 
   let q = sb
@@ -21,7 +23,7 @@ export async function GET(req: Request) {
 
   if (worksiteId) q = q.eq('worksite_id', worksiteId);
 
-  const { data, error } = await q.order('type_name').order('size_spec');
+  const { data, error } = await q.order('type_name').order('size_spec').order('unit');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
@@ -32,7 +34,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
-  const category = body?.category === '미장' ? '미장' : '조적';
+  const category = parseCategory(body?.category);
   const worksite_id = typeof body?.worksite_id === 'string' && body.worksite_id ? body.worksite_id : null;
   const unit_price = typeof body?.unit_price === 'number' && Number.isFinite(body.unit_price) ? Math.floor(body.unit_price) : -1;
 
@@ -41,23 +43,42 @@ export async function POST(req: Request) {
 
   let type_name: string;
   let size_spec: string | null;
-  let unit: '장' | '㎡';
+  let unit: string;
 
   if (category === '조적') {
     type_name = typeof body?.type_name === 'string' ? body.type_name.trim() : '';
     if (!(BRICK_TYPES as readonly string[]).includes(type_name)) {
-      return NextResponse.json({ error: '벽돌 종류를 선택하세요 (치장벽돌·시멘트벽돌)' }, { status: 400 });
+      return NextResponse.json({ error: '종류를 선택하세요' }, { status: 400 });
     }
-    const size = typeof body?.size_spec === 'string' ? body.size_spec.trim() : '';
-    if (!(BRICK_SIZES as readonly string[]).includes(size)) {
-      return NextResponse.json({ error: '부위·규격을 선택하세요 (보통·특수)' }, { status: 400 });
+    const sizes = brickSizes(type_name);
+    if (sizes) {
+      const size = typeof body?.size_spec === 'string' ? body.size_spec.trim() : '';
+      if (!(sizes as readonly string[]).includes(size)) {
+        return NextResponse.json({ error: '규격을 선택하세요 (4·6·8인치)' }, { status: 400 });
+      }
+      size_spec = size;
+    } else {
+      size_spec = null;
     }
-    size_spec = size;
     unit = '장';
   } else {
-    type_name = '미장';
+    // 미장형: 단위 선택형. 미장은 종류(type_name)도 선택 (종류+단위 조합별 단가).
+    const types = categoryTypes(category);
+    if (types) {
+      const t = typeof body?.type_name === 'string' ? body.type_name.trim() : '';
+      if (!(types as readonly string[]).includes(t)) {
+        return NextResponse.json({ error: '종류를 선택하세요' }, { status: 400 });
+      }
+      type_name = t;
+    } else {
+      type_name = category;
+    }
     size_spec = null;
-    unit = '㎡';
+    const u = typeof body?.unit === 'string' ? body.unit.trim() : '';
+    if (!(MASONRY_UNITS as readonly string[]).includes(u)) {
+      return NextResponse.json({ error: '단위를 선택하세요' }, { status: 400 });
+    }
+    unit = u;
   }
 
   const { data, error } = await sb
@@ -68,9 +89,9 @@ export async function POST(req: Request) {
 
   if (error) {
     if (error.code === '23505') {
-      const msg = category === '미장'
-        ? '해당 현장에 미장 단가가 이미 등록되어 있습니다'
-        : '해당 현장에 동일 종류·규격이 이미 등록되어 있습니다';
+      const msg = category === '조적'
+        ? '해당 현장에 동일 종류·규격이 이미 등록되어 있습니다'
+        : `해당 현장에 ${category} ${unit} 단가가 이미 등록되어 있습니다`;
       return NextResponse.json({ error: msg }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });

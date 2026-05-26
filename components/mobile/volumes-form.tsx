@@ -1,13 +1,16 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { categoryTypes } from '@/lib/constants/masonry';
 
-export type FormType = '조적' | '미장' | 'not_eligible' | 'trade_unknown' | 'no_worker_link';
+// 성과 입력 가능 카테고리 (조적 + 미장형). not_eligible/trade_unknown/no_worker_link 는 안내.
+export type EligibleCategory = '조적' | '미장' | '방수' | '타일' | '석공사';
+export type FormType = EligibleCategory | 'not_eligible' | 'trade_unknown' | 'no_worker_link';
 
 export type PriceOption = {
   id: string;
-  category: '조적' | '미장';
+  category: string;
   type_name: string | null;
   size_spec: string | null;
   unit: string;
@@ -19,10 +22,13 @@ export type ExistingVolume = {
   category: string;
   type_name: string | null;
   size_spec: string | null;
+  unit: string | null;
   quantity: number;
   unit_price: number;
   amount: number;
   note: string | null;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  rejection_reason?: string | null;
 };
 
 export type VolumesMe = {
@@ -40,17 +46,35 @@ export type VolumesMe = {
 type Row = { masonry_price_id: string; quantity: number };
 
 function priceLabel(p: PriceOption): string {
+  // 조적: 벽돌종류(+규격), 종류형(미장): 종류·단위, 단위형(방수/타일/석공): 단위
   if (p.category === '조적') {
     return `${p.type_name ?? ''}${p.size_spec ? ` (${p.size_spec})` : ''}`;
   }
-  return '미장';
+  if (categoryTypes(p.category)) {
+    return `${p.type_name ?? ''} · ${p.unit}`;
+  }
+  return p.unit;
 }
 
 function matchPrice(e: ExistingVolume, prices: PriceOption[]): string | null {
-  const m = prices.find(
-    (p) => p.category === e.category && p.type_name === e.type_name && p.size_spec === e.size_spec,
+  // 종류·규격·단위 통합 매칭 (조적/미장종류/단위형 모두 커버)
+  const m = prices.find((p) =>
+    p.category === e.category &&
+    (p.type_name ?? '') === (e.type_name ?? '') &&
+    (p.size_spec ?? '') === (e.size_spec ?? '') &&
+    (e.unit == null || p.unit === e.unit),
   );
   return m?.id ?? null;
+}
+
+function existingLabel(e: ExistingVolume): string {
+  if (e.category === '조적') {
+    return `${e.type_name ?? ''}${e.size_spec ? ` (${e.size_spec})` : ''}`;
+  }
+  if (categoryTypes(e.category)) {
+    return `${e.category} ${e.type_name ?? ''}`;
+  }
+  return e.category;
 }
 
 function fmtDate(s: string): string {
@@ -58,7 +82,7 @@ function fmtDate(s: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-export function VolumesForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void }) {
+export function VolumesForm({ data, onSaved, readOnly = false }: { data: VolumesMe; onSaved: () => void; readOnly?: boolean }) {
   if (data.form_type === 'no_worker_link') {
     return <InfoBox kind="error" title="작업자 정보 미연결" desc="관리자가 본인 계정과 작업자 정보를 연결해야 합니다." />;
   }
@@ -67,7 +91,7 @@ export function VolumesForm({ data, onSaved }: { data: VolumesMe; onSaved: () =>
       <InfoBox
         kind="info"
         title="해당 없음"
-        desc="월급/일급 작업자만 매사 성과를 입력합니다. 출역만 제출해 주세요."
+        desc="성과(매사) 입력은 월급/일급 작업자만 가능합니다. 출역만 제출해 주세요."
       />
     );
   }
@@ -76,18 +100,18 @@ export function VolumesForm({ data, onSaved }: { data: VolumesMe; onSaved: () =>
       <InfoBox
         kind="warn"
         title="직종 확인 필요"
-        desc={`현재 직종(${data.worker?.default_trade ?? '미설정'})은 매사 입력 대상이 아닙니다. 관리자에게 확인 요청하세요.`}
+        desc={`현재 직종(${data.worker?.default_trade ?? '미설정'})은 매사 성과 입력 대상이 아닙니다. 관리자에게 확인 요청하세요.`}
       />
     );
   }
 
-  // 적격 작업자 (조적/미장)
-  return <EligibleForm data={data} onSaved={onSaved} />;
+  // 적격 작업자 (조적/미장/방수/타일/석공사)
+  return <EligibleForm data={data} onSaved={onSaved} readOnly={readOnly} />;
 }
 
-function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void }) {
+function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: () => void; readOnly: boolean }) {
   const sb = getBrowserSupabase();
-  const isPlaster = data.form_type === '미장';
+  const catName = data.form_type as EligibleCategory;
 
   const initialRows: Row[] = useMemo(() => {
     const out: Row[] = [];
@@ -122,11 +146,11 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
   const total = rows.reduce((s, r) => {
     const p = priceMap.get(r.masonry_price_id);
     if (!p) return s;
-    return s + Math.floor(r.quantity * p.unit_price);
+    return s + Math.round(r.quantity * p.unit_price);
   }, 0);
 
   async function save() {
-    if (busy) return;
+    if (readOnly || busy) return;
     if (!data.target_year_month) return;
     setBusy(true);
     setErr(null);
@@ -142,7 +166,7 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
       setErr(error.message);
       return;
     }
-    setOkMsg('저장되었습니다');
+    setOkMsg('저장되었습니다. 관리자 승인 후 급여에 반영됩니다.');
     onSaved();
   }
 
@@ -152,12 +176,12 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
       <InfoBox
         kind="warn"
         title="단가 미등록"
-        desc={`현장에 ${isPlaster ? '미장' : '조적'} 단가가 등록되지 않았습니다. 관리자에게 단가 등록을 요청하세요.`}
+        desc={`현장에 ${catName} 단가가 등록되지 않았습니다. 관리자에게 단가 등록을 요청하세요.`}
       />
     );
   }
 
-  // 입력 기간 외
+  // 입력 기간 외 — 제출 내역(승인상태)만 표시
   if (!data.is_input_open) {
     return (
       <div className="space-y-4">
@@ -171,7 +195,7 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
           }
         />
         {data.existing.length > 0 && (
-          <ExistingList existing={data.existing} prices={data.prices} />
+          <ExistingList existing={data.existing} />
         )}
       </div>
     );
@@ -181,7 +205,7 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
     <div className="space-y-4">
       <div className="rounded-[10px] bg-blue-50 p-3 text-sm">
         <p className="font-semibold text-blue-900">
-          {data.target_year_month?.replace('-', '년 ')}월 {isPlaster ? '미장' : '조적'} 성과 입력
+          {data.target_year_month?.replace('-', '년 ')}월 {catName} 성과 입력
         </p>
         {data.input_window && (
           <p className="text-xs text-blue-700 mt-1">
@@ -189,6 +213,16 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
           </p>
         )}
       </div>
+
+      {data.existing.some((e) => e.approval_status === 'rejected') && (
+        <InfoBox
+          kind="warn"
+          title="반려된 성과가 있습니다"
+          desc={data.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason
+            ? `사유: ${data.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason}`
+            : '관리자가 반려했습니다. 다시 입력 후 저장해 주세요.'}
+        />
+      )}
 
       <div className="space-y-2.5">
         {rows.length === 0 ? (
@@ -234,7 +268,7 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
                   />
                   <span className="w-12 text-center text-sm text-zinc-500">{p?.unit ?? ''}</span>
                   <span className="w-28 text-right text-sm tabular-nums text-zinc-700">
-                    {p ? `${Math.floor(r.quantity * p.unit_price).toLocaleString()}원` : '-'}
+                    {p ? `${Math.round(r.quantity * p.unit_price).toLocaleString()}원` : '-'}
                   </span>
                 </div>
               </div>
@@ -274,43 +308,51 @@ function EligibleForm({ data, onSaved }: { data: VolumesMe; onSaved: () => void 
       <button
         type="button"
         onClick={save}
-        disabled={busy}
+        disabled={busy || readOnly}
         className="h-[68px] w-full rounded-[12px] bg-blue-900 text-lg font-bold text-white disabled:bg-zinc-300"
       >
-        {busy ? '저장 중...' : '저장'}
+        {readOnly ? '보기 전용' : busy ? '저장 중...' : '저장'}
       </button>
     </div>
   );
 }
 
-function ExistingList({ existing, prices }: { existing: ExistingVolume[]; prices: PriceOption[] }) {
-  const priceMap = useMemo(() => {
-    const m = new Map<string, PriceOption>();
-    for (const p of prices) {
-      const key = `${p.category}|${p.type_name ?? ''}|${p.size_spec ?? ''}`;
-      m.set(key, p);
-    }
-    return m;
-  }, [prices]);
+function StatusBadge({ status }: { status?: ExistingVolume['approval_status'] }) {
+  if (status === 'approved') {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+        <CheckCircle2 className="h-3 w-3" /> 승인
+      </span>
+    );
+  }
+  if (status === 'rejected') {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+        <XCircle className="h-3 w-3" /> 반려
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+      <Clock className="h-3 w-3" /> 검토 중
+    </span>
+  );
+}
+
+function ExistingList({ existing }: { existing: ExistingVolume[] }) {
   const total = existing.reduce((s, e) => s + e.amount, 0);
   return (
     <div className="rounded-[10px] border border-zinc-200 bg-white p-3 space-y-2">
       <p className="text-sm font-semibold text-zinc-700">제출된 성과</p>
-      {existing.map((e) => {
-        const key = `${e.category}|${e.type_name ?? ''}|${e.size_spec ?? ''}`;
-        const p = priceMap.get(key);
-        return (
-          <div key={e.id} className="flex items-center justify-between text-sm">
-            <span className="text-zinc-700">
-              {e.category === '조적'
-                ? `${e.type_name ?? ''}${e.size_spec ? ` (${e.size_spec})` : ''}`
-                : '미장'}
-              {' '}× {e.quantity}{p?.unit ?? ''}
-            </span>
-            <span className="tabular-nums font-semibold">{e.amount.toLocaleString()}원</span>
-          </div>
-        );
-      })}
+      {existing.map((e) => (
+        <div key={e.id} className="flex items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-1.5 text-zinc-700">
+            {existingLabel(e)} × {e.quantity}{e.unit ?? ''}
+            <StatusBadge status={e.approval_status} />
+          </span>
+          <span className="tabular-nums font-semibold">{e.amount.toLocaleString()}원</span>
+        </div>
+      ))}
       <div className="border-t border-zinc-200 pt-2 flex items-center justify-between">
         <span className="text-sm font-semibold">합계</span>
         <span className="text-base font-bold tabular-nums text-blue-900">{total.toLocaleString()}원</span>

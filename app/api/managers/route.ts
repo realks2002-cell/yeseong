@@ -36,7 +36,23 @@ export async function GET(req: Request) {
     if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
     return (a.name ?? '').localeCompare(b.name ?? '', 'ko');
   });
-  return NextResponse.json(sorted);
+
+  // 팀장 협력사 = 연결된 worker(phone) 의 default_subcontractor_id (팀장도 작업자)
+  const admin = getServiceSupabase();
+  const phones = sorted.map((m: { phone: string | null }) => m.phone).filter((p): p is string => !!p);
+  const subMap = new Map<string, string | null>();
+  if (phones.length > 0) {
+    const { data: ws } = await admin
+      .from('yeseong_workers')
+      .select('phone, default_subcontractor_id')
+      .in('phone', phones);
+    for (const w of ws ?? []) subMap.set(w.phone, w.default_subcontractor_id);
+  }
+  const enriched = sorted.map((m: { phone: string | null }) => ({
+    ...m,
+    subcontractor_id: m.phone ? subMap.get(m.phone) ?? null : null,
+  }));
+  return NextResponse.json(enriched);
 }
 
 export async function POST(req: Request) {
@@ -52,6 +68,8 @@ export async function POST(req: Request) {
   const worksiteIds: string[] = Array.isArray(body?.worksite_ids)
     ? body.worksite_ids.filter((v: unknown) => typeof v === 'string')
     : [];
+  const subcontractorId: string | null =
+    typeof body?.subcontractor_id === 'string' && body.subcontractor_id ? body.subcontractor_id : null;
 
   if (!name) return NextResponse.json({ error: '성명을 입력하세요' }, { status: 400 });
   const phone = normalizePhone(phoneRaw);
@@ -107,10 +125,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: insErr.message }, { status: 500 });
   }
 
+  // 팀장도 작업자다 — 같은 phone의 worker 행 보장 (없으면 생성, 있으면 기존 링크 유지)
+  const { data: existingWorker } = await admin
+    .from('yeseong_workers')
+    .select('id')
+    .eq('phone', phone)
+    .maybeSingle();
+  if (!existingWorker) {
+    const { error: wErr } = await admin
+      .from('yeseong_workers')
+      .insert({ name, phone, default_wage: 0, default_subcontractor_id: subcontractorId });
+    if (wErr) {
+      // 팀장/auth 롤백 후 실패 반환
+      await admin.from('yeseong_site_managers').delete().eq('id', inserted.id);
+      if (authUserId) await admin.auth.admin.deleteUser(authUserId);
+      return NextResponse.json({ error: '작업자 등록 실패: ' + wErr.message }, { status: 500 });
+    }
+  } else {
+    // 기존 worker면 협력사만 동기화 (팀원이 팀장 협력사를 따라감)
+    await admin
+      .from('yeseong_workers')
+      .update({ default_subcontractor_id: subcontractorId })
+      .eq('phone', phone);
+  }
+
   if (worksiteIds.length > 0) {
     const rows = worksiteIds.map((wid) => ({ site_manager_id: inserted.id, worksite_id: wid }));
     const { error: asErr } = await admin.from('yeseong_site_manager_assignments').insert(rows);
     if (asErr) return NextResponse.json({ error: asErr.message }, { status: 500 });
+
+    // 팀장도 작업자 — 담당 현장을 성과 입력 기본 현장으로 동기화
+    await admin
+      .from('yeseong_workers')
+      .update({ default_worksite_id: worksiteIds[0] })
+      .eq('phone', phone);
   }
 
   return NextResponse.json({ id: inserted.id }, { status: 201 });

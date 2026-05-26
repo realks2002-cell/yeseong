@@ -1,14 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
+import { BRICK_TYPES, BLOCK_SIZES, brickSizes, MASONRY_UNITS, categoryTypes, type MasonryCategory } from '@/lib/constants/masonry';
 
 export type Worksite = { id: string; name: string };
 
 export type MasonryPrice = {
   id: string;
-  category: '조적' | '미장';
+  category: MasonryCategory;
   type_name: string;
   size_spec: string | null;
   unit: string;
@@ -20,18 +21,16 @@ export type MasonryPrice = {
 };
 
 export type MasonryPriceInput = {
-  category: '조적' | '미장';
+  category: MasonryCategory;
   worksite_id: string;
   type_name: string;
   size_spec: string | null;
+  unit: string;
   unit_price: number;
 };
 
-const BRICK_TYPES = ['치장벽돌', '시멘트벽돌'] as const;
-const BRICK_SIZES = ['보통', '특수'] as const;
-
 type Props = {
-  category: '조적' | '미장';
+  category: MasonryCategory;
   initial?: MasonryPrice;
   worksites: Worksite[];
   onSubmit: (input: MasonryPriceInput) => Promise<void>;
@@ -40,34 +39,52 @@ type Props = {
 };
 
 export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCancel, title }: Props) {
+  const isBrick = category === '조적';
+  const types = useMemo(() => categoryTypes(category), [category]); // 미장: 종류배열, 그 외: null
+  const hasTypes = types != null;
+  const defaultType = isBrick ? BRICK_TYPES[0] : hasTypes ? types[0] : '';
+
   const [worksiteId, setWorksiteId] = useState(initial?.worksite_id ?? '');
-  const [typeName, setTypeName] = useState<string>(initial?.type_name ?? BRICK_TYPES[0]);
-  const [sizeSpec, setSizeSpec] = useState<string>(initial?.size_spec ?? BRICK_SIZES[0]);
+  const [typeName, setTypeName] = useState<string>(initial?.type_name ?? defaultType);
+  const [sizeSpec, setSizeSpec] = useState<string>(initial?.size_spec ?? '');
+  const [unit, setUnit] = useState<string>(initial?.unit ?? (isBrick ? '장' : MASONRY_UNITS[0]));
   const [unitPrice, setUnitPrice] = useState(initial?.unit_price ?? 0);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setWorksiteId(initial?.worksite_id ?? '');
-    setTypeName(initial?.type_name ?? BRICK_TYPES[0]);
-    setSizeSpec(initial?.size_spec ?? BRICK_SIZES[0]);
+    const t = initial?.type_name ?? defaultType;
+    setTypeName(t);
+    const sizes = brickSizes(t);
+    setSizeSpec(initial?.size_spec ?? (sizes ? sizes[0] : ''));
+    setUnit(initial?.unit ?? (isBrick ? '장' : MASONRY_UNITS[0]));
     setUnitPrice(initial?.unit_price ?? 0);
-  }, [initial]);
+  }, [initial, isBrick, defaultType]);
 
-  const unitLabel = category === '조적' ? '장' : '㎡';
+  // 조적 종류 변경 시 규격 초기화(블록쌓기만 규격 보유)
+  function changeBrickType(t: string) {
+    setTypeName(t);
+    const sizes = brickSizes(t);
+    setSizeSpec(sizes ? sizes[0] : '');
+  }
+
+  const unitLabel = isBrick ? '장' : unit;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     if (!worksiteId) return setErr('현장을 선택하세요');
+    if (isBrick && brickSizes(typeName) && !sizeSpec) return setErr('규격을 선택하세요');
     if (!unitPrice || unitPrice < 0) return setErr('단가를 입력하세요');
     setLoading(true);
     try {
       await onSubmit({
         category,
         worksite_id: worksiteId,
-        type_name: category === '조적' ? typeName : '미장',
-        size_spec: category === '조적' ? sizeSpec : null,
+        type_name: isBrick ? typeName : hasTypes ? typeName : category,
+        size_spec: isBrick ? (brickSizes(typeName) ? sizeSpec : null) : null,
+        unit: isBrick ? '장' : unit,
         unit_price: Math.floor(unitPrice),
       });
     } catch (e) {
@@ -76,6 +93,9 @@ export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCan
       setLoading(false);
     }
   }
+
+  const selectCls =
+    'h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
@@ -89,12 +109,7 @@ export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCan
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">현장 *</label>
-            <select
-              value={worksiteId}
-              onChange={(e) => setWorksiteId(e.target.value)}
-              disabled={loading}
-              className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
-            >
+            <select value={worksiteId} onChange={(e) => setWorksiteId(e.target.value)} disabled={loading} className={selectCls}>
               <option value="">현장 선택</option>
               {worksites.map((w) => (
                 <option key={w.id} value={w.id}>{w.name}</option>
@@ -102,34 +117,49 @@ export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCan
             </select>
           </div>
 
-          {category === '조적' && (
+          {isBrick ? (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">벽돌 종류 *</label>
-                <select
-                  value={typeName}
-                  onChange={(e) => setTypeName(e.target.value)}
-                  disabled={loading}
-                  className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
-                >
+                <label className="text-sm font-medium">종류 *</label>
+                <select value={typeName} onChange={(e) => changeBrickType(e.target.value)} disabled={loading} className={selectCls}>
                   {BRICK_TYPES.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
               </div>
-
+              {brickSizes(typeName) && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">규격 *</label>
+                  <select value={sizeSpec} onChange={(e) => setSizeSpec(e.target.value)} disabled={loading} className={selectCls}>
+                    {BLOCK_SIZES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {hasTypes && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">종류 *</label>
+                  <select value={typeName} onChange={(e) => setTypeName(e.target.value)} disabled={loading} className={selectCls}>
+                    {types.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">부위·규격 *</label>
-                <select
-                  value={sizeSpec}
-                  onChange={(e) => setSizeSpec(e.target.value)}
-                  disabled={loading}
-                  className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
-                >
-                  {BRICK_SIZES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                <label className="text-sm font-medium">단위 *</label>
+                <select value={unit} onChange={(e) => setUnit(e.target.value)} disabled={loading} className={selectCls}>
+                  {MASONRY_UNITS.map((u) => (
+                    <option key={u} value={u}>{u}</option>
                   ))}
                 </select>
+                <p className="text-xs text-[#6B7280]">
+                  {hasTypes ? '종류·단위 조합마다 단가를 따로 등록합니다.' : '단위마다 단가를 따로 등록합니다.'}
+                </p>
               </div>
             </>
           )}

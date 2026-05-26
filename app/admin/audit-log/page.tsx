@@ -100,7 +100,7 @@ export default function AuditLogPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-7xl p-6 space-y-5">
+      <div className="max-w-7xl p-6 space-y-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <History className="h-6 w-6 text-[#447D9B]" />
@@ -160,7 +160,7 @@ export default function AuditLogPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-[11px]">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-32">시각</th>
@@ -295,7 +295,7 @@ function AuditDetailModal({
           {keys.length === 0 ? (
             <p className="text-sm text-[#6B7280]">표시할 변경 내용이 없습니다.</p>
           ) : (
-            <table className="w-full text-xs">
+            <table className="w-full text-[11px]">
               <thead className="text-[#4B5563] border-b border-[#D7D7D7]">
                 <tr className="text-left text-[11px]">
                   <th className="px-2 py-2 font-medium w-32">필드</th>

@@ -17,10 +17,13 @@ import {
   Layers,
   Megaphone,
   Package,
+  Tags,
+  ClipboardList,
   Bell,
   BellOff,
   ClipboardCheck,
   History,
+  Smartphone,
   LogOut as LogOutIcon,
   KeyRound,
   type LucideIcon,
@@ -34,6 +37,7 @@ type Item = {
   href: string;
   icon: LucideIcon;
   badge?: string;
+  divider?: boolean; // 항목 아래 구분선
 };
 
 type Group = {
@@ -62,11 +66,12 @@ const groups: Group[] = [
     label: '마스터 데이터',
     items: [
       { label: '작업자', href: '/workers', icon: Users },
+      { label: '직종', href: '/trades', icon: Tags },
       { label: '팀장', href: '/managers', icon: HardHat },
       { label: '협력사', href: '/subcontractors', icon: HardHat },
-      { label: '현장', href: '/worksites', icon: Building2 },
+      { label: '현장', href: '/worksites', icon: Building2, divider: true },
       { label: '거래처', href: '/vendors', icon: Store },
-      { label: '품목', href: '/items', icon: Package },
+      { label: '품목', href: '/items', icon: Package, divider: true },
       { label: '매사 단가', href: '/masonry-prices', icon: Layers },
     ],
   },
@@ -80,7 +85,9 @@ const groups: Group[] = [
   {
     label: '모니터링',
     items: [
+      { label: '팀장 화면 보기', href: '/admin/manager-view', icon: Smartphone },
       { label: '팀장출역 검토', href: '/monitoring/attendance-review', icon: ClipboardCheck },
+      { label: '매사 성과 검토', href: '/monitoring/volumes-review', icon: ClipboardList },
       { label: '변경 이력', href: '/admin/audit-log', icon: History },
       { label: '앱 종료 알림', href: '/monitoring/offline', icon: BellOff },
       { label: '이탈 기록', href: '/monitoring/departures', icon: LogOutIcon },
@@ -136,7 +143,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
         {groups.map(group => (
           <div key={group.label}>
-            <p className="px-3 mb-1 text-[9px] font-semibold uppercase tracking-wider text-[#6B7280]">
+            <p className="mb-1.5 rounded-[5px] bg-[#273F4F] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
               {group.label}
             </p>
             <ul className="space-y-0.5">
@@ -144,13 +151,13 @@ export function Sidebar() {
                 const active = isActive(pathname, item.href);
                 const Icon = item.icon;
                 return (
-                  <li key={item.href}>
+                  <li key={item.href} className={cn(item.divider && 'border-b border-[#D7D7D7] pb-1.5 mb-1.5')}>
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-[12px] transition-colors',
+                        'flex items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-[11px] transition-colors',
                         active
-                          ? 'bg-[#D7D7D7] text-[#091413] font-semibold'
+                          ? 'bg-[#E3E9EF] text-[#273F4F] font-semibold'
                           : 'text-[#091413] hover:bg-[#F5F5F5]'
                       )}
                     >
