@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Search, X, UserPlus, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Search, X, UserPlus, Pencil, RotateCcw, Trash2, Users } from 'lucide-react';
 
 type Manager = {
   id: string;
@@ -30,6 +30,7 @@ function getAssignments(m: Manager): Assignment[] {
 
 type Worksite = { id: string; name: string; subcontractor_id: string | null };
 type Subcontractor = { id: string; name: string };
+type TeamMember = { id: string; name: string; phone: string | null; default_trade: string | null };
 
 type ManagerInput = {
   name: string;
@@ -55,6 +56,9 @@ export default function ManagersPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Manager | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [viewingManager, setViewingManager] = useState<Manager | null>(null);
+  const [members, setMembers] = useState<TeamMember[] | null>(null);
+  const [membersError, setMembersError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -132,6 +136,19 @@ export default function ManagersPage() {
 
   const subName = (id: string | null) =>
     id ? subcontractors.find((s) => s.id === id)?.name ?? '-' : '미지정';
+
+  async function openMembers(m: Manager) {
+    setViewingManager(m);
+    setMembers(null);
+    setMembersError(null);
+    const r = await fetch(`/api/managers/${m.id}/members`, { cache: 'no-store' });
+    if (!r.ok) {
+      setMembersError((await r.json().catch(() => ({}))).error ?? '팀원을 불러오지 못했습니다');
+      setMembers([]);
+      return;
+    }
+    setMembers(await r.json());
+  }
 
   async function handleDelete(m: Manager) {
     if (!confirm(`"${m.name}" 팀장을 비활성 처리할까요?\n과거 출역 승인 기록은 그대로 유지되고, 목록과 모바일 로그인에서만 차단됩니다.`)) return;
@@ -278,6 +295,14 @@ export default function ManagersPage() {
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-0.5">
+                            <button
+                              className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#447D9B]"
+                              onClick={() => openMembers(m)}
+                              aria-label="팀원 보기"
+                              title="팀원 보기"
+                            >
+                              <Users className="h-3.5 w-3.5" />
+                            </button>
                             {m.is_active ? (
                               <>
                                 <button
@@ -341,6 +366,52 @@ export default function ManagersPage() {
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
         />
+      )}
+
+      {viewingManager && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setViewingManager(null)}
+        >
+          <div className="w-full max-w-md rounded-[5px] bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#D7D7D7] px-5 py-3">
+              <h2 className="text-base font-semibold">
+                {viewingManager.name} 팀원
+                {members && <span className="ml-2 text-sm font-normal text-[#6B7280]">총원 {members.length}명</span>}
+              </h2>
+              <button
+                onClick={() => setViewingManager(null)}
+                className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                aria-label="닫기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5">
+              {membersError ? (
+                <p className="text-sm text-red-600">{membersError}</p>
+              ) : members === null ? (
+                <p className="py-6 text-center text-sm text-[#9CA3AF]">불러오는 중...</p>
+              ) : members.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[#9CA3AF]">등록된 팀원이 없습니다.</p>
+              ) : (
+                <div className="divide-y divide-[#D7D7D7] rounded-[5px] border border-[#D7D7D7]">
+                  {members.map((mem) => (
+                    <div key={mem.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                      <span className="font-medium text-[#091413]">
+                        {mem.name}
+                        {mem.default_trade && (
+                          <span className="ml-1.5 text-[11px] text-[#6B7280]">{mem.default_trade}</span>
+                        )}
+                      </span>
+                      <span className="font-mono text-[#4B5563]">{formatPhone(mem.phone)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </AdminShell>
   );

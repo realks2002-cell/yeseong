@@ -25,6 +25,12 @@ export default function MasonryPricesPage() {
     return list.filter((p) => p.worksite_id === filterWorksiteId);
   }, [list, filterWorksiteId]);
 
+  // 이미 등록된 품명(분류 전체 distinct) — 폼 드롭다운 자동 제안
+  const existingTypeNames = useMemo(
+    () => Array.from(new Set((list ?? []).map((p) => p.type_name).filter((t): t is string => !!t))),
+    [list],
+  );
+
   async function loadWorksites() {
     const r = await fetch('/api/worksites', { cache: 'no-store' });
     if (!r.ok) return;
@@ -228,6 +234,7 @@ export default function MasonryPricesPage() {
           category={category}
           title={`${category} 단가 추가`}
           worksites={worksites}
+          existingTypeNames={existingTypeNames}
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
         />
@@ -243,6 +250,7 @@ export default function MasonryPricesPage() {
               : `${editing.yeseong_worksites?.name ?? ''} · ${category} (${editing.unit}) 수정`
           }
           worksites={worksites}
+          existingTypeNames={existingTypeNames}
           initial={editing}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}

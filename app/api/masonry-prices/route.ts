@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { MASONRY_CATEGORIES, MASONRY_UNITS, BRICK_TYPES, brickSizes, categoryTypes } from '@/lib/constants/masonry';
+import { MASONRY_CATEGORIES, MASONRY_UNITS, brickSizes, categoryTypes } from '@/lib/constants/masonry';
 
 function parseCategory(v: unknown): string {
   return typeof v === 'string' && (MASONRY_CATEGORIES as readonly string[]).includes(v) ? v : '조적';
@@ -48,8 +48,8 @@ export async function POST(req: Request) {
 
   if (category === '조적') {
     type_name = typeof body?.type_name === 'string' ? body.type_name.trim() : '';
-    if (!(BRICK_TYPES as readonly string[]).includes(type_name)) {
-      return NextResponse.json({ error: '품명을 선택하세요' }, { status: 400 });
+    if (!type_name) {
+      return NextResponse.json({ error: '품명을 입력하세요' }, { status: 400 });
     }
     const sizes = brickSizes(type_name);
     if (sizes) {
@@ -67,8 +67,8 @@ export async function POST(req: Request) {
     const types = categoryTypes(category);
     if (types) {
       const t = typeof body?.type_name === 'string' ? body.type_name.trim() : '';
-      if (!(types as readonly string[]).includes(t)) {
-        return NextResponse.json({ error: '품명을 선택하세요' }, { status: 400 });
+      if (!t) {
+        return NextResponse.json({ error: '품명을 입력하세요' }, { status: 400 });
       }
       type_name = t;
     } else {
