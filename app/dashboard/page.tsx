@@ -16,6 +16,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { currentYearMonth, formatYearMonth, shiftMonth } from '@/lib/utils/date';
+import { TrendChart, type TrendPoint } from '@/components/dashboard/trend-chart';
 
 type Worksite = { id: string; name: string; address: string | null; is_active: boolean };
 type Trade = { trade: string; hours: number };
@@ -27,6 +28,7 @@ type Dashboard = {
     totalHours: number;
     workerDays: number;
     estimatedWageTotal: number;
+    wageBreakdown: { daily: number; monthly: number; masonry: number };
   };
   worksites: Worksite[];
   tradeBreakdown: Trade[];
@@ -39,16 +41,21 @@ function formatKRW(n: number): string {
 export default function DashboardPage() {
   const [yearMonth, setYearMonth] = useState(currentYearMonth());
   const [data, setData] = useState<Dashboard | null>(null);
+  const [trend, setTrend] = useState<TrendPoint[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
-    const r = await fetch(`/api/dashboard?yearMonth=${yearMonth}`, { cache: 'no-store' });
+    const [r, tr] = await Promise.all([
+      fetch(`/api/dashboard?yearMonth=${yearMonth}`, { cache: 'no-store' }),
+      fetch(`/api/dashboard/trend?yearMonth=${yearMonth}`, { cache: 'no-store' }),
+    ]);
     if (!r.ok) {
       setError(`로드 실패: ${r.status}`);
       return;
     }
     setData(await r.json());
+    setTrend(tr.ok ? (await tr.json()).trend : []);
   }, [yearMonth]);
 
   useEffect(() => { load(); }, [load]);
@@ -56,6 +63,13 @@ export default function DashboardPage() {
   const kpi = data?.kpi;
   const trades = data?.tradeBreakdown ?? [];
   const maxTrade = Math.max(1, ...trades.map((t) => t.hours));
+  const wb = kpi?.wageBreakdown ?? { daily: 0, monthly: 0, masonry: 0 };
+  const wageTotal = kpi?.estimatedWageTotal ?? 0;
+  const wageSegs = [
+    { label: '일급', value: wb.daily, dot: 'bg-yellow-400', text: 'text-yellow-600' },
+    { label: '월급', value: wb.monthly, dot: 'bg-red-500', text: 'text-red-600' },
+    { label: '매사', value: wb.masonry, dot: 'bg-blue-500', text: 'text-blue-600' },
+  ];
 
   return (
     <AdminShell>
@@ -89,8 +103,72 @@ export default function DashboardPage() {
           <KpiCard
             icon={<Wallet className="h-3.5 w-3.5" />}
             label="추정 임금총액"
-            value={`${formatKRW(kpi?.estimatedWageTotal ?? 0)}원`}
+            value={`${formatKRW(wageTotal)}원`}
           />
+        </div>
+
+        <Card>
+          <CardHeader className="pb-2 p-4">
+            <CardTitle className="text-sm">추정 임금총액 구분 ({formatYearMonth(yearMonth)})</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            {wageTotal === 0 ? (
+              <p className="py-6 text-center text-xs text-[#9CA3AF]">임금 데이터가 없습니다.</p>
+            ) : (
+              <>
+                <div className="flex h-2.5 overflow-hidden rounded-full bg-[#F5F5F5]">
+                  {wageSegs.map((s) => (
+                    <div key={s.label} className={s.dot} style={{ width: `${(s.value / wageTotal) * 100}%` }} />
+                  ))}
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {wageSegs.map((s) => (
+                    <div key={s.label} className="rounded-[5px] border border-[#D7D7D7] bg-white p-2.5">
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${s.dot}`} />
+                        <span className={`font-medium ${s.text}`}>{s.label}</span>
+                        <span className="ml-auto text-[10px] tabular-nums text-[#9CA3AF]">
+                          {Math.round((s.value / wageTotal) * 100)}%
+                        </span>
+                      </div>
+                      <div className="mt-1 text-sm font-bold tabular-nums">{formatKRW(s.value)}원</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2 p-4">
+              <CardTitle className="text-sm">총 공수 — 최근 6개월</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {trend === null ? (
+                <p className="py-12 text-center text-xs text-[#9CA3AF]">불러오는 중...</p>
+              ) : trend.every((t) => t.totalHours === 0) ? (
+                <p className="py-12 text-center text-xs text-[#9CA3AF]">출역 데이터가 없습니다.</p>
+              ) : (
+                <TrendChart data={trend} metric="hours" />
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2 p-4">
+              <CardTitle className="text-sm">임금총액 — 최근 6개월</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {trend === null ? (
+                <p className="py-12 text-center text-xs text-[#9CA3AF]">불러오는 중...</p>
+              ) : trend.every((t) => t.wageTotal === 0) ? (
+                <p className="py-12 text-center text-xs text-[#9CA3AF]">임금 데이터가 없습니다.</p>
+              ) : (
+                <TrendChart data={trend} metric="wage" />
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">

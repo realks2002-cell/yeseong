@@ -7,7 +7,7 @@ import { WorkerForm, type Worker, type WorkerInput, type TeamLeaderOption } from
 import { WAGE_TYPES } from '@/lib/constants/trades';
 import { formatRrnDisplay } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
-import { Search, UserPlus, Pencil, Trash2, X, Smartphone, Download } from 'lucide-react';
+import { Search, UserPlus, Pencil, Trash2, X, Download } from 'lucide-react';
 
 export default function WorkersPage() {
   const [list, setList] = useState<Worker[] | null>(null);
@@ -183,23 +183,23 @@ export default function WorkersPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative max-w-md flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+          <div className="relative max-w-sm flex-1 min-w-[192px]">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9CA3AF]" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="이름 · 전화번호 · 주민번호로 검색"
-              className="w-full rounded-[5px] border border-[#D7D7D7] bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+              className="h-8 w-full rounded-[5px] border border-[#D7D7D7] bg-white pl-8 pr-8 text-xs outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-[#9CA3AF] hover:bg-[#F5F5F5] hover:text-[#091413]"
                 aria-label="검색어 지우기"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </button>
             )}
           </div>
@@ -207,7 +207,7 @@ export default function WorkersPage() {
             value={wageTypeFilter}
             onChange={(e) => setWageTypeFilter(e.target.value)}
             aria-label="급여형태 필터"
-            className="h-10 rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
+            className="h-8 rounded-[5px] border border-[#D7D7D7] bg-white px-2.5 text-xs text-[#091413] outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
           >
             <option value="">급여형태 (전체)</option>
             {WAGE_TYPES.map((w) => (
@@ -230,53 +230,51 @@ export default function WorkersPage() {
 
         {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[11px] whitespace-nowrap">
-              <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-[11px]">
-                  <th className="px-3 py-2 font-medium w-10">#</th>
-                  <th className="px-3 py-2 font-medium">성명</th>
-                  <th className="px-3 py-2 font-medium">팀장</th>
-                  <th className="px-3 py-2 font-medium">구분</th>
-                  <th className="px-3 py-2 font-medium">직종</th>
-                  <th className="px-3 py-2 font-medium">연락처</th>
-                  <th className="px-3 py-2 font-medium">주민번호</th>
-                  <th className="px-3 py-2 font-medium">은행</th>
-                  <th className="px-3 py-2 font-medium">계좌</th>
-                  <th className="px-3 py-2 font-medium">예금주</th>
-                  <th className="px-3 py-2 font-medium">주소</th>
-                  <th className="px-3 py-2 font-medium text-center">앱</th>
-                  <th className="px-3 py-2 font-medium text-right">기본일당</th>
-                  <th className="px-3 py-2 font-medium">급여형태</th>
-                  <th className="px-3 py-2 font-medium w-20"></th>
+        <Card className="overflow-hidden p-0">
+          <div className="overflow-auto max-h-[calc(100svh-14rem)]">
+            <table className="w-full border-separate border-spacing-0 text-[11px] whitespace-nowrap">
+              <thead className="sticky top-0 z-10 bg-[#F5F5F5] text-[#6B7280]">
+                <tr className="text-center">
+                  <th className="w-10 border-b border-[#D7D7D7] px-3 py-2.5 font-medium">#</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">성명</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">팀장</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">구분</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">직종</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">연락처</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">주민번호</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">계좌</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">주소</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">앱</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">기본일당</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">급여형태</th>
+                  <th className="w-20 border-b border-[#D7D7D7] px-3 py-2.5 font-medium"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#D7D7D7]">
+              <tbody>
                 {filtered === null ? (
-                  <tr><td colSpan={15} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={13} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={15} className="py-10 text-center text-[#9CA3AF]">
+                  <tr><td colSpan={13} className="py-12 text-center text-[#9CA3AF]">
                     {query ? '검색 결과가 없습니다.' : '등록된 작업자가 없습니다.'}
                   </td></tr>
                 ) : (
                   filtered.map((w, i) => (
-                    <tr key={w.id} className="hover:bg-[#F5F5F5]">
-                      <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
-                      <td className="px-3 py-2 font-medium">
-                        {w.name}
-                        {w.name_english && <span className="ml-1 text-[10px] text-[#9CA3AF]">({w.name_english})</span>}
+                    <tr key={w.id} className="group hover:bg-[#F5F5F5]">
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center text-[#9CA3AF] tabular-nums">{i + 1}</td>
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
+                        <div className="font-semibold text-[#091413]">{w.name}</div>
+                        {w.name_english && <div className="text-[10px] text-[#9CA3AF]">{w.name_english}</div>}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
                         {w.skill_grade === '팀장' ? (
-                          <span className="font-medium text-[#447D9B]">팀장</span>
+                          <span className="font-semibold text-emerald-600">팀장</span>
                         ) : (
                           <select
                             value={w.team_leader_id ?? ''}
                             disabled={savingLeaderId === w.id}
                             onChange={(e) => handleLeaderChange(w, e.target.value || null)}
                             aria-label="팀장 선택"
-                            className="h-7 max-w-[120px] rounded-[5px] border border-[#D7D7D7] bg-white px-1.5 text-xs text-[#091413] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 disabled:opacity-50"
+                            className="h-[24px] max-w-[102px] rounded-[5px] border border-[#D7D7D7] bg-white px-1 text-[10px] text-[#091413] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 disabled:opacity-50"
                           >
                             <option value="">없음</option>
                             {/* 현재 배정된 팀장이 활성 목록에 없으면 옵션에 살려서 유실 방지 */}
@@ -289,8 +287,8 @@ export default function WorkersPage() {
                           </select>
                         )}
                       </td>
-                      <td className="px-3 py-2">{w.skill_grade ?? <span className="text-[#D7D7D7]">-</span>}</td>
-                      <td className="px-3 py-2">
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center text-[#4B5563]">{w.skill_grade ?? <span className="text-[#D7D7D7]">-</span>}</td>
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
                         {w.default_trade ? (
                           trades.length > 0 && !trades.includes(w.default_trade) ? (
                             <span className="font-medium text-red-600" title="직종 마스터에 없는 비표준 값입니다. 수정에서 표준 직종으로 변경하세요.">
@@ -303,48 +301,60 @@ export default function WorkersPage() {
                           <span className="text-[#D7D7D7]">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-2">{w.phone ? formatPhone(w.phone) : '-'}</td>
-                      <td className="px-3 py-2">
-                        {formatRrnDisplay(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit)}
-                        {w.is_foreign && <span className="ml-1 rounded bg-amber-50 px-1 py-0.5 text-[9px] text-amber-700">외</span>}
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center font-mono text-[#4B5563]">{w.phone ? formatPhone(w.phone) : <span className="text-[#D7D7D7]">-</span>}</td>
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
+                        <span className="font-mono">{formatRrnDisplay(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit)}</span>
                       </td>
-                      <td className="px-3 py-2">{w.bank_name ?? '-'}</td>
-                      <td className="px-3 py-2">{w.account_number ?? '-'}</td>
-                      <td className="px-3 py-2">{w.account_holder ?? <span className="text-[#D7D7D7]">-</span>}</td>
-                      <td className="px-3 py-2 align-top max-w-[180px]" title={w.address ?? undefined}>
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5">
+                        {w.bank_name || w.account_number ? (
+                          <div className="leading-tight">
+                            <div className="font-mono text-[#091413]">
+                              {w.bank_name && <span className="mr-1 text-[10px] text-[#6B7280]">{w.bank_name}</span>}
+                              {w.account_number ?? ''}
+                            </div>
+                            {w.account_holder && <div className="text-[10px] text-[#9CA3AF]">{w.account_holder}</div>}
+                          </div>
+                        ) : <span className="text-[#D7D7D7]">-</span>}
+                      </td>
+                      <td className="max-w-[180px] border-b border-[#EAEAEA] px-3 py-2.5 align-top" title={w.address ?? undefined}>
                         {w.address ? (
-                          <div className="text-[10px] text-[#4B5563] leading-tight line-clamp-2 whitespace-normal break-keep">
+                          <div className="line-clamp-2 whitespace-normal break-keep text-[10px] leading-tight text-[#4B5563]">
                             {w.address}
                           </div>
                         ) : <span className="text-[#D7D7D7]">-</span>}
                       </td>
-                      <td className="px-3 py-2 text-center">
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
                         {w.auth_user_id ? (
-                          <span className="inline-flex items-center gap-1 rounded-[5px] bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700" title="앱 가입 완료">
-                            <Smartphone className="h-3 w-3" />
-                            가입
-                          </span>
+                          <span className="font-semibold text-emerald-600" title="앱 가입 완료">가입</span>
                         ) : (
-                          <span className="text-[10px] text-[#D7D7D7]" title="앱 미가입">미가입</span>
+                          <span className="text-[#9CA3AF]" title="앱 미가입">미가입</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {w.default_wage ? `${w.default_wage.toLocaleString()}원` : <span className="text-[#9CA3AF]">-</span>}
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center tabular-nums">
+                        {w.default_wage ? (
+                          <span><span className="font-medium text-[#091413]">{w.default_wage.toLocaleString()}</span><span className="ml-0.5 text-[10px] text-[#9CA3AF]">원</span></span>
+                        ) : <span className="text-[#D7D7D7]">-</span>}
                       </td>
-                      <td className="px-3 py-2">
-                        {w.wage_type ?? <span className="text-[#D7D7D7]">-</span>}
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
+                        {w.wage_type ? (
+                          <span className={
+                            w.wage_type === '월급/일급' ? 'font-medium text-blue-600'
+                              : w.wage_type === '월급' ? 'font-medium text-red-600'
+                                : 'text-[#091413]'
+                          }>{w.wage_type}</span>
+                        ) : <span className="text-[#D7D7D7]">-</span>}
                       </td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-0.5">
+                      <td className="border-b border-[#EAEAEA] px-3 py-2.5">
+                        <div className="flex justify-center gap-0.5 opacity-60 transition group-hover:opacity-100">
                           <button
-                            className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
+                            className="rounded-[5px] p-1 text-[#6B7280] hover:bg-white hover:text-[#447D9B]"
                             onClick={() => setEditing(w)}
                             aria-label="수정"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
+                            className="rounded-[5px] p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
                             onClick={() => handleDelete(w)}
                             aria-label="삭제"
                           >
