@@ -56,8 +56,8 @@ export function ZipAllButton({
     }
   };
 
-  // 전문건설사별 ZIP은 일급제(normal)에만 — 매사는 전문건설사 개념이 없음
-  const showSubMenu = kind === 'normal' && subcontractors.length > 0;
+  // 전문건설사별 ZIP — 현장↔전문건설사 1:1이라 일반·매사 모두 지원
+  const showSubMenu = subcontractors.length > 0;
 
   return (
     <div className="flex flex-col items-end gap-1">

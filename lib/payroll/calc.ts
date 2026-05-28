@@ -23,13 +23,3 @@ export function formatAttendanceCell(hours: number): string {
   const fixed = hours.toFixed(1);
   return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
 }
-
-// 엑셀 행 배경색 ARGB (ExcelJS fgColor)
-//   - 월급: 옅은 노랑
-//   - 월급/일급: 옅은 오렌지
-//   - 그 외: null (기본/흰색)
-export function wageTypeRowColor(wage_type: string | null): string | null {
-  if (wage_type === '월급') return 'FFFFF9C4';
-  if (wage_type === '월급/일급') return 'FFFFE4C4';
-  return null;
-}

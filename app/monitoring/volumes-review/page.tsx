@@ -203,9 +203,9 @@ export default function VolumesReviewPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px] whitespace-nowrap">
+            <table className="w-full text-[11px] whitespace-nowrap [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#6B7280]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   {isPending && (
                     <th className="px-3 py-2 w-10">
                       <input type="checkbox" checked={allChecked} onChange={toggleAll} aria-label="전체 선택" />
@@ -215,10 +215,10 @@ export default function VolumesReviewPage() {
                   <th className="px-3 py-2 font-medium">작업자</th>
                   <th className="px-3 py-2 font-medium">현장</th>
                   <th className="px-3 py-2 font-medium">항목</th>
-                  <th className="px-3 py-2 font-medium text-right">수량</th>
-                  <th className="px-3 py-2 font-medium text-right">금액</th>
+                  <th className="px-3 py-2 font-medium text-center">수량</th>
+                  <th className="px-3 py-2 font-medium text-center">금액</th>
                   <th className="px-3 py-2 font-medium text-center">상태</th>
-                  {isPending && <th className="px-3 py-2 font-medium text-right w-32">처리</th>}
+                  {isPending && <th className="px-3 py-2 font-medium text-center w-32">처리</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">

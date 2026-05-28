@@ -94,7 +94,7 @@ export default function WorksitesPage() {
   }
 
   const inlineSelectCls =
-    'h-7 w-full max-w-[140px] rounded-[5px] border border-[#D7D7D7] bg-white px-1.5 text-[11px] text-[#091413] focus:outline-none focus:ring-1 focus:ring-[#447D9B]';
+    'w-full max-w-[160px] cursor-pointer rounded bg-transparent px-2 py-1 text-[11px] text-[#091413] outline-none hover:bg-[#F5F5F5] focus:bg-[#F5F5F5] focus:ring-1 focus:ring-[#447D9B]';
 
   return (
     <AdminShell>
@@ -118,9 +118,9 @@ export default function WorksitesPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[11px] [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">현장명</th>
                   <th className="px-3 py-2 font-medium">원청사</th>

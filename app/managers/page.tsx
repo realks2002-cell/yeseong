@@ -14,6 +14,7 @@ type Manager = {
   is_active: boolean;
   created_at: string;
   subcontractor_id: string | null;
+  member_count: number;
   yeseong_site_manager_assignments:
     | Array<{ worksite_id: string; yeseong_worksites: { id: string; name: string } | null }>
     | { worksite_id: string; yeseong_worksites: { id: string; name: string } | null }
@@ -229,28 +230,29 @@ export default function ManagersPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[11px] [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   <th className="w-10 px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">성명</th>
                   <th className="px-3 py-2 font-medium">직종</th>
                   <th className="px-3 py-2 font-medium">전화번호</th>
                   <th className="px-3 py-2 font-medium">담당 현장</th>
                   <th className="px-3 py-2 font-medium">전문건설사</th>
+                  <th className="w-16 px-3 py-2 font-medium">팀원수</th>
                   <th className="w-20 px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {filtered === null ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-[#9CA3AF]">
+                    <td colSpan={8} className="py-10 text-center text-[#9CA3AF]">
                       불러오는 중...
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-[#9CA3AF]">
+                    <td colSpan={8} className="py-10 text-center text-[#9CA3AF]">
                       {query ? '검색 결과가 없습니다.' : '등록된 팀장이 없습니다.'}
                     </td>
                   </tr>
@@ -260,7 +262,7 @@ export default function ManagersPage() {
                       .map((a) => a.yeseong_worksites)
                       .filter((s): s is { id: string; name: string } => s !== null);
                     return (
-                      <tr key={m.id} className={`hover:bg-[#F5F5F5] ${!m.is_active ? 'text-[#9CA3AF]' : ''}`}>
+                      <tr key={m.id} className={`text-center hover:bg-[#F5F5F5] ${!m.is_active ? 'text-[#9CA3AF]' : ''}`}>
                         <td className="px-3 py-2 tabular-nums text-[#6B7280]">{i + 1}</td>
                         <td className="px-3 py-2 font-medium">
                           {m.name}
@@ -277,7 +279,7 @@ export default function ManagersPage() {
                             <select
                               value={sites[0]?.id ?? ''}
                               onChange={(e) => handleWorksiteChange(m, e.target.value)}
-                              className="rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-[11px] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
+                              className="cursor-pointer rounded bg-transparent px-2 py-1 text-[11px] text-[#091413] outline-none hover:bg-[#F5F5F5] focus:bg-[#F5F5F5] focus:ring-1 focus:ring-[#447D9B]"
                             >
                               <option value="">미배정</option>
                               {worksites.map((w) => (
@@ -293,8 +295,21 @@ export default function ManagersPage() {
                             {subName(m.subcontractor_id)}
                           </span>
                         </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {m.member_count > 0 ? (
+                            <button
+                              onClick={() => openMembers(m)}
+                              className="font-medium text-[#447D9B] hover:underline"
+                              title="팀원 보기"
+                            >
+                              {m.member_count}명
+                            </button>
+                          ) : (
+                            <span className="text-[#9CA3AF]">0명</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2">
-                          <div className="flex justify-end gap-0.5">
+                          <div className="flex justify-center gap-0.5">
                             <button
                               className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#447D9B]"
                               onClick={() => openMembers(m)}

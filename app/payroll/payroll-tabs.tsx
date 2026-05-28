@@ -19,12 +19,14 @@ export function PayrollTabs({
   ym,
   normal,
   masonry,
-  allSubs,
+  normalSubs,
+  masonrySubs,
 }: {
   ym: string;
   normal: WorksiteCard[];
   masonry: WorksiteCard[];
-  allSubs: string[];
+  normalSubs: string[];
+  masonrySubs: string[];
 }) {
   // 일반이 비었고 매사만 있으면 매사 탭부터 (빈 탭 먼저 보이지 않게)
   const [tab, setTab] = useState<Tab>(normal.length === 0 && masonry.length > 0 ? 'masonry' : 'normal');
@@ -61,9 +63,9 @@ export function PayrollTabs({
           {tabButton('masonry', '매사 노임대장', Hammer, masonry.length)}
         </div>
         {tab === 'normal' ? (
-          <ZipAllButton yyyymm={ym} kind="normal" subcontractors={allSubs} />
+          <ZipAllButton yyyymm={ym} kind="normal" subcontractors={normalSubs} />
         ) : (
-          <ZipAllButton yyyymm={ym} kind="masonry" />
+          <ZipAllButton yyyymm={ym} kind="masonry" subcontractors={masonrySubs} />
         )}
       </div>
 

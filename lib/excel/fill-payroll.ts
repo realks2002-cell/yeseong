@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { formatRrnPlain } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
-import { formatAttendanceCell, wageTypeRowColor } from '@/lib/payroll/calc';
+import { formatAttendanceCell } from '@/lib/payroll/calc';
 import {
   TEMPLATE_SHEET_NAME,
   HEADER_CELLS,
@@ -163,28 +163,6 @@ function fillWorker(sheet: ExcelJS.Worksheet, w: FillWorker): void {
   if (w.wageType === '월급' || w.wageType === '월급/일급') {
     sheet.getCell(`${WORKER_COLS.PAYOUT}${headRow}`).value = adValue;
     sheet.getCell(`${WORKER_COLS.PAYOUT}${headRow + 1}`).value = adValue;
-  }
-
-  // 행 배경색 — 월급: 옅은 노랑, 월급/일급: 옅은 오렌지
-  const color = wageTypeRowColor(w.wageType);
-  if (color) applyRowFill(sheet, headRow, color);
-}
-
-// head row와 head+1 row 모든 셀에 배경색 적용. 수식 셀도 안전 (fill은 수식과 무관).
-function applyRowFill(sheet: ExcelJS.Worksheet, headRow: number, argb: string): void {
-  const fill: ExcelJS.FillPattern = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb },
-  };
-  for (const row of [headRow, headRow + 1]) {
-    const r = sheet.getRow(row);
-    // 열 1..60까지 (템플릿 너비)
-    for (let c = 1; c <= 60; c++) {
-      const cell = r.getCell(c);
-      // 기존 fill 있으면 덮어쓰지 않음 (헤더·합계 행 보호) — 작업자 행은 비어있어서 안전
-      cell.fill = fill;
-    }
   }
 }
 

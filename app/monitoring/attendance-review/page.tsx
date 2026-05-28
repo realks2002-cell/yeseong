@@ -256,9 +256,9 @@ export default function AttendanceReviewPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px] whitespace-nowrap">
+            <table className="w-full text-[11px] whitespace-nowrap [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#6B7280]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   {statusFilter === 'rejected' && (
                     <th className="px-3 py-2 w-10">
                       <input
@@ -274,11 +274,11 @@ export default function AttendanceReviewPage() {
                   <th className="px-3 py-2 font-medium">작업자</th>
                   <th className="px-3 py-2 font-medium">현장</th>
                   <th className="px-3 py-2 font-medium">전문건설사</th>
-                  <th className="px-3 py-2 font-medium text-right">공수</th>
+                  <th className="px-3 py-2 font-medium text-center">공수</th>
                   <th className="px-3 py-2 font-medium text-center">상태</th>
                   <th className="px-3 py-2 font-medium">승인자(팀장)</th>
                   {statusFilter === 'rejected' && (
-                    <th className="px-3 py-2 font-medium text-right w-32">처리</th>
+                    <th className="px-3 py-2 font-medium text-center w-32">처리</th>
                   )}
                 </tr>
               </thead>

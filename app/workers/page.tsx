@@ -232,7 +232,7 @@ export default function WorkersPage() {
 
         <Card className="overflow-hidden p-0">
           <div className="overflow-auto max-h-[calc(100svh-14rem)]">
-            <table className="w-full border-separate border-spacing-0 text-[11px] whitespace-nowrap">
+            <table className="w-full border-separate border-spacing-0 text-[11px] whitespace-nowrap [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="sticky top-0 z-10 bg-[#F5F5F5] text-[#6B7280]">
                 <tr className="text-center">
                   <th className="w-10 border-b border-[#D7D7D7] px-3 py-2.5 font-medium">#</th>
@@ -274,7 +274,7 @@ export default function WorkersPage() {
                             disabled={savingLeaderId === w.id}
                             onChange={(e) => handleLeaderChange(w, e.target.value || null)}
                             aria-label="팀장 선택"
-                            className="h-[24px] max-w-[102px] rounded-[5px] border border-[#D7D7D7] bg-white px-1 text-[10px] text-[#091413] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 disabled:opacity-50"
+                            className="max-w-[110px] cursor-pointer rounded bg-transparent px-1.5 py-1 text-center text-[11px] text-[#091413] outline-none hover:bg-[#F5F5F5] focus:bg-[#F5F5F5] focus:ring-1 focus:ring-[#447D9B] disabled:opacity-50"
                           >
                             <option value="">없음</option>
                             {/* 현재 배정된 팀장이 활성 목록에 없으면 옵션에 살려서 유실 방지 */}

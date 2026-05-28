@@ -160,9 +160,9 @@ export default function AuditLogPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[11px] [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   <th className="px-3 py-2 font-medium w-32">시각</th>
                   <th className="px-3 py-2 font-medium w-32">사용자</th>
                   <th className="px-3 py-2 font-medium w-24">테이블</th>
@@ -295,9 +295,9 @@ function AuditDetailModal({
           {keys.length === 0 ? (
             <p className="text-sm text-[#6B7280]">표시할 변경 내용이 없습니다.</p>
           ) : (
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[11px] [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="text-[#4B5563] border-b border-[#D7D7D7]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   <th className="px-2 py-2 font-medium w-32">필드</th>
                   {row.action !== 'INSERT' && <th className="px-2 py-2 font-medium">변경 전</th>}
                   {row.action !== 'DELETE' && <th className="px-2 py-2 font-medium">변경 후</th>}

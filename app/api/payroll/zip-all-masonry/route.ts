@@ -43,10 +43,11 @@ function safeFileName(s: string): string {
   return s.replace(/[\/\\:*?"<>|]/g, '_').slice(0, 100);
 }
 
-// 매사 노임대장 전체 ZIP — 현장별 1파일 (매사 작업자만, 전문건설사 그룹핑 없음)
+// 매사 노임대장 ZIP — 현장별 1파일 (매사 작업자만). subcontractor 지정 시 해당 전문건설사 현장만.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const yyyymm = url.searchParams.get('yyyymm') ?? '';
+  const subFilter = url.searchParams.get('subcontractor') ?? '';
   if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
     return new NextResponse('invalid yyyymm', { status: 400 });
   }
@@ -82,7 +83,11 @@ export async function GET(req: Request) {
       continue;
     }
     const data = payload as unknown as PayrollData;
-    const masonry = (data.slots ?? []).filter((s) => s.worker.wage_type === MASONRY_WAGE_TYPE);
+    const masonry = (data.slots ?? []).filter(
+      (s) =>
+        s.worker.wage_type === MASONRY_WAGE_TYPE &&
+        (!subFilter || (s.subcontractor_name ?? '미배정') === subFilter),
+    );
     if (masonry.length === 0) continue;
     if (masonry.length > MAX_SLOTS) {
       warnings.push(`${data.worksite.name}: 매사 작업자 ${masonry.length}명 (최대 ${MAX_SLOTS}명 초과로 스킵)`);
@@ -129,7 +134,7 @@ export async function GET(req: Request) {
   }
 
   const zipBuf = await zip.generateAsync({ type: 'nodebuffer' });
-  const zipFilename = safeFileName(`매사노임대장_전체_${yyyymm}.zip`);
+  const zipFilename = safeFileName(subFilter ? `매사노임대장_${subFilter}_${yyyymm}.zip` : `매사노임대장_전체_${yyyymm}.zip`);
   const encoded = encodeURIComponent(zipFilename);
   return new NextResponse(new Uint8Array(zipBuf), {
     status: 200,

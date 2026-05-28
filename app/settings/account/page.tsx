@@ -98,9 +98,9 @@ export default function AccountPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[11px] [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   <th className="px-4 py-3 font-medium w-12">#</th>
                   <th className="px-4 py-3 font-medium">ID</th>
                   <th className="px-4 py-3 font-medium">마지막 로그인</th>

@@ -259,15 +259,15 @@ export default function NotificationsPage() {
             <p className="mt-4 text-center text-sm text-[#9CA3AF]">발송 이력이 없습니다.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-[11px]">
+              <table className="w-full text-[11px] [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
                 <thead>
-                  <tr className="border-b border-[#D7D7D7] text-left text-[11px] font-semibold text-[#6B7280] uppercase">
+                  <tr className="border-b border-[#D7D7D7] text-center text-[11px] font-semibold text-[#6B7280] uppercase">
                     <th className="py-2 pr-3">시간</th>
                     <th className="py-2 pr-3">대상</th>
                     <th className="py-2 pr-3">제목</th>
                     <th className="py-2 pr-3">내용</th>
-                    <th className="py-2 pr-3 text-right">성공</th>
-                    <th className="py-2 text-right">실패</th>
+                    <th className="py-2 pr-3 text-center">성공</th>
+                    <th className="py-2 text-center">실패</th>
                   </tr>
                 </thead>
                 <tbody>

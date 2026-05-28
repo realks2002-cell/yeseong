@@ -26,6 +26,9 @@ export default async function PayrollIndexPage() {
   const masonryWorksites = new Set<string>();
   // 전문건설사명은 카드 칩 표시용
   const subsByWorksite = new Map<string, string[]>();
+  // 전문건설사별 ZIP 드롭다운용 (유형별로 분리)
+  const normalSubsSet = new Set<string>();
+  const masonrySubsSet = new Set<string>();
 
   const { data: periods } = await sb
     .from('yeseong_payroll_periods')
@@ -44,13 +47,15 @@ export default async function PayrollIndexPage() {
     for (const slot of slots ?? []) {
       const worksiteId = periodToWorksite.get(slot.period_id);
       if (!worksiteId) continue;
-      if (slot.yeseong_workers?.wage_type === MASONRY_WAGE_TYPE) {
+      const isMasonry = slot.yeseong_workers?.wage_type === MASONRY_WAGE_TYPE;
+      if (isMasonry) {
         masonryWorksites.add(worksiteId);
       } else {
         normalWorksites.add(worksiteId);
       }
       const name = slot.yeseong_subcontractors?.name;
       if (!name) continue;
+      (isMasonry ? masonrySubsSet : normalSubsSet).add(name);
       if (!accum.has(worksiteId)) accum.set(worksiteId, new Set());
       accum.get(worksiteId)!.add(name);
     }
@@ -67,7 +72,8 @@ export default async function PayrollIndexPage() {
   });
   const normalCards = (worksites ?? []).filter((ws) => normalWorksites.has(ws.id)).map(toCard);
   const masonryCards = (worksites ?? []).filter((ws) => masonryWorksites.has(ws.id)).map(toCard);
-  const allSubs = Array.from(new Set(Array.from(subsByWorksite.values()).flat())).sort();
+  const normalSubs = Array.from(normalSubsSet).sort();
+  const masonrySubs = Array.from(masonrySubsSet).sort();
 
   return (
     <AdminShell>
@@ -83,7 +89,7 @@ export default async function PayrollIndexPage() {
           </p>
         )}
 
-        <PayrollTabs ym={ym} normal={normalCards} masonry={masonryCards} allSubs={allSubs} />
+        <PayrollTabs ym={ym} normal={normalCards} masonry={masonryCards} normalSubs={normalSubs} masonrySubs={masonrySubs} />
       </div>
     </AdminShell>
   );

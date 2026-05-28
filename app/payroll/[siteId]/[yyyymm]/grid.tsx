@@ -11,7 +11,6 @@ import {
   UserPlus,
   Trash2,
   X,
-  Package,
 } from 'lucide-react';
 import { MasonryVolumeModal, type MasonryPriceOption, type ExistingVolume } from '@/components/masonry-volume-modal';
 
@@ -59,6 +58,12 @@ function volumeUnitLabel(v: ExistingVolume): string {
 export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   const router = useRouter();
   const totalDays = daysInMonth(yearMonth);
+  const [yy, mm] = yearMonth.split('-').map(Number);
+  // 일자 헤더 색: 일요일 빨강 · 토요일 파랑 · 평일 회색
+  const dayHeadColor = (d: number): string => {
+    const wd = new Date(yy, mm - 1, d).getDay();
+    return wd === 0 ? 'text-red-500' : wd === 6 ? 'text-blue-500' : 'text-[#6B7280]';
+  };
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
@@ -70,6 +75,7 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [volumeSlot, setVolumeSlot] = useState<Slot | null>(null);
+  const [view, setView] = useState<'general' | 'masonry'>('general');
 
   const load = useCallback(async () => {
     setError(null);
@@ -251,8 +257,17 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   const handleMasonryDownload = () => fetchAndSave('masonry-download', `매사노임대장_${yearMonth}.xlsx`);
   const hasMasonry = slots.some((s) => s.worker.wage_type === '월급/일급');
 
+  // 일반 노임대장 = 일급·월급, 매사 노임대장 = 월급/일급(매사). 탭으로 분리.
+  const generalCount = slots.filter((s) => s.worker.wage_type !== '월급/일급').length;
+  const masonryCount = slots.filter((s) => s.worker.wage_type === '월급/일급').length;
+  const showPerf = view === 'masonry';
+  const visibleSlots = slots.filter((s) =>
+    showPerf ? s.worker.wage_type === '월급/일급' : s.worker.wage_type !== '월급/일급',
+  );
+  const colCount = (showPerf ? 10 : 8) + totalDays;
+
   function dayTotalHours(day: number): number {
-    return slots.reduce((sum, s) => sum + (cellMap.get(`${s.id}:${day}`) ?? 0), 0);
+    return visibleSlots.reduce((sum, s) => sum + (cellMap.get(`${s.id}:${day}`) ?? 0), 0);
   }
 
   return (
@@ -302,63 +317,86 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
 
       {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-[5px] border border-[#D7D7D7] bg-white shadow-sm">
+      <div className="mb-3 inline-flex rounded-[5px] border border-[#D7D7D7] bg-white p-0.5 text-sm">
+        <button
+          onClick={() => setView('general')}
+          className={`rounded-[3px] px-3 py-1.5 font-medium transition ${view === 'general' ? 'bg-[#447D9B] text-white' : 'text-[#6B7280] hover:bg-[#F5F5F5]'}`}
+        >
+          일반 노임대장 ({generalCount})
+        </button>
+        <button
+          onClick={() => setView('masonry')}
+          className={`rounded-[3px] px-3 py-1.5 font-medium transition ${view === 'masonry' ? 'bg-[#447D9B] text-white' : 'text-[#6B7280] hover:bg-[#F5F5F5]'}`}
+        >
+          매사 노임대장 ({masonryCount})
+        </button>
+      </div>
+
+      <div className="overflow-auto max-h-[calc(100svh-12rem)] rounded-[5px] border border-[#D7D7D7] bg-white shadow-sm">
         <table className="border-collapse text-[12px]">
           <thead>
-            <tr className="border-b border-[#D7D7D7] bg-white">
-              <th className="sticky left-0 z-10 bg-white px-3 py-2 font-medium w-10 text-[#091413]">#</th>
-              <th className="sticky left-10 z-10 bg-white px-3 py-2 font-medium text-center text-[#091413] min-w-[100px]">성명</th>
-              <th className="sticky left-[152px] z-10 bg-white px-3 py-2 font-medium text-center text-[#091413] min-w-[120px]">전문건설사</th>
-              <th className="px-3 py-2 font-medium text-center text-[#091413] min-w-[80px]">공종</th>
-              <th className="px-3 py-2 font-medium text-right text-[#091413] min-w-[100px]">일당</th>
+            <tr className="whitespace-nowrap text-[11px] text-[#6B7280]">
+              <th className="sticky left-0 top-0 z-30 w-10 border-b border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2.5 font-medium">#</th>
+              <th className="sticky left-10 top-0 z-30 w-[112px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성명</th>
+              <th className="sticky left-[152px] top-0 z-30 w-[150px] border-b border-l border-r border-b-[#D7D7D7] border-l-[#EAEAEA] border-r-[#D7D7D7] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">전문건설사</th>
+              <th className="sticky top-0 z-20 min-w-[80px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공종</th>
+              <th className="sticky top-0 z-20 min-w-[100px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">일당</th>
               {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                <th key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 font-medium text-[#091413] w-10 text-center tabular-nums">{d}</th>
+                <th key={d} className={`sticky top-0 z-20 w-10 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-1.5 py-2.5 text-center font-medium tabular-nums ${dayHeadColor(d)}`}>{d}</th>
               ))}
-              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] w-14 text-center">공수</th>
-              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] w-14 text-center">일수</th>
-              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] min-w-[190px] text-center">성과 내역</th>
-              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] w-28 text-center">성과(원)</th>
-              <th className="border-l border-[#D7D7D7] px-2 py-2 font-medium text-[#091413] w-10"></th>
+              <th className="sticky top-0 z-20 w-14 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공수</th>
+              <th className="sticky top-0 z-20 w-14 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">일수</th>
+              {showPerf && (
+                <>
+                  <th className="sticky top-0 z-20 min-w-[190px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성과 내역</th>
+                  <th className="sticky top-0 z-20 w-28 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성과(원)</th>
+                </>
+              )}
+              <th className="sticky top-0 z-20 w-16 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] py-2.5 pl-2 pr-5 font-medium"></th>
             </tr>
           </thead>
           <tbody>
             {!loaded ? (
-              <tr><td colSpan={10 + totalDays} className="py-12 text-center text-[#091413]">불러오는 중...</td></tr>
+              <tr><td colSpan={colCount} className="py-12 text-center text-[#091413]">불러오는 중...</td></tr>
             ) : slots.length === 0 ? (
               <tr>
-                <td colSpan={10 + totalDays} className="py-12 text-center text-[#091413]">
+                <td colSpan={colCount} className="py-12 text-center text-[#091413]">
                   아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
                 </td>
               </tr>
+            ) : visibleSlots.length === 0 ? (
+              <tr>
+                <td colSpan={colCount} className="py-12 text-center text-[#9CA3AF]">
+                  {showPerf ? '매사 작업자가 없습니다.' : '일반(일급·월급) 작업자가 없습니다.'}
+                </td>
+              </tr>
             ) : (
-              slots.map((s, idx) => {
+              visibleSlots.map((s, idx) => {
                 const sum = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
                 const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`)).filter((v) => v != null && v > 0).length;
-                const isPerformance = s.worker.wage_type === '월급/일급';
-                const rowBg = 'hover:bg-[#F5F5F5]/50';
-                const stickyBg = 'bg-white';
+                const stickyBg = 'bg-white group-hover:bg-[#F5F5F5]';
                 const volumeAmount = volumeSumMap.get(s.id) ?? 0;
                 return (
-                  <tr key={s.id} className={`border-b border-[#D7D7D7] ${rowBg}`}>
+                  <tr key={s.id} className="group border-b border-[#D7D7D7] hover:bg-[#F5F5F5]">
                     <td className={`sticky left-0 z-10 ${stickyBg} px-3 py-2 text-[#091413] tabular-nums`}>{idx + 1}</td>
-                    <td className={`sticky left-10 z-10 ${stickyBg} px-3 py-2 font-medium text-center`}>{s.worker.name}</td>
-                    <td className={`sticky left-[152px] z-10 ${stickyBg} px-1.5 py-1 text-center`}>
+                    <td className={`sticky left-10 z-10 w-[112px] border-l border-[#EAEAEA] ${stickyBg} px-3 py-2 font-medium text-center`}>{s.worker.name}</td>
+                    <td className={`sticky left-[152px] z-10 w-[150px] border-l border-r border-l-[#EAEAEA] border-r-[#D7D7D7] ${stickyBg} px-1.5 py-1 text-center`}>
                       <SubcontractorSelect
                         value={s.subcontractor?.id ?? ''}
                         options={subcontractors}
                         onChange={(id) => patchSlot(s.id, { subcontractor_id: id || null })}
                       />
                     </td>
-                    <td className="px-3 py-2 text-center text-[#091413]">
-                      {s.worker.default_trade ?? <span className="text-[#091413]">-</span>}
+                    <td className="border-l border-[#EAEAEA] px-3 py-2 text-center text-[#091413]">
+                      {s.worker.default_trade ?? <span className="text-[#9CA3AF]">-</span>}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-[#091413]">
-                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#091413]">-</span>}
+                    <td className="border-l border-[#EAEAEA] px-3 py-2 text-right tabular-nums text-[#091413]">
+                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#9CA3AF]">-</span>}
                     </td>
                     {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => {
                       const v = cellMap.get(`${s.id}:${d}`);
                       return (
-                        <td key={d} className="border-l border-[#D7D7D7] p-0 text-center tabular-nums">
+                        <td key={d} className="border-l border-[#EAEAEA] p-0 text-center tabular-nums">
                           <CellInput
                             value={v ?? null}
                             onChange={(n) => setCell(s.id, d, n)}
@@ -366,44 +404,39 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                         </td>
                       );
                     })}
-                    <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
-                    <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums text-[#091413]">{days || ''}</td>
-                    <td className="border-l border-[#D7D7D7] bg-white px-3 py-2 text-left align-top text-[11px]">
-                      {isPerformance ? (
-                        (volumesByWorker.get(s.id) ?? []).length > 0 ? (
-                          <div className="flex flex-col gap-0.5">
-                            {(volumesByWorker.get(s.id) ?? []).map((v) => (
-                              <div key={v.id} className="whitespace-nowrap tabular-nums">
-                                <span className="text-[#091413]">{volumeItemLabel(v)}</span>
-                                <span className="text-[#091413]">
-                                  {' '}
-                                  {v.quantity.toLocaleString()}
-                                  {volumeUnitLabel(v)} × {v.unit_price.toLocaleString()}원
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-[#091413]">입력 전</span>
-                        )
-                      ) : (
-                        <span className="text-[#091413]">-</span>
-                      )}
-                    </td>
-                    <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center text-[12px]">
-                      {isPerformance ? (
-                        <button
-                          onClick={() => setVolumeSlot(s)}
-                          className="inline-flex items-center gap-1 rounded-[5px] border border-[#091413] bg-white px-2 py-1 text-[11px] font-medium text-[#091413] hover:bg-[#F5F5F5] tabular-nums"
-                        >
-                          <Package className="h-3 w-3" />
-                          {volumeAmount > 0 ? `${volumeAmount.toLocaleString()}` : '입력'}
-                        </button>
-                      ) : (
-                        <span className="text-[#091413]">-</span>
-                      )}
-                    </td>
-                    <td className="border-l border-[#D7D7D7] px-1 py-2 text-center">
+                    <td className="border-l border-[#EAEAEA] bg-white px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
+                    <td className="border-l border-[#EAEAEA] bg-white px-2 py-2 text-center tabular-nums text-[#091413]">{days || ''}</td>
+                    {showPerf && (
+                      <>
+                        <td className="border-l border-[#EAEAEA] bg-white px-3 py-2 text-left align-top text-[11px]">
+                          {(volumesByWorker.get(s.id) ?? []).length > 0 ? (
+                            <div className="flex flex-col gap-0.5">
+                              {(volumesByWorker.get(s.id) ?? []).map((v) => (
+                                <div key={v.id} className="whitespace-nowrap tabular-nums">
+                                  <span className="text-[#091413]">{volumeItemLabel(v)}</span>
+                                  <span className="text-[#091413]">
+                                    {' '}
+                                    {v.quantity.toLocaleString()}
+                                    {volumeUnitLabel(v)} × {v.unit_price.toLocaleString()}원
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[#9CA3AF]">입력 전</span>
+                          )}
+                        </td>
+                        <td className="border-l border-[#EAEAEA] bg-white px-2 py-2 text-center text-[12px]">
+                          <button
+                            onClick={() => setVolumeSlot(s)}
+                            className="tabular-nums text-[12px] font-medium text-[#091413] hover:text-[#447D9B] hover:underline"
+                          >
+                            {volumeAmount > 0 ? volumeAmount.toLocaleString() : <span className="font-normal text-[#9CA3AF]">입력</span>}
+                          </button>
+                        </td>
+                      </>
+                    )}
+                    <td className="border-l border-[#EAEAEA] py-2 pl-1 pr-5 text-center">
                       <button
                         className="rounded p-1 text-[#9CA3AF] hover:bg-red-50 hover:text-red-600"
                         onClick={() => removeSlot(s.id, s.worker.name)}
@@ -416,24 +449,28 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                 );
               })
             )}
-            {slots.length > 0 && (
-              <tr className="border-t-2 border-[#D7D7D7] bg-white font-semibold text-[#091413]">
-                <td colSpan={5} className="sticky left-0 z-10 bg-white px-3 py-2">일자별 합계</td>
+            {visibleSlots.length > 0 && (
+              <tr className="border-t-2 border-[#D7D7D7] bg-[#F5F5F5] font-semibold text-[#091413]">
+                <td colSpan={5} className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2">일자별 합계</td>
                 {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                  <td key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
+                  <td key={d} className="border-l border-[#EAEAEA] px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
                 ))}
-                <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums">
-                  {slots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
+                <td className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums">
+                  {visibleSlots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
                 </td>
-                <td className="border-l border-[#D7D7D7] bg-white"></td>
-                <td className="border-l border-[#D7D7D7] bg-white"></td>
-                <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums text-[12px]">
-                  {(() => {
-                    const total = slots.reduce((sum, sl) => sum + (volumeSumMap.get(sl.id) ?? 0), 0);
-                    return total > 0 ? total.toLocaleString() : '';
-                  })()}
-                </td>
-                <td className="border-l border-[#D7D7D7]"></td>
+                <td className="border-l border-[#EAEAEA] bg-[#F5F5F5]"></td>
+                {showPerf && (
+                  <>
+                    <td className="border-l border-[#EAEAEA] bg-[#F5F5F5]"></td>
+                    <td className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[12px]">
+                      {(() => {
+                        const total = visibleSlots.reduce((sum, sl) => sum + (volumeSumMap.get(sl.id) ?? 0), 0);
+                        return total > 0 ? total.toLocaleString() : '';
+                      })()}
+                    </td>
+                  </>
+                )}
+                <td className="border-l border-[#EAEAEA] pr-5"></td>
               </tr>
             )}
           </tbody>

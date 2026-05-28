@@ -80,9 +80,9 @@ export default function VendorsPage() {
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px] whitespace-nowrap">
+            <table className="w-full text-[11px] whitespace-nowrap [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
-                <tr className="text-left text-[11px]">
+                <tr className="text-center text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">거래처명</th>
                   <th className="px-3 py-2 font-medium">사업자번호</th>

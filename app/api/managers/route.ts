@@ -44,6 +44,22 @@ export async function GET(req: Request) {
     .select('id, subcontractor_id');
   const wsSubMap = new Map<string, string | null>((wsRows ?? []).map((w) => [w.id, w.subcontractor_id]));
 
+  // 팀원수 = team_leader_id가 해당 팀장인 활성 작업자 (팀장 본인=동일 전화번호 제외 — 팀원 보기 모달과 동일 기준)
+  const managerIds = sorted.map((m: { id: string }) => m.id);
+  const phoneByMgr = new Map<string, string>(sorted.map((m: { id: string; phone: string }) => [m.id, m.phone]));
+  const memberCount = new Map<string, number>();
+  if (managerIds.length) {
+    const { data: memberRows } = await admin
+      .from('yeseong_workers')
+      .select('team_leader_id, phone')
+      .in('team_leader_id', managerIds)
+      .eq('is_active', true);
+    for (const r of (memberRows ?? []) as Array<{ team_leader_id: string; phone: string | null }>) {
+      if (r.phone && phoneByMgr.get(r.team_leader_id) === r.phone) continue; // 본인 제외
+      memberCount.set(r.team_leader_id, (memberCount.get(r.team_leader_id) ?? 0) + 1);
+    }
+  }
+
   type AssignShape =
     | Array<{ worksite_id: string }>
     | { worksite_id: string }
@@ -54,9 +70,9 @@ export async function GET(req: Request) {
     return arr[0]?.worksite_id ?? null;
   };
 
-  const enriched = sorted.map((m: { yeseong_site_manager_assignments?: AssignShape }) => {
+  const enriched = sorted.map((m: { id: string; yeseong_site_manager_assignments?: AssignShape }) => {
     const wsId = firstWorksiteId(m.yeseong_site_manager_assignments ?? null);
-    return { ...m, subcontractor_id: wsId ? wsSubMap.get(wsId) ?? null : null };
+    return { ...m, subcontractor_id: wsId ? wsSubMap.get(wsId) ?? null : null, member_count: memberCount.get(m.id) ?? 0 };
   });
   return NextResponse.json(enriched);
 }
