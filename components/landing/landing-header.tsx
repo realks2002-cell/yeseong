@@ -3,7 +3,7 @@ import Link from 'next/link';
 const NAV_ITEMS = [
   { href: '#services', label: '서비스' },
   { href: '#about', label: '회사소개' },
-  { href: '#partners', label: '협력사' },
+  { href: '#partners', label: '전문건설사' },
   { href: '#contact', label: '문의' },
 ];
 

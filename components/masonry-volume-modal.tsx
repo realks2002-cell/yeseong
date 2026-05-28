@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, X } from 'lucide-react';
+import { MASONRY_CATEGORIES } from '@/lib/constants/masonry';
 
 export type MasonryPriceOption = {
   id: string;
-  category: '조적' | '미장';
+  category: string;
   type_name: string;
   size_spec: string | null;
   unit: string;
@@ -29,6 +30,7 @@ export type ExistingVolume = {
   quantity: number;
   unit_price: number;
   amount: number;
+  unit: string | null;
   note: string | null;
 };
 
@@ -43,11 +45,13 @@ type Props = {
   onSaved: () => void;
 };
 
-function priceLabel(p: MasonryPriceOption): string {
-  const main = p.category === '조적'
-    ? `${p.type_name}${p.size_spec ? ` (${p.size_spec})` : ''}`
-    : '미장';
-  return `${main} — ${p.unit_price.toLocaleString()}원/${p.unit}`;
+// optgroup(분류) 안에서의 항목 라벨 — 종류·규격·단가/단위
+function optionLabel(p: MasonryPriceOption): string {
+  const parts: string[] = [];
+  if (p.type_name && p.type_name !== p.category) parts.push(p.type_name);
+  if (p.size_spec) parts.push(p.size_spec);
+  if (parts.length === 0) parts.push(p.category);
+  return `${parts.join(' ')} — ${p.unit_price.toLocaleString()}원/${p.unit}`;
 }
 
 // 기존 ExistingVolume → MasonryPriceOption 매칭
@@ -89,6 +93,19 @@ export function MasonryVolumeModal({
   useEffect(() => setRows(initialRows), [initialRows]);
 
   const priceMap = useMemo(() => new Map(prices.map((p) => [p.id, p])), [prices]);
+
+  // 분류별 그룹 (조적·미장·방수·타일·석공사 순)
+  const grouped = useMemo(() => {
+    const m = new Map<string, MasonryPriceOption[]>();
+    for (const p of prices) {
+      if (!m.has(p.category)) m.set(p.category, []);
+      m.get(p.category)!.push(p);
+    }
+    const order = [...MASONRY_CATEGORIES] as string[];
+    return [...m.keys()]
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .map((c) => [c, m.get(c)!] as const);
+  }, [prices]);
 
   function updateRow(i: number, patch: Partial<VolumeRow>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -141,7 +158,7 @@ export function MasonryVolumeModal({
         <div className="flex items-center justify-between border-b border-[#D7D7D7] px-5 py-3">
           <div>
             <h2 className="text-base font-semibold">{workerName} — 월말 성과 입력</h2>
-            <p className="text-xs text-[#6B7280] mt-0.5">조적 장수 · 미장 ㎡ 입력. 현장 단가 자동 적용.</p>
+            <p className="text-xs text-[#6B7280] mt-0.5">조적·미장·방수·타일·석공사 — 현장 단가표 기준 종류·수량 입력.</p>
           </div>
           <button onClick={onClose} className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5]" aria-label="닫기">
             <X className="h-4 w-4" />
@@ -151,7 +168,7 @@ export function MasonryVolumeModal({
         <div className="p-5 space-y-4">
           {prices.length === 0 ? (
             <p className="rounded-[5px] bg-amber-50 p-3 text-sm text-amber-700">
-              이 현장에 등록된 조적·미장 단가가 없습니다. /masonry-prices 페이지에서 먼저 단가를 등록해주세요.
+              이 현장에 등록된 매사 단가가 없습니다. /masonry-prices 페이지에서 먼저 단가를 등록해주세요.
             </p>
           ) : (
             <>
@@ -169,8 +186,12 @@ export function MasonryVolumeModal({
                           disabled={saving}
                           className="flex-1 h-9 rounded-[5px] border border-[#D7D7D7] bg-white px-2.5 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
                         >
-                          {prices.map((opt) => (
-                            <option key={opt.id} value={opt.id}>{priceLabel(opt)}</option>
+                          {grouped.map(([cat, opts]) => (
+                            <optgroup key={cat} label={cat}>
+                              {opts.map((opt) => (
+                                <option key={opt.id} value={opt.id}>{optionLabel(opt)}</option>
+                              ))}
+                            </optgroup>
                           ))}
                         </select>
                         <Input

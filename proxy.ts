@@ -6,6 +6,7 @@ const PROTECTED_PREFIXES = [
   '/workers',
   '/managers',
   '/worksites',
+  '/clients',
   '/subcontractors',
   '/payroll',
   '/attendance',

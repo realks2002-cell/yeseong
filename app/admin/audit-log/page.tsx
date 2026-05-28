@@ -106,7 +106,7 @@ export default function AuditLogPage() {
             <History className="h-6 w-6 text-[#447D9B]" />
             변경 이력
           </h1>
-          <p className="text-sm text-[#6B7280] mt-1">마스터 데이터(작업자·팀장·협력사·현장·단가)의 모든 변경 사항</p>
+          <p className="text-sm text-[#6B7280] mt-1">마스터 데이터(작업자·팀장·전문건설사·현장·단가)의 모든 변경 사항</p>
         </div>
 
         <Card className="p-4">

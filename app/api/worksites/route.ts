@@ -10,7 +10,7 @@ export async function GET(req: Request) {
 
   let query = sb
     .from('yeseong_worksites')
-    .select('id, name, address, is_active, created_at')
+    .select('id, name, address, client_id, subcontractor_id, is_active, created_at')
     .order('name');
   if (!includeArchived) query = query.eq('is_active', true);
 
@@ -27,12 +27,14 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   const address = typeof body?.address === 'string' ? body.address.trim() || null : null;
+  const client_id = typeof body?.client_id === 'string' && body.client_id ? body.client_id : null;
+  const subcontractor_id = typeof body?.subcontractor_id === 'string' && body.subcontractor_id ? body.subcontractor_id : null;
   if (!name) return NextResponse.json({ error: '현장명을 입력하세요' }, { status: 400 });
 
   const { data, error } = await sb
     .from('yeseong_worksites')
-    .insert({ name, address })
-    .select('id, name, address, is_active, created_at')
+    .insert({ name, address, client_id, subcontractor_id })
+    .select('id, name, address, client_id, subcontractor_id, is_active, created_at')
     .single();
 
   if (error) {

@@ -110,20 +110,22 @@ export async function PATCH(
       if (asErr) return NextResponse.json({ error: asErr.message }, { status: 500 });
     }
 
-    // 팀장도 작업자 — 담당 현장을 성과 입력 기본 현장으로 동기화 (worker는 phone으로 연결)
+    // 팀장도 작업자 — 담당 현장 + 그 현장의 전문건설사(1:1)를 worker 행에 동기화
+    let subId: string | null = null;
+    if (worksiteIds.length > 0) {
+      const { data: ws } = await admin
+        .from('yeseong_worksites')
+        .select('subcontractor_id')
+        .eq('id', worksiteIds[0])
+        .single();
+      subId = ws?.subcontractor_id ?? null;
+    }
     await admin
       .from('yeseong_workers')
-      .update({ default_worksite_id: worksiteIds.length > 0 ? worksiteIds[0] : null })
-      .eq('phone', current.phone);
-  }
-
-  // 팀장 협력사 갱신 — 팀원이 팀장 협력사를 따라감 (worker.default_subcontractor_id)
-  if (body != null && 'subcontractor_id' in body) {
-    const subcontractorId: string | null =
-      typeof body.subcontractor_id === 'string' && body.subcontractor_id ? body.subcontractor_id : null;
-    await admin
-      .from('yeseong_workers')
-      .update({ default_subcontractor_id: subcontractorId })
+      .update({
+        default_worksite_id: worksiteIds.length > 0 ? worksiteIds[0] : null,
+        default_subcontractor_id: subId,
+      })
       .eq('phone', current.phone);
   }
 

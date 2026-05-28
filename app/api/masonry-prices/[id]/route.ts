@@ -20,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (typeof body.type_name === 'string') {
     const v = body.type_name.trim();
-    if (!v) return NextResponse.json({ error: '종류명은 비울 수 없습니다' }, { status: 400 });
+    if (!v) return NextResponse.json({ error: '품명은 비울 수 없습니다' }, { status: 400 });
     patch.type_name = v;
   }
   if ('size_spec' in body) {
@@ -47,7 +47,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (error) {
     if (error.code === '23505') {
-      return NextResponse.json({ error: '해당 현장에 동일 항목(종류·규격·단위)이 이미 등록되어 있습니다' }, { status: 409 });
+      return NextResponse.json({ error: '해당 현장에 동일 항목(품명·규격·단위)이 이미 등록되어 있습니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

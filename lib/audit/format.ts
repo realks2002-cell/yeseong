@@ -1,5 +1,5 @@
 // audit_log 표시용 라벨 + 값 포맷팅
-//   대상: 마스터 5개 (작업자/팀장/협력사/현장/조적·미장 단가)
+//   대상: 마스터 5개 (작업자/팀장/전문건설사/현장/조적·미장 단가)
 //   - 테이블 한글 이름
 //   - 컬럼 한글 라벨 (테이블별)
 //   - 값 포맷: 금액·boolean·날짜·null
@@ -7,7 +7,8 @@
 export const TABLE_LABELS: Record<string, string> = {
   yeseong_workers: '작업자',
   yeseong_site_managers: '팀장',
-  yeseong_subcontractors: '협력사',
+  yeseong_subcontractors: '전문건설사',
+  yeseong_clients: '원청사',
   yeseong_worksites: '현장',
   yeseong_masonry_prices: '조적·미장 단가',
 };
@@ -41,7 +42,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     rrn_gender_digit: '성별숫자',
     auth_user_id: '앱계정',
     default_worksite_id: '기본현장',
-    default_subcontractor_id: '기본협력사',
+    default_subcontractor_id: '기본전문건설사',
   },
   yeseong_site_managers: {
     name: '성명',
@@ -51,12 +52,20 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     auth_user_id: '앱계정',
   },
   yeseong_subcontractors: {
-    name: '협력사명',
+    name: '전문건설사명',
+    is_active: '활성',
+  },
+  yeseong_clients: {
+    name: '원청사명',
+    business_number: '사업자등록번호',
+    contact_phone: '연락처',
     is_active: '활성',
   },
   yeseong_worksites: {
     name: '현장명',
     address: '주소',
+    client_id: '원청사',
+    subcontractor_id: '전문건설사',
     is_active: '활성',
   },
   yeseong_masonry_prices: {

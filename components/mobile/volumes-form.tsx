@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, CheckCircle2, Clock, XCircle, MapPin } from 'lucide-react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { categoryTypes } from '@/lib/constants/masonry';
 
@@ -31,22 +31,28 @@ export type ExistingVolume = {
   rejection_reason?: string | null;
 };
 
+// 현장별 성과 입력 섹션 (월중 이동 시 여러 현장이 올 수 있음)
+export type WorksiteSection = {
+  worksite_id: string;
+  worksite_name: string;
+  is_current: boolean;           // 현재 배정 현장
+  is_input_open: boolean;        // 입력 가능 여부 (현재=월말창 / 떠난현장=상시)
+  input_window: { start: string; end: string } | null;
+  prices: PriceOption[];
+  existing: ExistingVolume[];
+};
+
 export type VolumesMe = {
   form_type: FormType;
   worker?: { id: string; name: string; wage_type: string | null; default_trade: string | null };
-  worksite_id?: string | null;
   target_year_month: string | null;
-  is_input_open: boolean;
-  input_window: { start: string; end: string } | null;
-  today: string;
-  existing: ExistingVolume[];
-  prices: PriceOption[];
+  today?: string;
+  worksites: WorksiteSection[];
 };
 
 type Row = { masonry_price_id: string; quantity: number };
 
 function priceLabel(p: PriceOption): string {
-  // 조적: 벽돌종류(+규격), 종류형(미장): 종류·단위, 단위형(방수/타일/석공): 단위
   if (p.category === '조적') {
     return `${p.type_name ?? ''}${p.size_spec ? ` (${p.size_spec})` : ''}`;
   }
@@ -57,7 +63,6 @@ function priceLabel(p: PriceOption): string {
 }
 
 function matchPrice(e: ExistingVolume, prices: PriceOption[]): string | null {
-  // 종류·규격·단위 통합 매칭 (조적/미장종류/단위형 모두 커버)
   const m = prices.find((p) =>
     p.category === e.category &&
     (p.type_name ?? '') === (e.type_name ?? '') &&
@@ -105,23 +110,72 @@ export function VolumesForm({ data, onSaved, readOnly = false }: { data: Volumes
     );
   }
 
-  // 적격 작업자 (조적/미장/방수/타일/석공사)
-  return <EligibleForm data={data} onSaved={onSaved} readOnly={readOnly} />;
+  const catName = data.form_type as EligibleCategory;
+  const sections = data.worksites ?? [];
+
+  if (sections.length === 0) {
+    return <InfoBox kind="warn" title="현장 미설정" desc="배정된 현장이 없습니다. 관리자에게 현장 배정을 요청하세요." />;
+  }
+
+  const multi = sections.length > 1;
+
+  return (
+    <div className="space-y-5">
+      {multi && (
+        <div className="rounded-[10px] bg-amber-50 p-3 text-xs text-amber-800">
+          이번 달 두 곳 이상에서 작업하셨습니다. <b>현장별로 따로</b> 성과를 입력하세요.
+        </div>
+      )}
+      {sections.map((s) => (
+        <div key={s.worksite_id}>
+          {multi && (
+            <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-zinc-800">
+              <MapPin className="h-4 w-4 text-zinc-400" />
+              {s.worksite_name}
+              {!s.is_current && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                  이전 현장
+                </span>
+              )}
+            </div>
+          )}
+          <WorksiteSectionForm
+            section={s}
+            catName={catName}
+            yearMonth={data.target_year_month}
+            onSaved={onSaved}
+            readOnly={readOnly}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: () => void; readOnly: boolean }) {
+function WorksiteSectionForm({
+  section,
+  catName,
+  yearMonth,
+  onSaved,
+  readOnly,
+}: {
+  section: WorksiteSection;
+  catName: EligibleCategory;
+  yearMonth: string | null;
+  onSaved: () => void;
+  readOnly: boolean;
+}) {
   const sb = getBrowserSupabase();
-  const catName = data.form_type as EligibleCategory;
 
   const initialRows: Row[] = useMemo(() => {
     const out: Row[] = [];
-    for (const e of data.existing) {
-      const pid = matchPrice(e, data.prices);
+    for (const e of section.existing) {
+      const pid = matchPrice(e, section.prices);
       if (!pid) continue;
       out.push({ masonry_price_id: pid, quantity: Number(e.quantity) });
     }
     return out;
-  }, [data.existing, data.prices]);
+  }, [section.existing, section.prices]);
 
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [busy, setBusy] = useState(false);
@@ -130,14 +184,14 @@ function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: (
 
   useEffect(() => setRows(initialRows), [initialRows]);
 
-  const priceMap = useMemo(() => new Map(data.prices.map((p) => [p.id, p])), [data.prices]);
+  const priceMap = useMemo(() => new Map(section.prices.map((p) => [p.id, p])), [section.prices]);
 
   function update(i: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
   function addRow() {
-    if (data.prices.length === 0) return;
-    setRows((prev) => [...prev, { masonry_price_id: data.prices[0].id, quantity: 0 }]);
+    if (section.prices.length === 0) return;
+    setRows((prev) => [...prev, { masonry_price_id: section.prices[0].id, quantity: 0 }]);
   }
   function removeRow(i: number) {
     setRows((prev) => prev.filter((_, idx) => idx !== i));
@@ -151,12 +205,13 @@ function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: (
 
   async function save() {
     if (readOnly || busy) return;
-    if (!data.target_year_month) return;
+    if (!yearMonth) return;
     setBusy(true);
     setErr(null);
     setOkMsg(null);
     const { error } = await sb.rpc('yeseong_mobile_replace_volumes_me', {
-      p_year_month: data.target_year_month,
+      p_year_month: yearMonth,
+      p_worksite_id: section.worksite_id,
       p_items: rows
         .filter((r) => r.quantity > 0)
         .map((r) => ({ masonry_price_id: r.masonry_price_id, quantity: r.quantity })),
@@ -171,32 +226,30 @@ function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: (
   }
 
   // 단가 미등록
-  if (data.prices.length === 0) {
+  if (section.prices.length === 0) {
     return (
       <InfoBox
         kind="warn"
         title="단가 미등록"
-        desc={`현장에 ${catName} 단가가 등록되지 않았습니다. 관리자에게 단가 등록을 요청하세요.`}
+        desc={`이 현장에 ${catName} 단가가 등록되지 않았습니다. 관리자에게 단가 등록을 요청하세요.`}
       />
     );
   }
 
-  // 입력 기간 외 — 제출 내역(승인상태)만 표시
-  if (!data.is_input_open) {
+  // 입력 불가(현재 현장인데 입력 기간 외) — 제출 내역만 표시
+  if (!section.is_input_open) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <InfoBox
           kind="info"
           title="입력 기간이 아닙니다"
           desc={
-            data.input_window
-              ? `${fmtDate(data.input_window.start)} ~ ${fmtDate(data.input_window.end)}에 입력 가능합니다.`
+            section.input_window
+              ? `${fmtDate(section.input_window.start)} ~ ${fmtDate(section.input_window.end)}에 입력 가능합니다.`
               : '매월 말일~다음달 10일에 입력 가능합니다.'
           }
         />
-        {data.existing.length > 0 && (
-          <ExistingList existing={data.existing} />
-        )}
+        {section.existing.length > 0 && <ExistingList existing={section.existing} />}
       </div>
     );
   }
@@ -205,21 +258,23 @@ function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: (
     <div className="space-y-4">
       <div className="rounded-[10px] bg-blue-50 p-3 text-sm">
         <p className="font-semibold text-blue-900">
-          {data.target_year_month?.replace('-', '년 ')}월 {catName} 성과 입력
+          {yearMonth?.replace('-', '년 ')}월 {catName} 성과 입력
         </p>
-        {data.input_window && (
-          <p className="text-xs text-blue-700 mt-1">
-            입력 기간: {fmtDate(data.input_window.start)} ~ {fmtDate(data.input_window.end)}
-          </p>
-        )}
+        <p className="text-xs text-blue-700 mt-1">
+          {section.is_current
+            ? section.input_window
+              ? `입력 기간: ${fmtDate(section.input_window.start)} ~ ${fmtDate(section.input_window.end)}`
+              : ''
+            : '이전 현장 — 지금 입력해 마감할 수 있습니다.'}
+        </p>
       </div>
 
-      {data.existing.some((e) => e.approval_status === 'rejected') && (
+      {section.existing.some((e) => e.approval_status === 'rejected') && (
         <InfoBox
           kind="warn"
           title="반려된 성과가 있습니다"
-          desc={data.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason
-            ? `사유: ${data.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason}`
+          desc={section.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason
+            ? `사유: ${section.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason}`
             : '관리자가 반려했습니다. 다시 입력 후 저장해 주세요.'}
         />
       )}
@@ -241,7 +296,7 @@ function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: (
                     disabled={busy}
                     className="flex-1 h-10 rounded-[8px] border border-zinc-300 bg-white px-2.5 text-sm"
                   >
-                    {data.prices.map((opt) => (
+                    {section.prices.map((opt) => (
                       <option key={opt.id} value={opt.id}>{priceLabel(opt)}</option>
                     ))}
                   </select>
@@ -288,7 +343,7 @@ function EligibleForm({ data, onSaved, readOnly }: { data: VolumesMe; onSaved: (
       </button>
 
       <div className="flex items-center justify-between rounded-[10px] bg-zinc-50 px-4 py-3">
-        <span className="text-sm font-semibold text-zinc-700">이번 달 성과 합계</span>
+        <span className="text-sm font-semibold text-zinc-700">이 현장 성과 합계</span>
         <span className="text-xl font-bold tabular-nums text-blue-900">{total.toLocaleString()}원</span>
       </div>
 

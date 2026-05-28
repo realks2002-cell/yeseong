@@ -3,19 +3,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { SubcontractorForm, type Subcontractor, type SubcontractorInput } from '@/components/subcontractor-form';
-import { HardHat, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { ClientForm, type Client, type ClientInput } from '@/components/client-form';
+import { Building, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 
-export default function SubcontractorsPage() {
-  const [list, setList] = useState<Subcontractor[] | null>(null);
+export default function ClientsPage() {
+  const [list, setList] = useState<Client[] | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [editing, setEditing] = useState<Subcontractor | null>(null);
+  const [editing, setEditing] = useState<Client | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
-    const r = await fetch(`/api/subcontractors${showArchived ? '?includeArchived=true' : ''}`, {
+    const r = await fetch(`/api/clients${showArchived ? '?includeArchived=true' : ''}`, {
       cache: 'no-store',
     });
     if (!r.ok) {
@@ -30,8 +30,8 @@ export default function SubcontractorsPage() {
     load();
   }, [load]);
 
-  async function handleAdd(input: SubcontractorInput) {
-    const r = await fetch('/api/subcontractors', {
+  async function handleAdd(input: ClientInput) {
+    const r = await fetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -41,9 +41,9 @@ export default function SubcontractorsPage() {
     load();
   }
 
-  async function handleEdit(input: SubcontractorInput) {
+  async function handleEdit(input: ClientInput) {
     if (!editing) return;
-    const r = await fetch(`/api/subcontractors/${editing.id}`, {
+    const r = await fetch(`/api/clients/${editing.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -53,9 +53,9 @@ export default function SubcontractorsPage() {
     load();
   }
 
-  async function handleDelete(s: Subcontractor) {
-    if (!confirm(`"${s.name}" 전문건설사를 보관함으로 이동할까요?\n과거 데이터는 그대로 유지되고, 목록에서만 숨겨집니다.`)) return;
-    const r = await fetch(`/api/subcontractors/${s.id}`, { method: 'DELETE' });
+  async function handleDelete(c: Client) {
+    if (!confirm(`"${c.name}" 원청사를 보관함으로 이동할까요?\n과거 데이터는 그대로 유지되고, 목록에서만 숨겨집니다.`)) return;
+    const r = await fetch(`/api/clients/${c.id}`, { method: 'DELETE' });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
       alert(j.error ?? '보관 실패');
@@ -64,9 +64,9 @@ export default function SubcontractorsPage() {
     load();
   }
 
-  async function handleRestore(s: Subcontractor) {
-    if (!confirm(`"${s.name}" 전문건설사를 복원할까요?`)) return;
-    const r = await fetch(`/api/subcontractors/${s.id}`, {
+  async function handleRestore(c: Client) {
+    if (!confirm(`"${c.name}" 원청사를 복원할까요?`)) return;
+    const r = await fetch(`/api/clients/${c.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: true }),
@@ -84,9 +84,9 @@ export default function SubcontractorsPage() {
       <div className="max-w-7xl p-6">
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">전문건설사 마스터</h1>
+            <h1 className="text-2xl font-bold tracking-tight">원청사 마스터</h1>
             <p className="text-sm text-[#6B7280] mt-1">
-              총 {list?.length ?? '...'}개 전문건설사
+              총 {list?.length ?? '...'}개 원청사
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -100,8 +100,8 @@ export default function SubcontractorsPage() {
               보관함 보기
             </label>
             <Button onClick={() => setShowAdd(true)}>
-              <HardHat className="h-4 w-4" />
-              전문건설사 추가
+              <Building className="h-4 w-4" />
+              원청사 추가
             </Button>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function SubcontractorsPage() {
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
-                  <th className="px-3 py-2 font-medium">전문건설사명</th>
+                  <th className="px-3 py-2 font-medium">원청사명</th>
                   <th className="px-3 py-2 font-medium">사업자등록번호</th>
                   <th className="px-3 py-2 font-medium">연락처</th>
                   <th className="px-3 py-2 font-medium w-20">상태</th>
@@ -125,16 +125,16 @@ export default function SubcontractorsPage() {
                 {list === null ? (
                   <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">등록된 전문건설사가 없습니다.</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">등록된 원청사가 없습니다.</td></tr>
                 ) : (
-                  list.map((s, i) => (
-                    <tr key={s.id} className={`hover:bg-[#F5F5F5] ${!s.is_active ? 'text-[#9CA3AF]' : ''}`}>
+                  list.map((c, i) => (
+                    <tr key={c.id} className={`hover:bg-[#F5F5F5] ${!c.is_active ? 'text-[#9CA3AF]' : ''}`}>
                       <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
-                      <td className="px-3 py-2 font-medium">{s.name}</td>
-                      <td className="px-3 py-2 font-mono text-[#4B5563]">{s.business_number ?? '-'}</td>
-                      <td className="px-3 py-2 font-mono text-[#4B5563]">{s.contact_phone ?? '-'}</td>
+                      <td className="px-3 py-2 font-medium">{c.name}</td>
+                      <td className="px-3 py-2 font-mono text-[#4B5563]">{c.business_number ?? '-'}</td>
+                      <td className="px-3 py-2 font-mono text-[#4B5563]">{c.contact_phone ?? '-'}</td>
                       <td className="px-3 py-2">
-                        {s.is_active ? (
+                        {c.is_active ? (
                           <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">활성</span>
                         ) : (
                           <span className="rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] text-[#6B7280]">보관됨</span>
@@ -142,18 +142,18 @@ export default function SubcontractorsPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
-                          {s.is_active ? (
+                          {c.is_active ? (
                             <>
                               <button
                                 className="rounded p-1 text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
-                                onClick={() => setEditing(s)}
+                                onClick={() => setEditing(c)}
                                 aria-label="수정"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 className="rounded p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
-                                onClick={() => handleDelete(s)}
+                                onClick={() => handleDelete(c)}
                                 aria-label="보관"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -162,7 +162,7 @@ export default function SubcontractorsPage() {
                           ) : (
                             <button
                               className="rounded p-1 text-[#6B7280] hover:bg-emerald-50 hover:text-emerald-700"
-                              onClick={() => handleRestore(s)}
+                              onClick={() => handleRestore(c)}
                               aria-label="복원"
                               title="복원"
                             >
@@ -181,14 +181,14 @@ export default function SubcontractorsPage() {
       </div>
 
       {showAdd && (
-        <SubcontractorForm
-          title="전문건설사 추가"
+        <ClientForm
+          title="원청사 추가"
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
         />
       )}
       {editing && (
-        <SubcontractorForm
+        <ClientForm
           title={`${editing.name} 수정`}
           initial={editing}
           onSubmit={handleEdit}

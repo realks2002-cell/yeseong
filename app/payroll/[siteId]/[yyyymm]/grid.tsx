@@ -47,6 +47,15 @@ type Props = {
   yearMonth: string;
 };
 
+// 성과 내역 표기용 — 단위는 DB값 우선, 없으면 분류로 추정
+const CATEGORY_UNIT: Record<string, string> = { 조적: '장', 미장: '㎡' };
+function volumeItemLabel(v: ExistingVolume): string {
+  return [v.type_name, v.size_spec].filter(Boolean).join(' ') || v.category;
+}
+function volumeUnitLabel(v: ExistingVolume): string {
+  return v.unit ?? CATEGORY_UNIT[v.category] ?? '';
+}
+
 export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   const router = useRouter();
   const totalDays = daysInMonth(yearMonth);
@@ -64,13 +73,12 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
 
   const load = useCallback(async () => {
     setError(null);
-    const [r1, r2, r3, r4, r5a, r5b] = await Promise.all([
+    const [r1, r2, r3, r4, r5] = await Promise.all([
       fetch(`/api/payroll/${siteId}/${yearMonth}`, { cache: 'no-store' }),
       fetch(`/api/workers`, { cache: 'no-store' }),
       fetch(`/api/subcontractors`, { cache: 'no-store' }),
       fetch(`/api/payroll/${siteId}/${yearMonth}/volumes`, { cache: 'no-store' }),
-      fetch(`/api/masonry-prices?category=조적&worksiteId=${siteId}`, { cache: 'no-store' }),
-      fetch(`/api/masonry-prices?category=미장&worksiteId=${siteId}`, { cache: 'no-store' }),
+      fetch(`/api/masonry-prices?worksiteId=${siteId}`, { cache: 'no-store' }),
     ]);
     if (!r1.ok) {
       setError(`노임대장 로드 실패: ${r1.status}`);
@@ -81,19 +89,18 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
       return;
     }
     if (!r3.ok) {
-      setError(`협력사 로드 실패: ${r3.status}`);
+      setError(`전문건설사 로드 실패: ${r3.status}`);
       return;
     }
     const data = await r1.json();
     const workersAll = await r2.json();
     const subs = await r3.json();
     const vols: ExistingVolume[] = r4.ok ? await r4.json() : [];
-    const pricesJoki: MasonryPriceOption[] = r5a.ok ? await r5a.json() : [];
-    const pricesMij: MasonryPriceOption[] = r5b.ok ? await r5b.json() : [];
+    const pricesAll: MasonryPriceOption[] = r5.ok ? await r5.json() : [];
     setSlots(data.slots ?? []);
     setAttendance(data.attendance ?? []);
     setVolumes(vols);
-    setPrices([...pricesJoki, ...pricesMij]);
+    setPrices(pricesAll);
     setAllWorkers(workersAll ?? []);
     setSubcontractors(subs ?? []);
     setLoaded(true);
@@ -210,9 +217,9 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     load();
   }
 
-  const [downloadBusy, setDownloadBusy] = useState<'download' | null>(null);
+  const [downloadBusy, setDownloadBusy] = useState<'download' | 'masonry-download' | null>(null);
 
-  async function fetchAndSave(endpoint: 'download', fallbackName: string) {
+  async function fetchAndSave(endpoint: 'download' | 'masonry-download', fallbackName: string) {
     if (slots.length === 0) {
       alert('작업자를 1명 이상 추가해주세요.');
       return;
@@ -241,13 +248,15 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     }
   }
   const handleDownload = () => fetchAndSave('download', `노임대장_${yearMonth}.xlsx`);
+  const handleMasonryDownload = () => fetchAndSave('masonry-download', `매사노임대장_${yearMonth}.xlsx`);
+  const hasMasonry = slots.some((s) => s.worker.wage_type === '월급/일급');
 
   function dayTotalHours(day: number): number {
     return slots.reduce((sum, s) => sum + (cellMap.get(`${s.id}:${day}`) ?? 0), 0);
   }
 
   return (
-    <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
+    <main className="w-full min-w-0 bg-white p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link href="/payroll" className="text-sm text-[#6B7280] hover:text-[#091413]">
           ← 현장 목록
@@ -282,6 +291,12 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
             <Download className="h-4 w-4" />
             {downloadBusy === 'download' ? '생성 중...' : '엑셀 다운로드'}
           </Button>
+          {hasMasonry && (
+            <Button variant="outline" onClick={handleMasonryDownload} disabled={!!downloadBusy}>
+              <Download className="h-4 w-4" />
+              {downloadBusy === 'masonry-download' ? '생성 중...' : '매사 노임대장'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -290,27 +305,28 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
       <div className="overflow-x-auto rounded-[5px] border border-[#D7D7D7] bg-white shadow-sm">
         <table className="border-collapse text-[12px]">
           <thead>
-            <tr className="border-b border-[#D7D7D7] bg-[#F5F5F5]">
-              <th className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2 font-medium w-10 text-[#4B5563]">#</th>
-              <th className="sticky left-10 z-10 bg-[#F5F5F5] px-3 py-2 font-medium text-center text-[#4B5563] min-w-[100px]">성명</th>
-              <th className="sticky left-[152px] z-10 bg-[#F5F5F5] px-3 py-2 font-medium text-center text-[#4B5563] min-w-[120px]">협력사</th>
-              <th className="px-3 py-2 font-medium text-center text-[#4B5563] min-w-[80px]">공종</th>
-              <th className="px-3 py-2 font-medium text-right text-[#4B5563] min-w-[100px]">일당</th>
+            <tr className="border-b border-[#D7D7D7] bg-white">
+              <th className="sticky left-0 z-10 bg-white px-3 py-2 font-medium w-10 text-[#091413]">#</th>
+              <th className="sticky left-10 z-10 bg-white px-3 py-2 font-medium text-center text-[#091413] min-w-[100px]">성명</th>
+              <th className="sticky left-[152px] z-10 bg-white px-3 py-2 font-medium text-center text-[#091413] min-w-[120px]">전문건설사</th>
+              <th className="px-3 py-2 font-medium text-center text-[#091413] min-w-[80px]">공종</th>
+              <th className="px-3 py-2 font-medium text-right text-[#091413] min-w-[100px]">일당</th>
               {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                <th key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 font-medium text-[#4B5563] w-10 text-center tabular-nums">{d}</th>
+                <th key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 font-medium text-[#091413] w-10 text-center tabular-nums">{d}</th>
               ))}
-              <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-14 text-center">공수</th>
-              <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-14 text-center">일수</th>
-              <th className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 font-medium text-[#091413] w-28 text-center">성과(원)</th>
-              <th className="border-l border-[#D7D7D7] px-2 py-2 font-medium text-[#4B5563] w-10"></th>
+              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] w-14 text-center">공수</th>
+              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] w-14 text-center">일수</th>
+              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] min-w-[190px] text-center">성과 내역</th>
+              <th className="border-l border-[#D7D7D7] bg-white px-3 py-2 font-medium text-[#091413] w-28 text-center">성과(원)</th>
+              <th className="border-l border-[#D7D7D7] px-2 py-2 font-medium text-[#091413] w-10"></th>
             </tr>
           </thead>
           <tbody>
             {!loaded ? (
-              <tr><td colSpan={9 + totalDays} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+              <tr><td colSpan={10 + totalDays} className="py-12 text-center text-[#091413]">불러오는 중...</td></tr>
             ) : slots.length === 0 ? (
               <tr>
-                <td colSpan={9 + totalDays} className="py-12 text-center text-[#9CA3AF]">
+                <td colSpan={10 + totalDays} className="py-12 text-center text-[#091413]">
                   아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
                 </td>
               </tr>
@@ -319,13 +335,12 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                 const sum = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
                 const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`)).filter((v) => v != null && v > 0).length;
                 const isPerformance = s.worker.wage_type === '월급/일급';
-                const isMonthly = s.worker.wage_type === '월급';
-                const rowBg = isPerformance ? 'bg-[#FFE4C4]/40 hover:bg-[#FFE4C4]/60' : isMonthly ? 'bg-[#FFF9C4]/40 hover:bg-[#FFF9C4]/60' : 'hover:bg-[#F5F5F5]/50';
-                const stickyBg = isPerformance ? 'bg-[#FFEDD5]' : isMonthly ? 'bg-[#FEF9C3]' : 'bg-white';
+                const rowBg = 'hover:bg-[#F5F5F5]/50';
+                const stickyBg = 'bg-white';
                 const volumeAmount = volumeSumMap.get(s.id) ?? 0;
                 return (
                   <tr key={s.id} className={`border-b border-[#D7D7D7] ${rowBg}`}>
-                    <td className={`sticky left-0 z-10 ${stickyBg} px-3 py-2 text-[#6B7280] tabular-nums`}>{idx + 1}</td>
+                    <td className={`sticky left-0 z-10 ${stickyBg} px-3 py-2 text-[#091413] tabular-nums`}>{idx + 1}</td>
                     <td className={`sticky left-10 z-10 ${stickyBg} px-3 py-2 font-medium text-center`}>{s.worker.name}</td>
                     <td className={`sticky left-[152px] z-10 ${stickyBg} px-1.5 py-1 text-center`}>
                       <SubcontractorSelect
@@ -335,10 +350,10 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                       />
                     </td>
                     <td className="px-3 py-2 text-center text-[#091413]">
-                      {s.worker.default_trade ?? <span className="text-[#9CA3AF]">-</span>}
+                      {s.worker.default_trade ?? <span className="text-[#091413]">-</span>}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-[#091413]">
-                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#9CA3AF]">-</span>}
+                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#091413]">-</span>}
                     </td>
                     {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => {
                       const v = cellMap.get(`${s.id}:${d}`);
@@ -351,19 +366,41 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                         </td>
                       );
                     })}
-                    <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
-                    <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[#4B5563]">{days || ''}</td>
-                    <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center text-[12px]">
+                    <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
+                    <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums text-[#091413]">{days || ''}</td>
+                    <td className="border-l border-[#D7D7D7] bg-white px-3 py-2 text-left align-top text-[11px]">
+                      {isPerformance ? (
+                        (volumesByWorker.get(s.id) ?? []).length > 0 ? (
+                          <div className="flex flex-col gap-0.5">
+                            {(volumesByWorker.get(s.id) ?? []).map((v) => (
+                              <div key={v.id} className="whitespace-nowrap tabular-nums">
+                                <span className="text-[#091413]">{volumeItemLabel(v)}</span>
+                                <span className="text-[#091413]">
+                                  {' '}
+                                  {v.quantity.toLocaleString()}
+                                  {volumeUnitLabel(v)} × {v.unit_price.toLocaleString()}원
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[#091413]">입력 전</span>
+                        )
+                      ) : (
+                        <span className="text-[#091413]">-</span>
+                      )}
+                    </td>
+                    <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center text-[12px]">
                       {isPerformance ? (
                         <button
                           onClick={() => setVolumeSlot(s)}
-                          className="inline-flex items-center gap-1 rounded-[5px] border border-[#FE7743] bg-white px-2 py-1 text-[11px] font-medium text-[#FE7743] hover:bg-[#FFF1E6] tabular-nums"
+                          className="inline-flex items-center gap-1 rounded-[5px] border border-[#091413] bg-white px-2 py-1 text-[11px] font-medium text-[#091413] hover:bg-[#F5F5F5] tabular-nums"
                         >
                           <Package className="h-3 w-3" />
                           {volumeAmount > 0 ? `${volumeAmount.toLocaleString()}` : '입력'}
                         </button>
                       ) : (
-                        <span className="text-[#D7D7D7]">-</span>
+                        <span className="text-[#091413]">-</span>
                       )}
                     </td>
                     <td className="border-l border-[#D7D7D7] px-1 py-2 text-center">
@@ -380,16 +417,17 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
               })
             )}
             {slots.length > 0 && (
-              <tr className="border-t-2 border-[#D7D7D7] bg-[#F5F5F5] font-semibold text-[#091413]">
-                <td colSpan={5} className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2">일자별 합계</td>
+              <tr className="border-t-2 border-[#D7D7D7] bg-white font-semibold text-[#091413]">
+                <td colSpan={5} className="sticky left-0 z-10 bg-white px-3 py-2">일자별 합계</td>
                 {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
                   <td key={d} className="border-l border-[#D7D7D7] px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
                 ))}
-                <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums">
+                <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums">
                   {slots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
                 </td>
-                <td className="border-l border-[#D7D7D7] bg-[#F5F5F5]"></td>
-                <td className="border-l border-[#D7D7D7] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[12px]">
+                <td className="border-l border-[#D7D7D7] bg-white"></td>
+                <td className="border-l border-[#D7D7D7] bg-white"></td>
+                <td className="border-l border-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums text-[12px]">
                   {(() => {
                     const total = slots.reduce((sum, sl) => sum + (volumeSumMap.get(sl.id) ?? 0), 0);
                     return total > 0 ? total.toLocaleString() : '';

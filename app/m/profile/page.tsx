@@ -60,7 +60,7 @@ export default function ProfilePage() {
       <section className="px-7 space-y-4">
         <ReadField label="팀장" value={me.team_leader?.name} />
         <ReadField label="현장" value={me.worksite?.name} />
-        <ReadField label="소속(협력사)" value={me.subcontractor?.name} />
+        <ReadField label="소속(전문건설사)" value={me.subcontractor?.name} />
       </section>
     </MobileShell>
   );

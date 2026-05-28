@@ -37,7 +37,7 @@ export async function GET(
     .single();
   if (pErr || !period) return NextResponse.json({ error: pErr?.message ?? 'period upsert failed' }, { status: 500 });
 
-  // 슬롯 + 워커 + 협력사 조회
+  // 슬롯 + 워커 + 전문건설사 조회
   const { data: slots, error: slotErr } = await sb
     .from('yeseong_payroll_workers')
     .select(`

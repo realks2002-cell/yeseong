@@ -28,13 +28,20 @@ export async function POST(
     .single();
   if (pErr || !period) return NextResponse.json({ error: 'period 없음 — 먼저 GET 호출' }, { status: 404 });
 
-  // 워커 + default vendor + default wage 조회
+  // 워커 + default wage 조회
   const { data: w, error: wErr } = await sb
     .from('yeseong_workers')
-    .select('id, default_wage, default_trade, default_subcontractor_id')
+    .select('id, default_wage, default_trade')
     .eq('id', workerId)
     .single();
   if (wErr || !w) return NextResponse.json({ error: 'worker not found' }, { status: 404 });
+
+  // 전문건설사 = 현장(1:1)에서 파생 (worksites.subcontractor_id)
+  const { data: site } = await sb
+    .from('yeseong_worksites')
+    .select('subcontractor_id')
+    .eq('id', siteId)
+    .single();
 
   // 빈 slot_number 찾기 (1~26)
   const { data: existing } = await sb
@@ -57,7 +64,7 @@ export async function POST(
       slot_number: slot,
       trade: w.default_trade,
       daily_wage: w.default_wage ?? 0,
-      subcontractor_id: w.default_subcontractor_id,
+      subcontractor_id: site?.subcontractor_id ?? null,
     })
     .select('id, slot_number')
     .single();

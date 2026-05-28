@@ -28,7 +28,7 @@ function getAssignments(m: Manager): Assignment[] {
   return Array.isArray(v) ? v : [v];
 }
 
-type Worksite = { id: string; name: string };
+type Worksite = { id: string; name: string; subcontractor_id: string | null };
 type Subcontractor = { id: string; name: string };
 
 type ManagerInput = {
@@ -36,7 +36,6 @@ type ManagerInput = {
   phone: string;
   pin: string;
   worksite_ids: string[];
-  subcontractor_id: string | null;
 };
 
 function formatPhone(phone: string | null | undefined): string {
@@ -131,19 +130,8 @@ export default function ManagersPage() {
     load();
   }
 
-  async function handleSubcontractorChange(m: Manager, subcontractorId: string) {
-    const r = await fetch(`/api/managers/${m.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subcontractor_id: subcontractorId || null }),
-    });
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}));
-      alert(j.error ?? '협력사 변경 실패');
-      return;
-    }
-    load();
-  }
+  const subName = (id: string | null) =>
+    id ? subcontractors.find((s) => s.id === id)?.name ?? '-' : '미지정';
 
   async function handleDelete(m: Manager) {
     if (!confirm(`"${m.name}" 팀장을 비활성 처리할까요?\n과거 출역 승인 기록은 그대로 유지되고, 목록과 모바일 로그인에서만 차단됩니다.`)) return;
@@ -232,7 +220,7 @@ export default function ManagersPage() {
                   <th className="px-3 py-2 font-medium">직종</th>
                   <th className="px-3 py-2 font-medium">전화번호</th>
                   <th className="px-3 py-2 font-medium">담당 현장</th>
-                  <th className="px-3 py-2 font-medium">협력사</th>
+                  <th className="px-3 py-2 font-medium">전문건설사</th>
                   <th className="w-20 px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
@@ -284,22 +272,9 @@ export default function ManagersPage() {
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          {m.is_active ? (
-                            <select
-                              value={m.subcontractor_id ?? ''}
-                              onChange={(e) => handleSubcontractorChange(m, e.target.value)}
-                              className="min-w-40 rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-[11px] outline-none focus:border-[#447D9B] focus:ring-1 focus:ring-[#447D9B]/30 hover:bg-[#F5F5F5]"
-                            >
-                              <option value="">미지정</option>
-                              {subcontractors.map((s) => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-[#9CA3AF]">
-                              {subcontractors.find((s) => s.id === m.subcontractor_id)?.name ?? '미지정'}
-                            </span>
-                          )}
+                          <span className="text-[#4B5563]" title="현장에 따라 자동 결정됩니다">
+                            {subName(m.subcontractor_id)}
+                          </span>
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-0.5">
@@ -362,7 +337,6 @@ export default function ManagersPage() {
             phone: editing.phone ?? '',
             pin: editing.pin ?? '',
             worksite_ids: getAssignments(editing).map((a) => a.worksite_id),
-            subcontractor_id: editing.subcontractor_id,
           }}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
@@ -391,9 +365,14 @@ function ManagerForm({
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [pin, setPin] = useState(initial?.pin ?? '');
   const [worksiteId, setWorksiteId] = useState<string>(initial?.worksite_ids?.[0] ?? '');
-  const [subcontractorId, setSubcontractorId] = useState<string>(initial?.subcontractor_id ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const derivedSubName = (() => {
+    const ws = worksites.find((w) => w.id === worksiteId);
+    if (!ws) return '미지정';
+    return ws.subcontractor_id ? subcontractors.find((s) => s.id === ws.subcontractor_id)?.name ?? '-' : '미지정';
+  })();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -408,7 +387,6 @@ function ManagerForm({
         phone,
         pin,
         worksite_ids: worksiteId ? [worksiteId] : [],
-        subcontractor_id: subcontractorId || null,
       });
     } catch (e) {
       setErr(e instanceof Error ? e.message : '저장 실패');
@@ -475,19 +453,12 @@ function ManagerForm({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[#4B5563]">협력사</label>
-            <select
-              value={subcontractorId}
-              onChange={(e) => setSubcontractorId(e.target.value)}
-              className="w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-2 text-sm outline-none focus:border-[#447D9B]"
-            >
-              <option value="">미지정</option>
-              {subcontractors.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">전문건설사 (자동)</label>
+            <div className="w-full rounded-[5px] border border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2 text-sm text-[#091413]">
+              {derivedSubName}
+            </div>
             <p className="mt-1 text-[11px] text-[#6B7280]">
-              팀원(이 팀장 소속 작업자)이 이 협력사를 자동으로 따라갑니다.
+              선택한 현장의 전문건설사가 자동 적용됩니다 (현장↔전문건설사 1:1). 팀원도 이 값을 따라갑니다.
             </p>
           </div>
         </div>

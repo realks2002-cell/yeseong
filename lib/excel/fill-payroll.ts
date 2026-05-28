@@ -41,7 +41,7 @@ export type FillInput = {
   periodStart: Date;
   periodEnd: Date;
   companyName: string;           // '예성건설' — fallback (subcontractorName 없을 때)
-  subcontractorName?: string;    // 협력사명 — "상 호" 셀에 우선 사용
+  subcontractorName?: string;    // 전문건설사명 — "상 호" 셀에 우선 사용
   worksiteName: string;          // '보은현장'
   workers: FillWorker[];
 };

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 
-export type Subcontractor = {
+export type Client = {
   id: string;
   name: string;
   business_number: string | null;
@@ -13,7 +13,7 @@ export type Subcontractor = {
   created_at: string;
 };
 
-export type SubcontractorInput = {
+export type ClientInput = {
   name: string;
   business_number: string;
   contact_phone: string;
@@ -21,13 +21,13 @@ export type SubcontractorInput = {
 };
 
 type Props = {
-  initial?: Subcontractor;
-  onSubmit: (input: SubcontractorInput) => Promise<void>;
+  initial?: Client;
+  onSubmit: (input: ClientInput) => Promise<void>;
   onCancel: () => void;
   title: string;
 };
 
-export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props) {
+export function ClientForm({ initial, onSubmit, onCancel, title }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [businessNumber, setBusinessNumber] = useState(initial?.business_number ?? '');
   const [contactPhone, setContactPhone] = useState(initial?.contact_phone ?? '');
@@ -45,7 +45,7 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!name.trim()) return setErr('전문건설사명을 입력하세요');
+    if (!name.trim()) return setErr('원청사명을 입력하세요');
     setLoading(true);
     try {
       await onSubmit({
@@ -72,13 +72,13 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="sc-name">전문건설사명 *</label>
-            <Input id="sc-name" value={name} onChange={(e) => setName(e.target.value)} disabled={loading} autoFocus />
+            <label className="text-sm font-medium" htmlFor="cl-name">원청사명 *</label>
+            <Input id="cl-name" value={name} onChange={(e) => setName(e.target.value)} disabled={loading} autoFocus />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="sc-bn">사업자등록번호</label>
+            <label className="text-sm font-medium" htmlFor="cl-bn">사업자등록번호</label>
             <Input
-              id="sc-bn"
+              id="cl-bn"
               value={businessNumber}
               onChange={(e) => setBusinessNumber(e.target.value)}
               placeholder="(선택) 예: 123-45-67890"
@@ -86,9 +86,9 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="sc-phone">연락처</label>
+            <label className="text-sm font-medium" htmlFor="cl-phone">연락처</label>
             <Input
-              id="sc-phone"
+              id="cl-phone"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
               placeholder="(선택)"

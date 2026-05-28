@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { WorksiteForm, type Worksite, type WorksiteInput } from '@/components/worksite-form';
+import { WorksiteForm, type Worksite, type WorksiteInput, type Option } from '@/components/worksite-form';
 import { Building2, Pencil, Trash2 } from 'lucide-react';
 
 export default function WorksitesPage() {
   const [list, setList] = useState<Worksite[] | null>(null);
+  const [clients, setClients] = useState<Option[]>([]);
+  const [subcontractors, setSubcontractors] = useState<Option[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Worksite | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,15 +25,31 @@ export default function WorksitesPage() {
     setList(await r.json());
   }
 
+  async function loadOptions() {
+    const [rc, rs] = await Promise.all([
+      fetch('/api/clients', { cache: 'no-store' }),
+      fetch('/api/subcontractors', { cache: 'no-store' }),
+    ]);
+    if (rc.ok) {
+      const data: Array<{ id: string; name: string }> = await rc.json();
+      setClients(data.map((c) => ({ id: c.id, name: c.name })));
+    }
+    if (rs.ok) {
+      const data: Array<{ id: string; name: string }> = await rs.json();
+      setSubcontractors(data.map((s) => ({ id: s.id, name: s.name })));
+    }
+  }
+
   useEffect(() => {
     load();
+    loadOptions();
   }, []);
 
   async function handleAdd(input: WorksiteInput) {
     const r = await fetch('/api/worksites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: input.name, address: input.address }),
+      body: JSON.stringify(input),
     });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? '추가 실패');
     setShowAdd(false);
@@ -61,6 +79,23 @@ export default function WorksitesPage() {
     load();
   }
 
+  async function updateField(id: string, patch: { client_id?: string | null; subcontractor_id?: string | null }) {
+    setList((prev) => (prev ? prev.map((w) => (w.id === id ? { ...w, ...patch } : w)) : prev));
+    const r = await fetch(`/api/worksites/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '저장 실패');
+      load();
+    }
+  }
+
+  const inlineSelectCls =
+    'h-7 w-full max-w-[140px] rounded-[5px] border border-[#D7D7D7] bg-white px-1.5 text-[11px] text-[#091413] focus:outline-none focus:ring-1 focus:ring-[#447D9B]';
+
   return (
     <AdminShell>
       <div className="max-w-7xl p-6">
@@ -88,20 +123,48 @@ export default function WorksitesPage() {
                 <tr className="text-left text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">현장명</th>
+                  <th className="px-3 py-2 font-medium">원청사</th>
+                  <th className="px-3 py-2 font-medium">전문건설사</th>
                   <th className="px-3 py-2 font-medium">주소</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={4} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={4} className="py-10 text-center text-[#9CA3AF]">등록된 현장이 없습니다.</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">등록된 현장이 없습니다.</td></tr>
                 ) : (
                   list.map((w, i) => (
                     <tr key={w.id} className="hover:bg-[#F5F5F5]">
                       <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{w.name}</td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={w.client_id ?? ''}
+                          onChange={(e) => updateField(w.id, { client_id: e.target.value || null })}
+                          className={inlineSelectCls}
+                          aria-label="원청사 선택"
+                        >
+                          <option value="">선택 안 함</option>
+                          {clients.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={w.subcontractor_id ?? ''}
+                          onChange={(e) => updateField(w.id, { subcontractor_id: e.target.value || null })}
+                          className={inlineSelectCls}
+                          aria-label="전문건설사 선택"
+                        >
+                          <option value="">선택 안 함</option>
+                          {subcontractors.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="px-3 py-2 text-[#4B5563]">{w.address ?? '-'}</td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
@@ -133,6 +196,8 @@ export default function WorksitesPage() {
       {showAdd && (
         <WorksiteForm
           title="현장 추가"
+          clients={clients}
+          subcontractors={subcontractors}
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
         />
@@ -141,6 +206,8 @@ export default function WorksitesPage() {
         <WorksiteForm
           title={`${editing.name} 수정`}
           initial={editing}
+          clients={clients}
+          subcontractors={subcontractors}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
         />

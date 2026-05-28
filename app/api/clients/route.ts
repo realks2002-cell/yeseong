@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const includeArchived = new URL(req.url).searchParams.get('includeArchived') === 'true';
 
   let query = sb
-    .from('yeseong_subcontractors')
+    .from('yeseong_clients')
     .select('id, name, business_number, contact_phone, is_active, created_at')
     .order('name');
   if (!includeArchived) query = query.eq('is_active', true);
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
-  if (!name) return NextResponse.json({ error: '전문건설사명을 입력하세요' }, { status: 400 });
+  if (!name) return NextResponse.json({ error: '원청사명을 입력하세요' }, { status: 400 });
 
   const business_number = typeof body?.business_number === 'string' && body.business_number.trim()
     ? body.business_number.trim() : null;
@@ -34,14 +34,14 @@ export async function POST(req: Request) {
     ? body.contact_phone.trim() : null;
 
   const { data, error } = await sb
-    .from('yeseong_subcontractors')
+    .from('yeseong_clients')
     .insert({ name, business_number, contact_phone })
     .select('id, name, business_number, contact_phone, is_active, created_at')
     .single();
 
   if (error) {
     if (error.code === '23505') {
-      return NextResponse.json({ error: '이미 같은 이름의 전문건설사가 있습니다' }, { status: 409 });
+      return NextResponse.json({ error: '이미 같은 이름의 원청사가 있습니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <CardContent className="p-4 pt-0 space-y-2">
               <Link href="/workers"><Button variant="outline" size="sm" className="w-full justify-between">작업자 관리<ChevronRight className="h-3.5 w-3.5" /></Button></Link>
               <Link href="/worksites"><Button variant="outline" size="sm" className="w-full justify-between">현장 관리<ChevronRight className="h-3.5 w-3.5" /></Button></Link>
-              <Link href="/subcontractors"><Button variant="outline" size="sm" className="w-full justify-between">협력사 관리<ChevronRight className="h-3.5 w-3.5" /></Button></Link>
+              <Link href="/subcontractors"><Button variant="outline" size="sm" className="w-full justify-between">전문건설사 관리<ChevronRight className="h-3.5 w-3.5" /></Button></Link>
               <Link href="/payroll"><Button variant="outline" size="sm" className="w-full justify-between">노임대장<ChevronRight className="h-3.5 w-3.5" /></Button></Link>
             </CardContent>
           </Card>

@@ -273,7 +273,7 @@ export default function AttendanceReviewPage() {
                   <th className="px-3 py-2 font-medium">제출시간</th>
                   <th className="px-3 py-2 font-medium">작업자</th>
                   <th className="px-3 py-2 font-medium">현장</th>
-                  <th className="px-3 py-2 font-medium">협력사</th>
+                  <th className="px-3 py-2 font-medium">전문건설사</th>
                   <th className="px-3 py-2 font-medium text-right">공수</th>
                   <th className="px-3 py-2 font-medium text-center">상태</th>
                   <th className="px-3 py-2 font-medium">승인자(팀장)</th>

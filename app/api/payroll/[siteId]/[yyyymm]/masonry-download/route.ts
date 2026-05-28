@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
-import { fillPayrollWorkbook, buildDownloadFilename, type FillWorker } from '@/lib/excel/fill-payroll';
-import { periodRange } from '@/lib/utils/date';
+import {
+  fillMasonryPayrollWorkbook,
+  buildMasonryDownloadFilename,
+  type FillMasonryWorker,
+} from '@/lib/excel/fill-payroll-masonry';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { getCompanySettings } from '@/lib/settings/company';
+import { MAX_SLOTS } from '@/lib/excel/template-meta-masonry';
 
 export const runtime = 'nodejs';
+
+const MASONRY_WAGE_TYPE = '월급/일급';
 
 type PayrollData = {
   period: { id: string; year_month: string };
@@ -52,22 +58,26 @@ export async function GET(
     .single();
   if (!period) return new NextResponse('period not found', { status: 404 });
 
+  // 일급제와 동일 RPC 사용 — 매사 작업자는 라우트에서 필터 (별도 RPC 불필요)
   const { data: payload, error } = await sb.rpc('yeseong_admin_get_payroll', { p_period_id: period.id });
   if (error) return new NextResponse(error.message, { status: 500 });
   const data = payload as unknown as PayrollData;
-  if (!data.slots || data.slots.length === 0) {
-    return new NextResponse('no enrolled workers', { status: 400 });
+
+  const masonrySlots = (data.slots ?? []).filter((s) => s.worker.wage_type === MASONRY_WAGE_TYPE);
+  if (masonrySlots.length === 0) {
+    return new NextResponse('no masonry workers (월급/일급)', { status: 400 });
   }
-  if (data.slots.length > 32) {
-    return new NextResponse('too many workers (max 32)', { status: 400 });
+  if (masonrySlots.length > MAX_SLOTS) {
+    return new NextResponse(`too many masonry workers (max ${MAX_SLOTS})`, { status: 400 });
   }
 
-  const sortedSlots = [...data.slots].sort((a, b) =>
+  const sorted = [...masonrySlots].sort((a, b) =>
     a.worker.name.localeCompare(b.worker.name, 'ko'),
   );
-  const fillWorkers: FillWorker[] = sortedSlots.map((s, i) => ({
+  const workers: FillMasonryWorker[] = sorted.map((s, i) => ({
     slot: i + 1,
     trade: s.worker.default_trade,
+    team: s.subcontractor_name,
     name: s.worker.name,
     rrn: s.worker.rrn_plain,
     address: s.worker.address,
@@ -76,7 +86,6 @@ export async function GET(
     accountHolder: s.worker.account_holder,
     phone: s.worker.phone,
     dailyWage: s.worker.default_wage,
-    wageType: s.worker.wage_type,
     attendance: s.attendance.map((a) => ({
       day: parseInt(a.work_date.split('-')[2], 10),
       hours: a.hours,
@@ -84,26 +93,15 @@ export async function GET(
     volumes: s.volumes ?? [],
   }));
 
-  const { start, end } = periodRange(yyyymm);
   const settings = await getCompanySettings();
-  // 단일 파일 다운로드: 모든 슬롯의 전문건설사가 동일하면 그 전문건설사명을 "상 호"에 사용
-  const uniqueSubs = new Set(
-    data.slots
-      .map((s) => s.subcontractor_name)
-      .filter((v): v is string => !!v),
-  );
-  const subcontractorName = uniqueSubs.size === 1 ? Array.from(uniqueSubs)[0] : undefined;
-  const buf = await fillPayrollWorkbook({
+  const buf = await fillMasonryPayrollWorkbook({
     yearMonth: yyyymm,
-    periodStart: start,
-    periodEnd: end,
     companyName: settings.company_name,
-    subcontractorName,
     worksiteName: data.worksite.name,
-    workers: fillWorkers,
+    workers,
   });
 
-  const filename = buildDownloadFilename(data.worksite.name, yyyymm);
+  const filename = buildMasonryDownloadFilename(data.worksite.name, yyyymm);
   const encoded = encodeURIComponent(filename);
   return new NextResponse(new Uint8Array(buf), {
     status: 200,

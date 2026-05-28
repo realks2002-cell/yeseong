@@ -120,7 +120,7 @@ export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCan
           {isBrick ? (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">종류 *</label>
+                <label className="text-sm font-medium">품명 *</label>
                 <select value={typeName} onChange={(e) => changeBrickType(e.target.value)} disabled={loading} className={selectCls}>
                   {BRICK_TYPES.map((t) => (
                     <option key={t} value={t}>{t}</option>
@@ -142,7 +142,7 @@ export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCan
             <>
               {hasTypes && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">종류 *</label>
+                  <label className="text-sm font-medium">품명 *</label>
                   <select value={typeName} onChange={(e) => setTypeName(e.target.value)} disabled={loading} className={selectCls}>
                     {types.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -158,7 +158,7 @@ export function MasonryPriceForm({ category, initial, worksites, onSubmit, onCan
                   ))}
                 </select>
                 <p className="text-xs text-[#6B7280]">
-                  {hasTypes ? '종류·단위 조합마다 단가를 따로 등록합니다.' : '단위마다 단가를 따로 등록합니다.'}
+                  {hasTypes ? '품명·단위 조합마다 단가를 따로 등록합니다.' : '단위마다 단가를 따로 등록합니다.'}
                 </p>
               </div>
             </>

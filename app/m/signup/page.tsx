@@ -916,7 +916,7 @@ function LeaderStep({
       <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">
         소속 팀장을<br />선택해주세요
       </h1>
-      <p className="mt-4 text-sm text-zinc-500">팀장에 따라 현장·협력사가 자동 설정됩니다.</p>
+      <p className="mt-4 text-sm text-zinc-500">팀장에 따라 현장·전문건설사가 자동 설정됩니다.</p>
       <div className="mt-8 flex flex-col gap-3 overflow-y-auto">
         {teamLeaders.length === 0 ? (
           <p className="text-zinc-400">등록된 팀장이 없습니다. 관리자에게 문의하세요.</p>

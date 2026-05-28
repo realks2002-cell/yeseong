@@ -155,12 +155,12 @@ export default function MasonryPricesPage() {
                   <th className="px-3 py-2 font-medium">현장</th>
                   {isBrick ? (
                     <>
-                      <th className="px-3 py-2 font-medium">종류</th>
+                      <th className="px-3 py-2 font-medium">품명</th>
                       <th className="px-3 py-2 font-medium">규격</th>
                     </>
                   ) : hasTypes ? (
                     <>
-                      <th className="px-3 py-2 font-medium">종류</th>
+                      <th className="px-3 py-2 font-medium">품명</th>
                       <th className="px-3 py-2 font-medium">단위</th>
                     </>
                   ) : (

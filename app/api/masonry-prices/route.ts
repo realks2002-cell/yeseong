@@ -12,18 +12,19 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
-  const category = parseCategory(url.searchParams.get('category'));
+  const categoryParam = url.searchParams.get('category');
+  const category = categoryParam ? parseCategory(categoryParam) : null; // 미지정 시 전체 분류
   const worksiteId = url.searchParams.get('worksiteId');
 
   let q = sb
     .from('yeseong_masonry_prices')
     .select('id, category, type_name, size_spec, unit, unit_price, is_active, worksite_id, created_at, yeseong_worksites(id, name)')
-    .eq('is_active', true)
-    .eq('category', category);
+    .eq('is_active', true);
 
+  if (category) q = q.eq('category', category);
   if (worksiteId) q = q.eq('worksite_id', worksiteId);
 
-  const { data, error } = await q.order('type_name').order('size_spec').order('unit');
+  const { data, error } = await q.order('category').order('type_name').order('size_spec').order('unit');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   if (category === '조적') {
     type_name = typeof body?.type_name === 'string' ? body.type_name.trim() : '';
     if (!(BRICK_TYPES as readonly string[]).includes(type_name)) {
-      return NextResponse.json({ error: '종류를 선택하세요' }, { status: 400 });
+      return NextResponse.json({ error: '품명을 선택하세요' }, { status: 400 });
     }
     const sizes = brickSizes(type_name);
     if (sizes) {
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
     if (types) {
       const t = typeof body?.type_name === 'string' ? body.type_name.trim() : '';
       if (!(types as readonly string[]).includes(t)) {
-        return NextResponse.json({ error: '종류를 선택하세요' }, { status: 400 });
+        return NextResponse.json({ error: '품명을 선택하세요' }, { status: 400 });
       }
       type_name = t;
     } else {
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
   if (error) {
     if (error.code === '23505') {
       const msg = category === '조적'
-        ? '해당 현장에 동일 종류·규격이 이미 등록되어 있습니다'
+        ? '해당 현장에 동일 품명·규격이 이미 등록되어 있습니다'
         : `해당 현장에 ${category} ${unit} 단가가 이미 등록되어 있습니다`;
       return NextResponse.json({ error: msg }, { status: 409 });
     }

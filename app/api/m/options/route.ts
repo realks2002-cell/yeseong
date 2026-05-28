@@ -4,7 +4,7 @@ import { getServiceSupabase } from '@/lib/supabase/server';
 export const runtime = 'nodejs';
 
 // 가입 흐름에서 belonging 단계 도착 시 아직 로그인 전이므로 RLS 우회 필요.
-// 노출 정보: 활성 현장명/협력사명/팀장명+phone (민감 정보 아님).
+// 노출 정보: 활성 현장명/전문건설사명/팀장명+phone (민감 정보 아님).
 export async function GET() {
   const sb = getServiceSupabase();
   const [worksites, subcontractors, teamLeaders] = await Promise.all([

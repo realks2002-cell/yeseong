@@ -11,7 +11,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const patch: Record<string, unknown> = {};
   if (typeof body?.name === 'string') {
     const name = body.name.trim();
-    if (!name) return NextResponse.json({ error: '협력사명은 비울 수 없습니다' }, { status: 400 });
+    if (!name) return NextResponse.json({ error: '전문건설사명은 비울 수 없습니다' }, { status: 400 });
     patch.name = name;
   }
   if ('business_number' in (body ?? {})) {
@@ -40,7 +40,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (error) {
     if (error.code === '23505') {
-      return NextResponse.json({ error: '이미 같은 이름의 협력사가 있습니다' }, { status: 409 });
+      return NextResponse.json({ error: '이미 같은 이름의 전문건설사가 있습니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

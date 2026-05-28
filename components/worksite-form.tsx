@@ -7,6 +7,8 @@ import { X } from 'lucide-react';
 export type WorksiteInput = {
   name: string;
   address: string;
+  client_id: string | null;
+  subcontractor_id: string | null;
   is_active: boolean;
 };
 
@@ -14,20 +16,28 @@ export type Worksite = {
   id: string;
   name: string;
   address: string | null;
+  client_id: string | null;
+  subcontractor_id: string | null;
   is_active: boolean;
   created_at: string;
 };
 
+export type Option = { id: string; name: string };
+
 type Props = {
   initial?: Worksite;
+  clients: Option[];
+  subcontractors: Option[];
   onSubmit: (input: WorksiteInput) => Promise<void>;
   onCancel: () => void;
   title: string;
 };
 
-export function WorksiteForm({ initial, onSubmit, onCancel, title }: Props) {
+export function WorksiteForm({ initial, clients, subcontractors, onSubmit, onCancel, title }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [address, setAddress] = useState(initial?.address ?? '');
+  const [clientId, setClientId] = useState(initial?.client_id ?? '');
+  const [subcontractorId, setSubcontractorId] = useState(initial?.subcontractor_id ?? '');
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +45,8 @@ export function WorksiteForm({ initial, onSubmit, onCancel, title }: Props) {
   useEffect(() => {
     setName(initial?.name ?? '');
     setAddress(initial?.address ?? '');
+    setClientId(initial?.client_id ?? '');
+    setSubcontractorId(initial?.subcontractor_id ?? '');
     setIsActive(initial?.is_active ?? true);
   }, [initial]);
 
@@ -44,13 +56,22 @@ export function WorksiteForm({ initial, onSubmit, onCancel, title }: Props) {
     if (!name.trim()) return setErr('현장명을 입력하세요');
     setLoading(true);
     try {
-      await onSubmit({ name: name.trim(), address: address.trim(), is_active: isActive });
+      await onSubmit({
+        name: name.trim(),
+        address: address.trim(),
+        client_id: clientId || null,
+        subcontractor_id: subcontractorId || null,
+        is_active: isActive,
+      });
     } catch (e) {
       setErr(e instanceof Error ? e.message : '저장 실패');
     } finally {
       setLoading(false);
     }
   }
+
+  const selectCls =
+    'h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
@@ -82,6 +103,36 @@ export function WorksiteForm({ initial, onSubmit, onCancel, title }: Props) {
               placeholder="(선택)"
               disabled={loading}
             />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="ws-client">원청사</label>
+            <select
+              id="ws-client"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              disabled={loading}
+              className={selectCls}
+            >
+              <option value="">선택 안 함</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="ws-sub">전문건설사</label>
+            <select
+              id="ws-sub"
+              value={subcontractorId}
+              onChange={(e) => setSubcontractorId(e.target.value)}
+              disabled={loading}
+              className={selectCls}
+            >
+              <option value="">선택 안 함</option>
+              {subcontractors.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input

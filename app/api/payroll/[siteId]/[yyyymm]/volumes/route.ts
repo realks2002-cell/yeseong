@@ -33,7 +33,7 @@ export async function GET(
 
   const { data, error } = await sb
     .from('yeseong_masonry_volumes')
-    .select('id, payroll_worker_id, category, type_name, size_spec, quantity, unit_price, amount, note')
+    .select('id, payroll_worker_id, category, type_name, size_spec, quantity, unit, unit_price, amount, note')
     .in('payroll_worker_id', slotIds);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);

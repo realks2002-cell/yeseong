@@ -37,21 +37,27 @@ export async function GET(req: Request) {
     return (a.name ?? '').localeCompare(b.name ?? '', 'ko');
   });
 
-  // 팀장 협력사 = 연결된 worker(phone) 의 default_subcontractor_id (팀장도 작업자)
+  // 팀장 전문건설사 = 담당 현장의 전문건설사 (현장 1:1 — worksites.subcontractor_id)
   const admin = getServiceSupabase();
-  const phones = sorted.map((m: { phone: string | null }) => m.phone).filter((p): p is string => !!p);
-  const subMap = new Map<string, string | null>();
-  if (phones.length > 0) {
-    const { data: ws } = await admin
-      .from('yeseong_workers')
-      .select('phone, default_subcontractor_id')
-      .in('phone', phones);
-    for (const w of ws ?? []) subMap.set(w.phone, w.default_subcontractor_id);
-  }
-  const enriched = sorted.map((m: { phone: string | null }) => ({
-    ...m,
-    subcontractor_id: m.phone ? subMap.get(m.phone) ?? null : null,
-  }));
+  const { data: wsRows } = await admin
+    .from('yeseong_worksites')
+    .select('id, subcontractor_id');
+  const wsSubMap = new Map<string, string | null>((wsRows ?? []).map((w) => [w.id, w.subcontractor_id]));
+
+  type AssignShape =
+    | Array<{ worksite_id: string }>
+    | { worksite_id: string }
+    | null;
+  const firstWorksiteId = (a: AssignShape): string | null => {
+    if (!a) return null;
+    const arr = Array.isArray(a) ? a : [a];
+    return arr[0]?.worksite_id ?? null;
+  };
+
+  const enriched = sorted.map((m: { yeseong_site_manager_assignments?: AssignShape }) => {
+    const wsId = firstWorksiteId(m.yeseong_site_manager_assignments ?? null);
+    return { ...m, subcontractor_id: wsId ? wsSubMap.get(wsId) ?? null : null };
+  });
   return NextResponse.json(enriched);
 }
 
@@ -68,8 +74,6 @@ export async function POST(req: Request) {
   const worksiteIds: string[] = Array.isArray(body?.worksite_ids)
     ? body.worksite_ids.filter((v: unknown) => typeof v === 'string')
     : [];
-  const subcontractorId: string | null =
-    typeof body?.subcontractor_id === 'string' && body.subcontractor_id ? body.subcontractor_id : null;
 
   if (!name) return NextResponse.json({ error: '성명을 입력하세요' }, { status: 400 });
   const phone = normalizePhone(phoneRaw);
@@ -134,19 +138,13 @@ export async function POST(req: Request) {
   if (!existingWorker) {
     const { error: wErr } = await admin
       .from('yeseong_workers')
-      .insert({ name, phone, default_wage: 0, default_subcontractor_id: subcontractorId });
+      .insert({ name, phone, default_wage: 0 });
     if (wErr) {
       // 팀장/auth 롤백 후 실패 반환
       await admin.from('yeseong_site_managers').delete().eq('id', inserted.id);
       if (authUserId) await admin.auth.admin.deleteUser(authUserId);
       return NextResponse.json({ error: '작업자 등록 실패: ' + wErr.message }, { status: 500 });
     }
-  } else {
-    // 기존 worker면 협력사만 동기화 (팀원이 팀장 협력사를 따라감)
-    await admin
-      .from('yeseong_workers')
-      .update({ default_subcontractor_id: subcontractorId })
-      .eq('phone', phone);
   }
 
   if (worksiteIds.length > 0) {
@@ -154,10 +152,15 @@ export async function POST(req: Request) {
     const { error: asErr } = await admin.from('yeseong_site_manager_assignments').insert(rows);
     if (asErr) return NextResponse.json({ error: asErr.message }, { status: 500 });
 
-    // 팀장도 작업자 — 담당 현장을 성과 입력 기본 현장으로 동기화
+    // 팀장도 작업자 — 담당 현장 + 그 현장의 전문건설사(1:1)를 worker 행에 동기화
+    const { data: ws } = await admin
+      .from('yeseong_worksites')
+      .select('subcontractor_id')
+      .eq('id', worksiteIds[0])
+      .single();
     await admin
       .from('yeseong_workers')
-      .update({ default_worksite_id: worksiteIds[0] })
+      .update({ default_worksite_id: worksiteIds[0], default_subcontractor_id: ws?.subcontractor_id ?? null })
       .eq('phone', phone);
   }
 

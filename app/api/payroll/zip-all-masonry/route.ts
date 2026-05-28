@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import JSZip from 'jszip';
-import { fillPayrollWorkbook, type FillWorker } from '@/lib/excel/fill-payroll';
-import { periodRange } from '@/lib/utils/date';
+import { fillMasonryPayrollWorkbook, type FillMasonryWorker } from '@/lib/excel/fill-payroll-masonry';
+import { MAX_SLOTS } from '@/lib/excel/template-meta-masonry';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { getCompanySettings } from '@/lib/settings/company';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+
+const MASONRY_WAGE_TYPE = '월급/일급';
 
 type Slot = {
   id: string;
@@ -41,31 +43,10 @@ function safeFileName(s: string): string {
   return s.replace(/[\/\\:*?"<>|]/g, '_').slice(0, 100);
 }
 
-function toFillWorker(s: Slot, slotIdx: number): FillWorker {
-  return {
-    slot: slotIdx,
-    trade: s.worker.default_trade,
-    name: s.worker.name,
-    rrn: s.worker.rrn_plain,
-    address: s.worker.address,
-    bankName: s.worker.bank_name,
-    accountNumber: s.worker.account_number,
-    accountHolder: s.worker.account_holder,
-    phone: s.worker.phone,
-    dailyWage: s.worker.default_wage,
-    wageType: s.worker.wage_type,
-    attendance: s.attendance.map((a) => ({
-      day: parseInt(a.work_date.split('-')[2], 10),
-      hours: a.hours,
-    })),
-    volumes: s.volumes ?? [],
-  };
-}
-
+// 매사 노임대장 전체 ZIP — 현장별 1파일 (매사 작업자만, 전문건설사 그룹핑 없음)
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const yyyymm = url.searchParams.get('yyyymm') ?? '';
-  const subFilter = url.searchParams.get('subcontractor') ?? '';
   if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
     return new NextResponse('invalid yyyymm', { status: 400 });
   }
@@ -89,10 +70,8 @@ export async function GET(req: Request) {
     return new NextResponse('no payroll data for ' + yyyymm, { status: 404 });
   }
 
-  const { start, end } = periodRange(yyyymm);
   const settings = await getCompanySettings();
   const zip = new JSZip();
-
   const warnings: string[] = [];
   let totalFiles = 0;
 
@@ -103,51 +82,54 @@ export async function GET(req: Request) {
       continue;
     }
     const data = payload as unknown as PayrollData;
-    if (!data.slots || data.slots.length === 0) continue;
-
-    const groups = new Map<string, Slot[]>();
-    for (const s of data.slots) {
-      const key = s.subcontractor_name ?? '미배정';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(s);
+    const masonry = (data.slots ?? []).filter((s) => s.worker.wage_type === MASONRY_WAGE_TYPE);
+    if (masonry.length === 0) continue;
+    if (masonry.length > MAX_SLOTS) {
+      warnings.push(`${data.worksite.name}: 매사 작업자 ${masonry.length}명 (최대 ${MAX_SLOTS}명 초과로 스킵)`);
+      continue;
     }
 
-    for (const [subName, groupSlots] of groups) {
-      // 전문건설사 필터가 있으면 해당 전문건설사만 처리
-      if (subFilter && subName !== subFilter) continue;
-      if (groupSlots.length > 32) {
-        warnings.push(`${data.worksite.name} / ${subName}: 슬롯 ${groupSlots.length}명 (32 초과로 스킵)`);
-        continue;
-      }
-      const sorted = [...groupSlots].sort((a, b) =>
-        a.worker.name.localeCompare(b.worker.name, 'ko'),
-      );
-      const fillWorkers = sorted.map((s, i) => toFillWorker(s, i + 1));
-      const buf = await fillPayrollWorkbook({
-        yearMonth: yyyymm,
-        periodStart: start,
-        periodEnd: end,
-        companyName: settings.company_name,
-        subcontractorName: subName === '미배정' ? undefined : subName,
-        worksiteName: data.worksite.name,
-        workers: fillWorkers,
-      });
-      const innerName = safeFileName(`노임대장_${data.worksite.name}_${subName}_${yyyymm}.xlsx`);
-      zip.file(innerName, buf);
-      totalFiles++;
-    }
+    const sorted = [...masonry].sort((a, b) =>
+      a.worker.name.localeCompare(b.worker.name, 'ko'),
+    );
+    const workers: FillMasonryWorker[] = sorted.map((s, i) => ({
+      slot: i + 1,
+      trade: s.worker.default_trade,
+      team: s.subcontractor_name,
+      name: s.worker.name,
+      rrn: s.worker.rrn_plain,
+      address: s.worker.address,
+      bankName: s.worker.bank_name,
+      accountNumber: s.worker.account_number,
+      accountHolder: s.worker.account_holder,
+      phone: s.worker.phone,
+      dailyWage: s.worker.default_wage,
+      attendance: s.attendance.map((a) => ({
+        day: parseInt(a.work_date.split('-')[2], 10),
+        hours: a.hours,
+      })),
+      volumes: s.volumes ?? [],
+    }));
+
+    const buf = await fillMasonryPayrollWorkbook({
+      yearMonth: yyyymm,
+      companyName: settings.company_name,
+      worksiteName: data.worksite.name,
+      workers,
+    });
+    zip.file(safeFileName(`매사노임대장_${data.worksite.name}_${yyyymm}.xlsx`), buf);
+    totalFiles++;
   }
 
   if (totalFiles === 0) {
-    return new NextResponse('생성 가능한 노임대장이 없습니다.\n' + warnings.join('\n'), { status: 400 });
+    return new NextResponse('생성 가능한 매사 노임대장이 없습니다.\n' + warnings.join('\n'), { status: 400 });
   }
-
   if (warnings.length > 0) {
     zip.file('_경고.txt', warnings.join('\n'));
   }
 
   const zipBuf = await zip.generateAsync({ type: 'nodebuffer' });
-  const zipFilename = safeFileName(subFilter ? `노임대장_${subFilter}_${yyyymm}.zip` : `노임대장_전체_${yyyymm}.zip`);
+  const zipFilename = safeFileName(`매사노임대장_전체_${yyyymm}.zip`);
   const encoded = encodeURIComponent(zipFilename);
   return new NextResponse(new Uint8Array(zipBuf), {
     status: 200,
