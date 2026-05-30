@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Home, User, Wallet, ClipboardCheck, PackagePlus, Receipt, Building2, Package } from 'lucide-react';
+import { Home, User, Wallet, ClipboardCheck, PackagePlus, Package, Camera } from 'lucide-react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, withMirror } from '@/lib/manager/mirror';
 
-type WorkerTab = 'home' | 'payroll' | 'volumes' | 'affiliation' | 'profile';
-type ManagerTab = 'home' | 'orders' | 'expenses' | 'volumes' | 'affiliation' | 'profile';
+type WorkerTab = 'home' | 'payroll' | 'volumes' | 'proofs' | 'profile';
+type ManagerTab = 'home' | 'orders' | 'proofs' | 'volumes' | 'affiliation' | 'profile';
 type ActiveTab = WorkerTab | ManagerTab;
 
 type Props = {
@@ -33,7 +33,7 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
             <HomeTabWithLongPressLogout active={activeTab === 'home'} />
             <Tab href="/m/payroll" icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
             <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-            <Tab href="/m/profile" icon={<Building2 className="h-6 w-6" />} label="소속" active={activeTab === 'affiliation'} />
+            <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="증빙" active={activeTab === 'proofs'} />
             <Tab href="/m/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
           </nav>
         )}
@@ -41,7 +41,7 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
           <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
             <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
             <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
-            <Tab href={withMirror('/m/manager/expenses', mirror)} icon={<Receipt className="h-6 w-6" />} label="비용" active={activeTab === 'expenses'} />
+            <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="증빙" active={activeTab === 'proofs'} />
             <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
             <Tab href={withMirror('/m/manager/me', mirror)} icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
           </nav>

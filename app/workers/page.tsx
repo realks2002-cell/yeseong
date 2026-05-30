@@ -4,6 +4,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WorkerForm, type Worker, type WorkerInput, type TeamLeaderOption } from '@/components/worker-form';
+import { WorkerDocumentsModal } from '@/components/worker-documents-modal';
 import { WAGE_TYPES } from '@/lib/constants/trades';
 import { formatRrnDisplay } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
@@ -20,6 +21,7 @@ export default function WorkersPage() {
   const [wageTypeFilter, setWageTypeFilter] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
   const [savingLeaderId, setSavingLeaderId] = useState<string | null>(null);
+  const [docsWorker, setDocsWorker] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -262,7 +264,14 @@ export default function WorkersPage() {
                     <tr key={w.id} className="group hover:bg-[#F5F5F5]">
                       <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center text-[#9CA3AF] tabular-nums">{i + 1}</td>
                       <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
-                        <div className="font-semibold text-[#091413]">{w.name}</div>
+                        <button
+                          type="button"
+                          onClick={() => setDocsWorker({ id: w.id, name: w.name })}
+                          className="font-semibold text-[#091413] hover:underline focus:outline-none focus:underline"
+                          title="서류 보기"
+                        >
+                          {w.name}
+                        </button>
                         {w.name_english && <div className="text-[10px] text-[#9CA3AF]">{w.name_english}</div>}
                       </td>
                       <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
@@ -394,6 +403,7 @@ export default function WorkersPage() {
           trades={trades}
         />
       )}
+      <WorkerDocumentsModal worker={docsWorker} onClose={() => setDocsWorker(null)} />
     </AdminShell>
   );
 }

@@ -27,6 +27,7 @@ import {
   Smartphone,
   LogOut as LogOutIcon,
   KeyRound,
+  Images,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
@@ -61,6 +62,7 @@ const groups: Group[] = [
       { label: '발주', href: '/orders', icon: ShoppingCart },
       { label: '영수증', href: '/expenses', icon: Receipt },
       { label: '장비 렌탈', href: '/equipment', icon: Wrench },
+      { label: '증빙', href: '/admin/site-photos', icon: Images, badge: 'NEW' },
     ],
   },
   {

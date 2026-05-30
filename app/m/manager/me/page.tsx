@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Pencil, Save, X, ChevronRight, ChevronDown, ChevronUp, MapPin, Users } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
+import { DocumentsSection } from '@/components/mobile/document-uploader';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, mirrorFetch, withMirror } from '@/lib/manager/mirror';
 import { formatPhone } from '@/lib/auth/phone-email';
@@ -410,6 +411,8 @@ export default function ManagerMePage() {
           <ChevronRight className="h-5 w-5 text-emerald-400" />
         </Link>
       </section>
+
+      {me.worker && <DocumentsSection readOnly={readOnly} />}
     </MobileShell>
   );
 }

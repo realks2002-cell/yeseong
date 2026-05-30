@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MobileShell } from '@/components/mobile/mobile-shell';
+import { DocumentsSection } from '@/components/mobile/document-uploader';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone } from '@/lib/auth/phone-email';
 
@@ -17,6 +18,9 @@ type Me = {
     account_holder: string | null;
     address: string | null;
   };
+  worksite: { id: string; name: string } | null;
+  subcontractor: { id: string; name: string } | null;
+  team_leader: { id: string; name: string } | null;
 };
 
 export default function MePage() {
@@ -67,7 +71,16 @@ export default function MePage() {
         </p>
       </section>
 
+      <section className="px-7 space-y-4 pb-8">
+        <h2 className="text-lg font-bold text-zinc-900">소속</h2>
+        <p className="-mt-2 text-sm text-zinc-500">팀장에 따라 자동으로 정해져요. 변경은 관리자에게 문의하세요.</p>
+        <ReadField label="팀장" value={me.team_leader?.name} />
+        <ReadField label="현장" value={me.worksite?.name} />
+        <ReadField label="소속(전문건설사)" value={me.subcontractor?.name} />
+      </section>
+
       <section className="px-7 space-y-4 pb-10">
+        <h2 className="text-lg font-bold text-zinc-900">기본 정보</h2>
         <ReadField label="구분" value={w.skill_grade} />
         <ReadField label="공종" value={w.default_trade} />
         <ReadField label="은행" value={w.bank_name} />
@@ -75,6 +88,8 @@ export default function MePage() {
         <ReadField label="예금주" value={w.account_holder} />
         <ReadField label="주소" value={w.address} />
       </section>
+
+      <DocumentsSection />
     </MobileShell>
   );
 }
