@@ -4,7 +4,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WorkerForm, type Worker, type WorkerInput, type TeamLeaderOption } from '@/components/worker-form';
-import { WorkerDocumentsModal } from '@/components/worker-documents-modal';
+import { WorkerDocumentsModal, type DocSubject } from '@/components/worker-documents-modal';
 import { WAGE_TYPES } from '@/lib/constants/trades';
 import { formatRrnDisplay } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
@@ -21,7 +21,7 @@ export default function WorkersPage() {
   const [wageTypeFilter, setWageTypeFilter] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
   const [savingLeaderId, setSavingLeaderId] = useState<string | null>(null);
-  const [docsWorker, setDocsWorker] = useState<{ id: string; name: string } | null>(null);
+  const [docsWorker, setDocsWorker] = useState<DocSubject | null>(null);
 
   const filtered = useMemo(() => {
     if (!list) return null;
@@ -266,7 +266,7 @@ export default function WorkersPage() {
                       <td className="border-b border-[#EAEAEA] px-3 py-2.5 text-center">
                         <button
                           type="button"
-                          onClick={() => setDocsWorker({ id: w.id, name: w.name })}
+                          onClick={() => setDocsWorker({ kind: 'worker', id: w.id, name: w.name })}
                           className="font-semibold text-[#091413] hover:underline focus:outline-none focus:underline"
                           title="서류 보기"
                         >
@@ -403,7 +403,7 @@ export default function WorkersPage() {
           trades={trades}
         />
       )}
-      <WorkerDocumentsModal worker={docsWorker} onClose={() => setDocsWorker(null)} />
+      <WorkerDocumentsModal subject={docsWorker} onClose={() => setDocsWorker(null)} />
     </AdminShell>
   );
 }

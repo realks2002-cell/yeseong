@@ -4,6 +4,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Search, X, UserPlus, Pencil, RotateCcw, Trash2, Users } from 'lucide-react';
+import { WorkerDocumentsModal, type DocSubject } from '@/components/worker-documents-modal';
 
 type Manager = {
   id: string;
@@ -58,6 +59,7 @@ export default function ManagersPage() {
   const [editing, setEditing] = useState<Manager | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [viewingManager, setViewingManager] = useState<Manager | null>(null);
+  const [docsManager, setDocsManager] = useState<DocSubject | null>(null);
   const [members, setMembers] = useState<TeamMember[] | null>(null);
   const [membersError, setMembersError] = useState<string | null>(null);
 
@@ -265,7 +267,14 @@ export default function ManagersPage() {
                       <tr key={m.id} className={`text-center hover:bg-[#F5F5F5] ${!m.is_active ? 'text-[#9CA3AF]' : ''}`}>
                         <td className="px-3 py-2 tabular-nums text-[#6B7280]">{i + 1}</td>
                         <td className="px-3 py-2 font-medium">
-                          {m.name}
+                          <button
+                            type="button"
+                            onClick={() => setDocsManager({ kind: 'manager', id: m.id, name: m.name })}
+                            className="text-[#091413] hover:underline focus:outline-none focus:underline"
+                            title="서류 보기"
+                          >
+                            {m.name}
+                          </button>
                           {!m.is_active && (
                             <span className="ml-2 rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] text-[#6B7280]">보관됨</span>
                           )}
@@ -428,6 +437,8 @@ export default function ManagersPage() {
           </div>
         </div>
       )}
+
+      <WorkerDocumentsModal subject={docsManager} onClose={() => setDocsManager(null)} />
     </AdminShell>
   );
 }

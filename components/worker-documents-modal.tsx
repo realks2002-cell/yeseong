@@ -48,11 +48,17 @@ function groupDocs(rows: ApiDoc[]): DocSet {
   };
 }
 
+export type DocSubject = { kind: 'worker' | 'manager'; id: string; name: string };
+
+function endpointBase(s: DocSubject): string {
+  return s.kind === 'manager' ? `/api/managers/${s.id}/documents` : `/api/workers/${s.id}/documents`;
+}
+
 export function WorkerDocumentsModal({
-  worker,
+  subject,
   onClose,
 }: {
-  worker: { id: string; name: string } | null;
+  subject: DocSubject | null;
   onClose: () => void;
 }) {
   const [docs, setDocs] = useState<DocSet | null>(null);
@@ -61,11 +67,11 @@ export function WorkerDocumentsModal({
   const [viewing, setViewing] = useState<Photo | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const load = useCallback(async (workerId: string) => {
+  const load = useCallback(async (s: DocSubject) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/workers/${workerId}/documents`, { cache: 'no-store' });
+      const res = await fetch(endpointBase(s), { cache: 'no-store' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '불러오기 실패');
       setDocs(groupDocs(json.documents ?? []));
@@ -78,28 +84,27 @@ export function WorkerDocumentsModal({
   }, []);
 
   useEffect(() => {
-    if (!worker) {
+    if (!subject) {
       setDocs(null);
       setError(null);
       return;
     }
-    load(worker.id);
-  }, [worker, load]);
+    load(subject);
+  }, [subject, load]);
 
   const handleDelete = async (doc: InternalDoc) => {
-    if (!worker) return;
+    if (!subject) return;
     if (!confirm(`"${doc.label}" 사진을 삭제하시겠습니까?`)) return;
     setDeletingId(doc.id);
     try {
-      const res = await fetch(`/api/workers/${worker.id}/documents/${doc.id}`, { method: 'DELETE' });
+      const res = await fetch(`${endpointBase(subject)}/${doc.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         alert(j.error || '삭제 실패');
         return;
       }
-      // 뷰어가 이 사진을 열고 있으면 닫음
       if (viewing && viewing.url === doc.url) setViewing(null);
-      await load(worker.id);
+      await load(subject);
     } finally {
       setDeletingId(null);
     }
@@ -107,11 +112,11 @@ export function WorkerDocumentsModal({
 
   return (
     <>
-      <Dialog open={!!worker} onOpenChange={(o) => !o && onClose()}>
-        {worker && (
+      <Dialog open={!!subject} onOpenChange={(o) => !o && onClose()}>
+        {subject && (
           <DialogContent className="flex max-h-[85vh] w-[720px] max-w-[95vw] flex-col overflow-hidden">
             <DialogHeader>
-              <DialogTitle>{worker.name} 서류</DialogTitle>
+              <DialogTitle>{subject.name} 서류</DialogTitle>
               <DialogDescription>
                 업로드된 신분증·통장사본·자격증 사본입니다. 사진을 클릭하면 크게 볼 수 있습니다.
               </DialogDescription>
