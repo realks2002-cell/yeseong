@@ -182,7 +182,7 @@ export default function SitePhotosPage() {
       <div className="mx-auto max-w-7xl p-5 space-y-5">
         <header className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#091413]">증빙</h1>
+            <h1 className="text-xl font-bold tracking-tight text-[#091413]">현장증빙</h1>
             <p className="mt-1 text-sm text-[#6B7280]">
               작업자·팀장이 앱에서 올린 TBM·자재·일반·비용 사진을 현장·날짜·카테고리별로 조회합니다.
             </p>

@@ -33,7 +33,7 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
             <HomeTabWithLongPressLogout active={activeTab === 'home'} />
             <Tab href="/m/payroll" icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
             <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-            <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="증빙" active={activeTab === 'proofs'} />
+            <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
             <Tab href="/m/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
           </nav>
         )}
@@ -41,7 +41,7 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
           <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
             <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
             <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
-            <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="증빙" active={activeTab === 'proofs'} />
+            <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
             <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
             <Tab href={withMirror('/m/manager/me', mirror)} icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
           </nav>
