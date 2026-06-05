@@ -10,13 +10,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: 'invalid body' }, { status: 400 });
 
-  const allowed = ['item_code', 'name', 'spec', 'unit', 'vendor_id'];
+  const allowed = ['item_code', 'name', 'spec', 'unit', 'vendor_id', 'trades'];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) {
       const v = body[k];
       if (k === 'vendor_id') {
         patch[k] = typeof v === 'string' && v ? v : null;
+      } else if (k === 'trades') {
+        patch[k] = Array.isArray(v) && v.length > 0
+          ? v.filter((t: unknown) => typeof t === 'string' && t)
+          : null;
       } else if (typeof v === 'string') {
         patch[k] = v.trim() || null;
       } else if (v === null) {

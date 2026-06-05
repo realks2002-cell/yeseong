@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { PackagePlus, Pencil, Trash2, Search, X } from 'lucide-react';
 
 type Vendor = { id: string; name: string };
+type Trade = { id: string; name: string };
 type Item = {
   id: string;
   item_code: string | null;
@@ -14,6 +15,7 @@ type Item = {
   spec: string | null;
   unit: string;
   vendor_id: string | null;
+  trades: string[] | null;
   is_active: boolean;
   created_at: string;
 };
@@ -23,11 +25,13 @@ type ItemInput = {
   spec: string | null;
   unit: string;
   vendor_id: string | null;
+  trades: string[] | null;
 };
 
 export default function ItemsPage() {
   const [list, setList] = useState<Item[] | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,13 +52,15 @@ export default function ItemsPage() {
 
   async function load() {
     setError(null);
-    const [iRes, vRes] = await Promise.all([
+    const [iRes, vRes, tRes] = await Promise.all([
       fetch('/api/items', { cache: 'no-store' }),
       fetch('/api/vendors', { cache: 'no-store' }),
+      fetch('/api/trades', { cache: 'no-store' }),
     ]);
     if (!iRes.ok) { setError('목록을 불러오지 못했습니다'); setList([]); return; }
     setList(await iRes.json());
     if (vRes.ok) setVendors(await vRes.json());
+    if (tRes.ok) setTrades(await tRes.json());
   }
 
   useEffect(() => { load(); }, []);
@@ -124,15 +130,16 @@ export default function ItemsPage() {
                   <th className="px-3 py-2 font-medium">품목</th>
                   <th className="px-3 py-2 font-medium">규격</th>
                   <th className="px-3 py-2 font-medium">단위</th>
+                  <th className="px-3 py-2 font-medium">공종</th>
                   <th className="px-3 py-2 font-medium">거래처</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {filtered === null ? (
-                  <tr><td colSpan={7} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-10 text-center text-[#9CA3AF]">
+                  <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">
                     {query ? '검색 결과가 없습니다.' : '등록된 품목이 없습니다.'}
                   </td></tr>
                 ) : (
@@ -143,6 +150,17 @@ export default function ItemsPage() {
                       <td className="px-3 py-2 font-medium">{it.name}</td>
                       <td className="px-3 py-2 text-[#4B5563]">{it.spec ?? '-'}</td>
                       <td className="px-3 py-2">{it.unit}</td>
+                      <td className="px-3 py-2 text-center">
+                        {it.trades && it.trades.length > 0 ? (
+                          <span className="inline-flex flex-wrap gap-0.5 justify-center">
+                            {it.trades.map((t) => (
+                              <span key={t} className="rounded bg-[#447D9B]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#447D9B]">{t}</span>
+                            ))}
+                          </span>
+                        ) : (
+                          <span className="rounded bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] font-semibold text-[#9CA3AF]">공통</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-[#4B5563]">{it.vendor_id ? vendorMap.get(it.vendor_id) ?? '-' : <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
@@ -159,14 +177,14 @@ export default function ItemsPage() {
         </Card>
       </div>
 
-      {showAdd && <ItemForm title="품목 추가" vendors={vendors} onSubmit={handleAdd} onCancel={() => setShowAdd(false)} />}
-      {editing && <ItemForm title={`${editing.name} 수정`} vendors={vendors} initial={editing} onSubmit={handleEdit} onCancel={() => setEditing(null)} />}
+      {showAdd && <ItemForm title="품목 추가" vendors={vendors} trades={trades} onSubmit={handleAdd} onCancel={() => setShowAdd(false)} />}
+      {editing && <ItemForm title={`${editing.name} 수정`} vendors={vendors} trades={trades} initial={editing} onSubmit={handleEdit} onCancel={() => setEditing(null)} />}
     </AdminShell>
   );
 }
 
-function ItemForm({ title, vendors, initial, onSubmit, onCancel }: {
-  title: string; vendors: Vendor[]; initial?: Item;
+function ItemForm({ title, vendors, trades, initial, onSubmit, onCancel }: {
+  title: string; vendors: Vendor[]; trades: Trade[]; initial?: Item;
   onSubmit: (i: ItemInput) => Promise<void>; onCancel: () => void;
 }) {
   const [itemCode, setItemCode] = useState(initial?.item_code ?? '');
@@ -174,8 +192,13 @@ function ItemForm({ title, vendors, initial, onSubmit, onCancel }: {
   const [spec, setSpec] = useState(initial?.spec ?? '');
   const [unit, setUnit] = useState(initial?.unit ?? '');
   const [vendorId, setVendorId] = useState(initial?.vendor_id ?? '');
+  const [selectedTrades, setSelectedTrades] = useState<string[]>(initial?.trades ?? []);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function toggleTrade(t: string) {
+    setSelectedTrades((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -185,7 +208,11 @@ function ItemForm({ title, vendors, initial, onSubmit, onCancel }: {
     setLoading(true);
     try {
       const nullable = (s: string) => s.trim() || null;
-      await onSubmit({ item_code: nullable(itemCode), name: name.trim(), spec: nullable(spec), unit: unit.trim(), vendor_id: vendorId || null });
+      await onSubmit({
+        item_code: nullable(itemCode), name: name.trim(), spec: nullable(spec), unit: unit.trim(),
+        vendor_id: vendorId || null,
+        trades: selectedTrades.length > 0 ? selectedTrades : null,
+      });
     } catch (e) { setErr(e instanceof Error ? e.message : '저장 실패'); } finally { setLoading(false); }
   }
 
@@ -212,6 +239,28 @@ function ItemForm({ title, vendors, initial, onSubmit, onCancel }: {
           <div className="col-span-2 space-y-1.5">
             <label className="text-sm font-medium">규격</label>
             <Input value={spec} onChange={(e) => setSpec(e.target.value)} placeholder="선택" disabled={loading} />
+          </div>
+          <div className="col-span-2 space-y-1.5">
+            <label className="text-sm font-medium">
+              노출 공종 <span className="text-[#9CA3AF] font-normal">(미선택 = 모든 팀장에게 노출)</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {trades.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => toggleTrade(t.name)}
+                  disabled={loading}
+                  className={`rounded-[5px] border px-2.5 py-1.5 text-xs font-semibold ${
+                    selectedTrades.includes(t.name)
+                      ? 'border-[#273F4F] bg-[#273F4F] text-white'
+                      : 'border-[#D7D7D7] bg-white text-[#091413] hover:bg-[#F5F5F5]'
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="col-span-2 space-y-1.5">
             <label className="text-sm font-medium">거래처</label>

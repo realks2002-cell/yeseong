@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data, error } = await sb
     .from('yeseong_items')
-    .select('id, item_code, name, spec, unit, vendor_id, is_active, created_at')
+    .select('id, item_code, name, spec, unit, vendor_id, trades, is_active, created_at')
     .eq('is_active', true)
     .order('name');
 
@@ -37,6 +37,9 @@ export async function POST(req: Request) {
       spec: str(body.spec),
       unit,
       vendor_id: typeof body?.vendor_id === 'string' && body.vendor_id ? body.vendor_id : null,
+      trades: Array.isArray(body?.trades) && body.trades.length > 0
+        ? body.trades.filter((t: unknown) => typeof t === 'string' && t)
+        : null,
     })
     .select('id')
     .single();
