@@ -1,9 +1,11 @@
 // 백그라운드 GPS 추적 — 앱이 백그라운드에 있어도 위치를 주기적으로 서버에 전송
 // @capacitor-community/background-geolocation 사용
 
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
-import { BackgroundGeolocation } from '@capacitor-community/background-geolocation';
+import type { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
+
+const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
 
 let started = false;
 
