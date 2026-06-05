@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Check, RefreshCw, AlertTriangle } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -44,6 +44,88 @@ export default function ManagerSiteGpsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [doneId, setDoneId] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
+
+  // Google Map — 내 위치(파란 점) + 등록된 현장 핀
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapObj = useRef<google.maps.Map | null>(null);
+  const myMarker = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const siteMarkers = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      setMapError('지도 API 키가 설정되지 않았습니다.');
+      return;
+    }
+    if (window.google?.maps) {
+      setMapLoaded(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`;
+    script.async = true;
+    script.onload = () => setMapLoaded(true);
+    script.onerror = () => setMapError('지도를 불러오지 못했습니다.');
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current) return;
+    if (!mapObj.current) {
+      mapObj.current = new google.maps.Map(mapRef.current, {
+        center: pos ? { lat: pos.latitude, lng: pos.longitude } : { lat: 36.5, lng: 127.0 },
+        zoom: pos ? 17 : 7,
+        mapId: 'site-gps-app',
+        disableDefaultUI: true,
+        zoomControl: true,
+        gestureHandling: 'greedy',
+      });
+    }
+    const map = mapObj.current;
+
+    // 내 현재 위치 — 파란 점
+    if (pos) {
+      const position = { lat: pos.latitude, lng: pos.longitude };
+      if (myMarker.current) {
+        myMarker.current.position = position;
+      } else {
+        const dot = document.createElement('div');
+        dot.style.cssText =
+          'width:16px;height:16px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 3px rgba(37,99,235,.3)';
+        myMarker.current = new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position,
+          content: dot,
+          title: '내 현재 위치',
+          zIndex: 10,
+        });
+      }
+      map.setCenter(position);
+      if ((map.getZoom() ?? 0) < 15) map.setZoom(17);
+    }
+
+    // 등록된 현장 핀 (초록)
+    siteMarkers.current.forEach((m) => { m.map = null; });
+    siteMarkers.current = [];
+    for (const s of sites ?? []) {
+      if (s.latitude === null || s.longitude === null) continue;
+      const pin = new google.maps.marker.PinElement({
+        background: '#047857',
+        borderColor: '#065f46',
+        glyphColor: '#fff',
+      });
+      siteMarkers.current.push(
+        new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position: { lat: s.latitude, lng: s.longitude },
+          content: pin.element,
+          title: s.name,
+        }),
+      );
+    }
+  }, [mapLoaded, pos, sites]);
 
   const load = useCallback(async () => {
     const { data: { user } } = await sb.auth.getUser();
@@ -131,6 +213,24 @@ export default function ManagerSiteGpsPage() {
             </p>
           )}
         </div>
+
+        {/* 지도 — 파란 점 = 내 위치, 초록 핀 = 등록된 현장 */}
+        <div className="relative mt-3 h-[280px] w-full overflow-hidden rounded-[8px] ring-1 ring-zinc-200 bg-zinc-100">
+          <div ref={mapRef} className="h-full w-full" />
+          {!mapLoaded && !mapError && (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
+              지도 로딩 중...
+            </div>
+          )}
+          {mapError && (
+            <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm font-semibold text-red-600">
+              {mapError}
+            </div>
+          )}
+        </div>
+        <p className="mt-1.5 text-[11px] text-zinc-400">
+          파란 점 = 내 현재 위치 · 초록 핀 = 등록된 현장 좌표
+        </p>
 
         {readOnly && (
           <p className="mt-3 rounded-[5px] bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">

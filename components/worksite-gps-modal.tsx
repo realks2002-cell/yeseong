@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, MapPin, Navigation, RotateCcw } from 'lucide-react';
+import { X, MapPin, Navigation, RotateCcw, LocateFixed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type Props = {
@@ -177,6 +177,28 @@ export function WorksiteGpsModal({
     });
   };
 
+  // 현재 위치(브라우저 geolocation)로 마커 이동
+  const handleMyLocation = () => {
+    if (!navigator.geolocation) {
+      setError('이 브라우저는 위치 기능을 지원하지 않습니다.');
+      return;
+    }
+    if (!mapInstanceRef.current) return;
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const loc = new google.maps.LatLng(p.coords.latitude, p.coords.longitude);
+        setLat(p.coords.latitude);
+        setLng(p.coords.longitude);
+        mapInstanceRef.current!.setCenter(loc);
+        mapInstanceRef.current!.setZoom(17);
+        updateMarker(mapInstanceRef.current!, loc, radius);
+      },
+      () => setError('현재 위치를 가져올 수 없습니다. 위치 권한을 확인해주세요.'),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   const handleSave = async () => {
     if (lat === null || lng === null) {
       setError('지도에서 위치를 선택해주세요.');
@@ -244,15 +266,24 @@ export function WorksiteGpsModal({
             ) : (
               <span className="text-xs text-[#9CA3AF]">지도를 클릭하거나 주소 검색을 사용하세요</span>
             )}
-            {address && (
+            <div className="ml-auto flex gap-1.5">
               <button
-                onClick={handleGeocode}
-                className="ml-auto flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] px-2.5 py-1 text-xs font-medium text-[#4B5563] hover:bg-[#F5F5F5]"
+                onClick={handleMyLocation}
+                className="flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] px-2.5 py-1 text-xs font-medium text-[#4B5563] hover:bg-[#F5F5F5]"
               >
-                <Navigation className="h-3 w-3" />
-                주소로 검색
+                <LocateFixed className="h-3 w-3" />
+                현재 위치
               </button>
-            )}
+              {address && (
+                <button
+                  onClick={handleGeocode}
+                  className="flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] px-2.5 py-1 text-xs font-medium text-[#4B5563] hover:bg-[#F5F5F5]"
+                >
+                  <Navigation className="h-3 w-3" />
+                  주소로 검색
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 반경 */}
