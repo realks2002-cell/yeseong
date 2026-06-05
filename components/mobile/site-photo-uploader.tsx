@@ -6,7 +6,7 @@
 //   - 오늘 본인 사진만 표시 (?date=today)
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, Plus, Loader2, X, ImageOff, CheckCircle2 } from 'lucide-react';
+import { Camera, Image as ImageIcon, Plus, Loader2, ImageOff, CheckCircle2 } from 'lucide-react';
 import { ActionSheet } from '@/components/mobile/action-sheet';
 import { MemoInputSheet } from '@/components/mobile/memo-input-sheet';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
@@ -120,7 +120,6 @@ export function SitePhotosSection({
               photos={byCategory(c)}
               readOnly={readOnly}
               onUploaded={load}
-              onDeleted={load}
               onView={setViewing}
             />
           ))}
@@ -137,14 +136,12 @@ function CategoryCard({
   photos,
   readOnly,
   onUploaded,
-  onDeleted,
   onView,
 }: {
   category: Category;
   photos: ApiPhoto[];
   readOnly: boolean;
   onUploaded: () => void;
-  onDeleted: () => void;
   onView: (p: Photo) => void;
 }) {
   return (
@@ -158,7 +155,7 @@ function CategoryCard({
       {photos.length > 0 ? (
         <div className="grid grid-cols-3 gap-2">
           {photos.map((p) => (
-            <Thumb key={p.id} photo={p} onView={onView} onDelete={readOnly ? undefined : () => deletePhoto(p.id, onDeleted)} />
+            <Thumb key={p.id} photo={p} onView={onView} />
           ))}
         </div>
       ) : (
@@ -310,15 +307,8 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
   );
 }
 
-function Thumb({
-  photo,
-  onView,
-  onDelete,
-}: {
-  photo: ApiPhoto;
-  onView: (p: Photo) => void;
-  onDelete?: () => void;
-}) {
+// 제출 후 삭제 불가 — 증빙 무결성 보호 (삭제 X 버튼 제거)
+function Thumb({ photo, onView }: { photo: ApiPhoto; onView: (p: Photo) => void }) {
   return (
     <div className="relative aspect-[4/3] w-full">
       <button
@@ -346,27 +336,6 @@ function Thumb({
           <div className="flex h-full items-center justify-center text-[10px] text-zinc-400">URL 만료</div>
         )}
       </button>
-      {onDelete && (
-        <button
-          type="button"
-          onClick={onDelete}
-          className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white active:bg-black/80"
-          title="삭제"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
     </div>
   );
-}
-
-async function deletePhoto(photoId: string, onDeleted: () => void) {
-  if (!confirm('이 사진을 삭제하시겠습니까?')) return;
-  const res = await fetch(`/api/m/site-photos/${photoId}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    alert(j.error || '삭제 실패');
-    return;
-  }
-  onDeleted();
 }
