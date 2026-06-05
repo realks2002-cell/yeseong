@@ -28,25 +28,37 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
   return (
     <div className="min-h-svh bg-white flex items-center justify-center p-0 sm:p-6">
       <div className="relative w-full sm:max-w-[420px] sm:rounded-[40px] sm:ring-1 sm:ring-zinc-200 sm:shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:overflow-hidden bg-white min-h-svh sm:min-h-[860px] sm:max-h-[860px] flex flex-col">
-        <div className="flex-1 overflow-y-auto">{children}</div>
-        {showTabs && variant === 'worker' && <LocationSettingsBar />}
-        {showTabs && variant === 'worker' && (
-          <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
-            <HomeTabWithLongPressLogout active={activeTab === 'home'} />
-            <Tab href="/m/payroll" icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
-            <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-            <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
-            <Tab href="/m/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
-          </nav>
-        )}
-        {showTabs && variant === 'manager' && (
-          <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
-            <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
-            <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
-            <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
-            <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-            <Tab href={withMirror('/m/manager/me', mirror)} icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
-          </nav>
+        <div className={'flex-1 overflow-y-auto' + (showTabs ? ' pb-32' : '')}>{children}</div>
+
+        {/* 플로팅 하단 메뉴 — Android 엣지투엣지에서 시스템 내비게이션 바 위에 떠 있도록
+            safe-area-inset-bottom 만큼 띄운다 */}
+        {showTabs && (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
+          >
+            <div className="pointer-events-auto space-y-2">
+              {variant === 'worker' && <LocationSettingsBar />}
+              {variant === 'worker' && (
+                <nav className="grid grid-cols-5 overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur">
+                  <HomeTabWithLongPressLogout active={activeTab === 'home'} />
+                  <Tab href="/m/payroll" icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
+                  <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
+                  <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
+                  <Tab href="/m/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
+                </nav>
+              )}
+              {variant === 'manager' && (
+                <nav className="grid grid-cols-5 overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur">
+                  <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
+                  <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
+                  <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
+                  <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
+                  <Tab href={withMirror('/m/manager/me', mirror)} icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
+                </nav>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

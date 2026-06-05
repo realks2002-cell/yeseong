@@ -38,7 +38,7 @@ export function LocationSettingsBar() {
     <button
       type="button"
       onClick={() => openLocationSettings()}
-      className="flex w-full shrink-0 items-center gap-3 border-t border-amber-200 bg-amber-50 px-5 py-3 text-left active:bg-amber-100"
+      className="flex w-full shrink-0 items-center gap-3 rounded-[18px] border border-amber-200 bg-amber-50/95 px-5 py-3 text-left shadow-[0_8px_30px_rgba(15,23,42,0.15)] backdrop-blur active:bg-amber-100"
     >
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100">
         <MapPin className="h-5 w-5 text-amber-700" />
