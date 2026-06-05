@@ -95,7 +95,12 @@ export default function WorksitesPage() {
     }
   }
 
-  const inlineSelectCls =
+  function fmtGpsDate(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const inlineSelectCls =
     'w-full max-w-[160px] cursor-pointer rounded bg-transparent px-2 py-1 text-[11px] text-[#091413] outline-none hover:bg-[#F5F5F5] focus:bg-[#F5F5F5] focus:ring-1 focus:ring-[#447D9B]';
 
   return (
@@ -177,10 +182,14 @@ export default function WorksitesPage() {
                               ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                               : 'bg-[#F5F5F5] text-[#9CA3AF] hover:bg-[#EAEAEA] hover:text-[#6B7280]'
                           }`}
-                          title={w.latitude ? `${w.latitude.toFixed(5)}, ${w.longitude!.toFixed(5)} (${w.geofence_radius}m)` : '좌표 미등록'}
+                          title={w.latitude
+                            ? `${w.latitude.toFixed(5)}, ${w.longitude!.toFixed(5)} (반경 ${w.geofence_radius}m)${w.gps_registered_at ? ` — 등록 ${fmtGpsDate(w.gps_registered_at)}` : ''}`
+                            : '좌표 미등록'}
                         >
                           <MapPin className="h-3 w-3" />
-                          {w.latitude ? `${w.geofence_radius}m` : '미등록'}
+                          {w.latitude
+                            ? `${w.geofence_radius}m${w.gps_registered_at ? ` · ${fmtGpsDate(w.gps_registered_at)}` : ''}`
+                            : '미등록'}
                         </button>
                       </td>
                       <td className="px-3 py-2">
