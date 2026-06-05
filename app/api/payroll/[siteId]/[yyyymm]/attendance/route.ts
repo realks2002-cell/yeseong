@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 // PATCH: 출역 셀 단일 저장 — { payroll_worker_id, day, hours }
 // hours = 0 이면 DELETE, 그 외엔 UPSERT (체크 조건 0 < h <= 3.0)
@@ -15,6 +16,7 @@ export async function PATCH(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const pwId = typeof body?.payroll_worker_id === 'string' ? body.payroll_worker_id : null;

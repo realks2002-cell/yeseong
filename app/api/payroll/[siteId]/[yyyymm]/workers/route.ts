@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 // POST: 노임대장에 작업자 추가 (슬롯 생성)
 export async function POST(
@@ -14,6 +15,7 @@ export async function POST(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const workerId = typeof body?.worker_id === 'string' ? body.worker_id : null;

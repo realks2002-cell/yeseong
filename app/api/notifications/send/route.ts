@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { sendMulticast } from '@/lib/firebase/admin';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { title, body, targetType, targetValue, phones } = (await req.json()) as SendBody;
   if (!title || !body || !targetType) {

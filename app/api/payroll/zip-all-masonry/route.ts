@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { fillMasonryPayrollWorkbook, type FillMasonryWorker } from '@/lib/excel/fill-payroll-masonry';
 import { MAX_SLOTS } from '@/lib/excel/template-meta-masonry';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { getCompanySettings } from '@/lib/settings/company';
 
 export const runtime = 'nodejs';
@@ -55,6 +56,7 @@ export async function GET(req: Request) {
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return new NextResponse('Unauthorized', { status: 401 });
+  if (!isAdminEmail(user.email)) return new NextResponse('Forbidden', { status: 403 });
 
   const { data: periodsRaw, error: pErr } = await sb
     .from('yeseong_payroll_periods')

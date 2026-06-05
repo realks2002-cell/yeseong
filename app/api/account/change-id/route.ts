@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { idToEmail } from '@/lib/auth/id-email';
 
 export async function POST(req: Request) {
   const userSb = await getServerSupabase();
   const { data: { user } } = await userSb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const newId = body?.newId;

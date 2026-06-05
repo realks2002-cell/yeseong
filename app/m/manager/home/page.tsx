@@ -121,6 +121,12 @@ export default function ManagerHomePage() {
       setError(rpcErr.message);
       return;
     }
+    // 작업자에게 반려 푸시 (실패해도 무시 — 보조 채널)
+    fetch('/api/push/attendance-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attendanceId: item.attendance_id }),
+    }).catch(() => {});
     setItems((prev) => (prev ?? []).filter((x) => x.attendance_id !== item.attendance_id));
   };
 

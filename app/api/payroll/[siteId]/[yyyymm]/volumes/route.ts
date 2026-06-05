@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 // GET /api/payroll/[siteId]/[yyyymm]/volumes
 //   해당 period의 모든 slot에 속한 물량 목록 — grid 합계 계산용
@@ -15,6 +16,7 @@ export async function GET(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { data: period } = await sb
     .from('yeseong_payroll_periods')
@@ -55,6 +57,7 @@ export async function PUT(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const pwId = typeof body?.payroll_worker_id === 'string' ? body.payroll_worker_id : null;

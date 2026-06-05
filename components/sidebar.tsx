@@ -115,6 +115,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [userId, setUserId] = useState<string>('');
+  const [orderCount, setOrderCount] = useState(0);
 
   useEffect(() => {
     const sb = getBrowserSupabase();
@@ -123,6 +124,19 @@ export function Sidebar() {
       if (email) setUserId(emailToId(email));
     });
   }, []);
+
+  // 발주 요청 건수 배지 — 60초마다 갱신
+  useEffect(() => {
+    const fetchCount = () => {
+      fetch('/api/orders/pending-count', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d) setOrderCount(d.count ?? 0); })
+        .catch(() => {});
+    };
+    fetchCount();
+    const t = setInterval(fetchCount, 60_000);
+    return () => clearInterval(t);
+  }, [pathname]);
 
   async function handleLogout() {
     if (!confirm('로그아웃 하시겠습니까?')) return;
@@ -167,6 +181,11 @@ export function Sidebar() {
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       <span className="flex-1">{item.label}</span>
+                      {item.href === '/orders' && orderCount > 0 && (
+                        <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                          {orderCount}
+                        </span>
+                      )}
                       {item.badge && (
                         <span className="rounded px-1.5 py-0.5 text-[8px] font-semibold bg-[#FE7743] text-white">
                           {item.badge}

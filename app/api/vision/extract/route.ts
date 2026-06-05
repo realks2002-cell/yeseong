@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { extractAttendanceFromImage } from '@/lib/vision/gemini';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +11,11 @@ type Body = {
 };
 
 export async function POST(req: Request) {
+  const sb = await getServerSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   let body: Body;
   try {
     body = (await req.json()) as Body;

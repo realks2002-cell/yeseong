@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fillPayrollWorkbook, buildDownloadFilename, type FillWorker } from '@/lib/excel/fill-payroll';
 import { periodRange } from '@/lib/utils/date';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { getCompanySettings } from '@/lib/settings/company';
 
 export const runtime = 'nodejs';
@@ -43,6 +44,7 @@ export async function GET(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return new NextResponse('Unauthorized', { status: 401 });
+  if (!isAdminEmail(user.email)) return new NextResponse('Forbidden', { status: 403 });
 
   const { data: period } = await sb
     .from('yeseong_payroll_periods')

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 // PATCH: 일반 필드 + (선택) RRN 평문. RRN은 별도 RPC로 4개 컬럼 일관 업데이트.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -7,6 +8,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: 'invalid body' }, { status: 400 });
@@ -91,6 +93,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { error } = await sb
     .from('yeseong_workers')

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 // PATCH: 슬롯의 subcontractor 변경 (trade·daily_wage는 작업자 마스터에서만 관리)
 export async function PATCH(
@@ -10,6 +11,7 @@ export async function PATCH(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const patch: Record<string, unknown> = {};
@@ -40,6 +42,7 @@ export async function DELETE(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { error } = await sb.from('yeseong_payroll_workers').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

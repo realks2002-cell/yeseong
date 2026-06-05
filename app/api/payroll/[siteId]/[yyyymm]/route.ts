@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { periodRangeIso } from '@/lib/utils/date';
 
 // GET: 현장+년월 노임대장 조회. period 없으면 자동 생성.
@@ -15,6 +16,7 @@ export async function GET(
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   // 현장 검증
   const { data: ws, error: wsErr } = await sb
