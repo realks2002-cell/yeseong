@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackagePlus, Search, X, Minus, Plus, Check, ClipboardList } from 'lucide-react';
+import { PackagePlus, Search, X, Check, ClipboardList } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId } from '@/lib/manager/mirror';
@@ -14,8 +14,6 @@ type OrderItem = {
   unit: string;
   vendor_name: string | null;
 };
-
-type CartLine = { item: OrderItem; quantity: number };
 
 type MyOrder = {
   id: string;
@@ -49,7 +47,8 @@ export default function ManagerOrdersPage() {
   const [items, setItems] = useState<OrderItem[] | null>(null);
   const [orders, setOrders] = useState<MyOrder[] | null>(null);
   const [query, setQuery] = useState('');
-  const [cart, setCart] = useState<CartLine[]>([]);
+  // 품목별 수량 입력값 (문자열 — 입력 중 빈 값 허용). 양수만 발주 라인으로 전송
+  const [qty, setQtyMap] = useState<Record<string, string>>({});
   const [deliveryDate, setDeliveryDate] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -84,27 +83,21 @@ export default function ManagerOrdersPage() {
     );
   }, [items, query]);
 
-  const cartIds = useMemo(() => new Set(cart.map((c) => c.item.id)), [cart]);
-
-  function addToCart(item: OrderItem) {
-    if (cartIds.has(item.id)) return;
-    setCart((prev) => [...prev, { item, quantity: 1 }]);
-  }
-
-  function setQty(itemId: string, qty: number) {
-    if (qty <= 0) {
-      setCart((prev) => prev.filter((c) => c.item.id !== itemId));
-      return;
-    }
-    setCart((prev) => prev.map((c) => (c.item.id === itemId ? { ...c, quantity: qty } : c)));
-  }
+  // 수량이 양수로 입력된 품목만 발주 대상
+  const selected = useMemo(
+    () =>
+      (items ?? [])
+        .map((it) => ({ item: it, quantity: parseFloat(qty[it.id] ?? '') }))
+        .filter((l) => Number.isFinite(l.quantity) && l.quantity > 0),
+    [items, qty],
+  );
 
   const submit = async () => {
-    if (readOnly || busy || cart.length === 0) return;
+    if (readOnly || busy || selected.length === 0) return;
     setBusy(true);
     setError(undefined);
     const { error: rpcErr } = await sb.rpc('yeseong_manager_create_order', {
-      p_items: cart.map((c) => ({ item_id: c.item.id, quantity: c.quantity })),
+      p_items: selected.map((l) => ({ item_id: l.item.id, quantity: l.quantity })),
       p_delivery_date: deliveryDate || null,
       p_note: note || null,
     });
@@ -113,7 +106,7 @@ export default function ManagerOrdersPage() {
       setError(rpcErr.message);
       return;
     }
-    setCart([]);
+    setQtyMap({});
     setDeliveryDate('');
     setNote('');
     setDone(true);
@@ -167,77 +160,6 @@ export default function ManagerOrdersPage() {
 
         {tab === 'new' ? (
           <>
-            {/* 선택된 품목 (장바구니) */}
-            {cart.length > 0 && (
-              <div className="mt-4 rounded-[8px] bg-blue-50 ring-1 ring-blue-200 p-3 space-y-2">
-                <p className="text-sm font-bold text-blue-900">선택한 자재 ({cart.length})</p>
-                {cart.map((c) => (
-                  <div key={c.item.id} className="flex items-center gap-2 rounded-[6px] bg-white px-3 py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-zinc-900 truncate">{c.item.name}</p>
-                      <p className="text-[11px] text-zinc-500 truncate">
-                        {c.item.spec ? `${c.item.spec} · ` : ''}{c.item.unit}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setQty(c.item.id, c.quantity - 1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-[5px] bg-zinc-100 text-zinc-600 active:scale-95"
-                        aria-label="수량 감소"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={c.quantity}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value);
-                          if (Number.isFinite(v) && v > 0) setQty(c.item.id, v);
-                        }}
-                        className="h-8 w-14 rounded-[5px] border border-zinc-200 text-center text-sm font-bold tabular-nums"
-                      />
-                      <button
-                        onClick={() => setQty(c.item.id, c.quantity + 1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-[5px] bg-zinc-100 text-zinc-600 active:scale-95"
-                        aria-label="수량 증가"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                      <span className="w-7 text-center text-xs font-semibold text-zinc-500">{c.item.unit}</span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* 납기 + 요청사항 + 제출 */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-blue-900 w-16 shrink-0">납기 희망</label>
-                    <input
-                      type="date"
-                      value={deliveryDate}
-                      onChange={(e) => setDeliveryDate(e.target.value)}
-                      className="h-10 flex-1 rounded-[5px] border border-zinc-200 bg-white px-2.5 text-sm"
-                    />
-                  </div>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="요청사항 (선택) — 예: 오전 중 하차 부탁드립니다"
-                    rows={2}
-                    className="w-full resize-none rounded-[5px] border border-zinc-200 bg-white px-3 py-2 text-sm"
-                  />
-                  <button
-                    onClick={submit}
-                    disabled={readOnly || busy || cart.length === 0}
-                    className="h-[52px] w-full rounded-[5px] bg-blue-900 text-base font-bold text-white active:scale-[0.99] disabled:opacity-40"
-                  >
-                    {busy ? '전송 중...' : `발주 요청 (${cart.length}개 품목)`}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* 품목 검색 */}
             <div className="mt-4 relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -255,45 +177,94 @@ export default function ManagerOrdersPage() {
               )}
             </div>
 
-            {/* 품목 리스트 */}
-            <div className="mt-3 space-y-2">
-              {filtered === null ? (
-                <p className="py-8 text-center text-sm text-zinc-400">불러오는 중...</p>
-              ) : filtered.length === 0 ? (
-                <p className="py-8 text-center text-sm text-zinc-400 whitespace-pre-line">
-                  {query ? '검색 결과가 없습니다.' : '발주 가능한 자재가 없습니다.\n관리자에게 품목 등록을 요청해주세요.'}
-                </p>
-              ) : (
-                filtered.map((it) => {
-                  const inCart = cartIds.has(it.id);
+            {/* 품목 리스트 — 품목 / 규격 / 수량 표 (수량 직접 입력) */}
+            {filtered === null ? (
+              <p className="py-8 text-center text-sm text-zinc-400">불러오는 중...</p>
+            ) : filtered.length === 0 ? (
+              <p className="py-8 text-center text-sm text-zinc-400 whitespace-pre-line">
+                {query ? '검색 결과가 없습니다.' : '발주 가능한 자재가 없습니다.\n관리자에게 품목 등록을 요청해주세요.'}
+              </p>
+            ) : (
+              <div className="mt-3 overflow-hidden rounded-[8px] bg-white ring-1 ring-zinc-200">
+                <div className="grid grid-cols-[1.1fr_1fr_84px] items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-bold text-zinc-500">
+                  <span>품목</span>
+                  <span>규격</span>
+                  <span className="text-center">수량</span>
+                </div>
+                {filtered.map((it) => {
+                  const v = qty[it.id] ?? '';
+                  const active = Number.isFinite(parseFloat(v)) && parseFloat(v) > 0;
                   return (
-                    <button
+                    <div
                       key={it.id}
-                      onClick={() => addToCart(it)}
-                      disabled={inCart}
-                      className={`flex w-full items-center justify-between rounded-[8px] px-4 py-3.5 text-left ring-1 active:scale-[0.99] ${
-                        inCart
-                          ? 'bg-blue-50 ring-blue-200 opacity-60'
-                          : 'bg-white ring-zinc-200'
+                      className={`grid grid-cols-[1.1fr_1fr_84px] items-center gap-2 border-b border-zinc-100 px-3 py-3 last:border-b-0 ${
+                        active ? 'bg-blue-50/60' : ''
                       }`}
                     >
                       <div className="min-w-0">
-                        <p className="text-base font-bold text-zinc-900 truncate">{it.name}</p>
-                        <p className="mt-0.5 text-xs text-zinc-500 truncate">
-                          {it.spec ? `${it.spec} · ` : ''}{it.unit}
-                          {it.vendor_name ? ` · ${it.vendor_name}` : ''}
-                        </p>
+                        <p className="text-sm font-bold text-zinc-900 break-words leading-tight">{it.name}</p>
+                        {it.vendor_name && (
+                          <p className="mt-0.5 text-[10px] text-zinc-400 truncate">{it.vendor_name}</p>
+                        )}
                       </div>
-                      {inCart ? (
-                        <Check className="h-5 w-5 shrink-0 text-blue-700" />
-                      ) : (
-                        <Plus className="h-5 w-5 shrink-0 text-zinc-400" />
-                      )}
-                    </button>
+                      <p className="min-w-0 text-xs text-zinc-600 break-words leading-tight">{it.spec || '-'}</p>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          placeholder="0"
+                          value={v}
+                          disabled={readOnly}
+                          onChange={(e) => setQtyMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
+                          className={`h-10 w-[72px] rounded-[6px] border text-center text-base font-bold tabular-nums ${
+                            active ? 'border-blue-400 bg-white text-blue-900' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
+                          }`}
+                        />
+                        <span className="text-[10px] font-semibold text-zinc-400">{it.unit}</span>
+                      </div>
+                    </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
+
+            {/* 납기 + 요청사항 + 제출 */}
+            {(items?.length ?? 0) > 0 && (
+              <div className="mt-4 space-y-2 rounded-[8px] bg-blue-50 ring-1 ring-blue-200 p-3">
+                <p className="text-sm font-bold text-blue-900">
+                  선택한 자재 {selected.length}개
+                  {selected.length > 0 && (
+                    <span className="ml-1.5 font-semibold text-blue-700/70 text-xs">
+                      {selected.map((l) => `${l.item.name} ${l.quantity}${l.item.unit}`).join(', ')}
+                    </span>
+                  )}
+                </p>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-blue-900 w-16 shrink-0">납기 희망</label>
+                  <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    className="h-10 flex-1 rounded-[5px] border border-zinc-200 bg-white px-2.5 text-sm"
+                  />
+                </div>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="요청사항 (선택) — 예: 오전 중 하차 부탁드립니다"
+                  rows={2}
+                  className="w-full resize-none rounded-[5px] border border-zinc-200 bg-white px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={submit}
+                  disabled={readOnly || busy || selected.length === 0}
+                  className="h-[52px] w-full rounded-[5px] bg-blue-900 text-base font-bold text-white active:scale-[0.99] disabled:opacity-40"
+                >
+                  {busy ? '전송 중...' : `발주 요청 (${selected.length}개 품목)`}
+                </button>
+              </div>
+            )}
           </>
         ) : (
           /* 요청 이력 */
