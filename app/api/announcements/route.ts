@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
+import { resolveTargetTokens, type PushTargetType } from '@/lib/push/targets';
+import { sendMulticast } from '@/lib/firebase/admin';
+
+export const runtime = 'nodejs';
 
 export async function GET() {
   const sb = await getServerSupabase();
@@ -33,7 +37,7 @@ export async function POST(req: Request) {
   if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { title, content, targetType, targetValue, fontSize, expiresAt } = body;
+  const { title, content, targetType, targetValue, fontSize, expiresAt, sendPush } = body;
 
   if (typeof title !== 'string' || !title.trim() || typeof content !== 'string' || !content.trim()) {
     return NextResponse.json({ error: '제목과 내용은 필수입니다.' }, { status: 400 });
@@ -69,5 +73,40 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, { status: 201 });
+
+  // 푸시도 함께 발송 — 공지와 같은 대상에게 FCM (실패해도 공지 등록은 유지)
+  let pushSent: number | null = null;
+  if (sendPush === true) {
+    try {
+      const tokens = await resolveTargetTokens(
+        sb,
+        tt as PushTargetType,
+        typeof targetValue === 'string' ? targetValue : null,
+      );
+      if (tokens.length > 0) {
+        const { successCount, failureCount } = await sendMulticast(
+          tokens,
+          `[공지] ${title.trim()}`,
+          content.trim().slice(0, 200),
+        );
+        pushSent = successCount;
+        // 알림 이력에도 기록
+        await sb.from('yeseong_notifications').insert({
+          title: `[공지] ${title.trim()}`,
+          body: content.trim().slice(0, 200),
+          target_type: tt,
+          target_value: typeof targetValue === 'string' && targetValue.trim() ? targetValue.trim() : null,
+          sent_count: successCount,
+          fail_count: failureCount,
+          sent_by: user.id,
+        });
+      } else {
+        pushSent = 0;
+      }
+    } catch {
+      pushSent = null; // 푸시 실패 — 공지는 정상 등록됨
+    }
+  }
+
+  return NextResponse.json({ ...data, push_sent: pushSent }, { status: 201 });
 }

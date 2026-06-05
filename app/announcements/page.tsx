@@ -51,6 +51,7 @@ export default function AnnouncementsPage() {
   const [targetValue, setTargetValue] = useState('');
   const [fontSize, setFontSize] = useState(16);
   const [expiresIn, setExpiresIn] = useState('');
+  const [sendPush, setSendPush] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,6 +106,7 @@ export default function AnnouncementsPage() {
         targetValue: targetValue.trim() || undefined,
         fontSize,
         expiresAt,
+        sendPush,
       }),
     });
 
@@ -115,12 +117,18 @@ export default function AnnouncementsPage() {
       return;
     }
 
+    const created = await res.json().catch(() => null);
+    if (sendPush && created?.push_sent != null) {
+      alert(`공지 등록 완료 — 푸시 ${created.push_sent}건 발송됨`);
+    }
+
     setTitle('');
     setContent('');
     setTargetType('all');
     setTargetValue('');
     setFontSize(16);
     setExpiresIn('');
+    setSendPush(true);
     setShowForm(false);
     load();
   };
@@ -298,6 +306,18 @@ export default function AnnouncementsPage() {
                 </div>
               </div>
             </div>
+
+            {/* 푸시 함께 발송 */}
+            <label className="flex items-center gap-2.5 rounded-[5px] border border-[#D7D7D7] bg-white px-4 py-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendPush}
+                onChange={(e) => setSendPush(e.target.checked)}
+                className="h-4 w-4 accent-[#273F4F]"
+              />
+              <span className="text-sm font-semibold text-[#091413]">푸시 알림도 함께 발송</span>
+              <span className="text-xs text-[#6B7280]">— 앱이 꺼져 있어도 상태바 알림으로 도착해요</span>
+            </label>
 
             {error && (
               <p className="rounded-[5px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{error}</p>
