@@ -100,6 +100,7 @@ const groups: Group[] = [
   {
     label: '설정',
     items: [
+      { label: '사용자 관리', href: '/settings/members', icon: Users },
       { label: '계정 (ID/비밀번호)', href: '/settings/account', icon: KeyRound },
     ],
   },
