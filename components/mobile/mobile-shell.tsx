@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Home, User, Wallet, ClipboardCheck, PackagePlus, Package, Camera } from 'lucide-react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, withMirror } from '@/lib/manager/mirror';
+import { LocationSettingsBar } from '@/components/mobile/location-settings-bar';
 
 type WorkerTab = 'home' | 'payroll' | 'volumes' | 'proofs' | 'profile';
 type ManagerTab = 'home' | 'orders' | 'proofs' | 'volumes' | 'affiliation' | 'profile';
@@ -28,6 +29,7 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
     <div className="min-h-svh bg-white flex items-center justify-center p-0 sm:p-6">
       <div className="relative w-full sm:max-w-[420px] sm:rounded-[40px] sm:ring-1 sm:ring-zinc-200 sm:shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:overflow-hidden bg-white min-h-svh sm:min-h-[860px] sm:max-h-[860px] flex flex-col">
         <div className="flex-1 overflow-y-auto">{children}</div>
+        {showTabs && variant === 'worker' && <LocationSettingsBar />}
         {showTabs && variant === 'worker' && (
           <nav className="shrink-0 grid grid-cols-5 border-t border-zinc-200 bg-white">
             <HomeTabWithLongPressLogout active={activeTab === 'home'} />

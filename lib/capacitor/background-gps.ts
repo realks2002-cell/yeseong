@@ -4,6 +4,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import type { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
+import { rememberPosition } from './geolocation';
 
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
 
@@ -76,12 +77,21 @@ export async function startBackgroundTracking(onLocation: GpsCallback) {
     (location, error) => {
       if (error) return;
       if (location) {
+        rememberPosition(location.latitude, location.longitude); // 제출 폴백 캐시 갱신
         onLocation(location.latitude, location.longitude);
       }
     },
   );
 
   return watcher;
+}
+
+/**
+ * 시스템 앱 설정 화면 열기 — 사용자가 위치 권한을 "항상 허용"으로 바꿀 수 있게
+ */
+export async function openLocationSettings() {
+  if (!Capacitor.isNativePlatform()) return;
+  await BackgroundGeolocation.openSettings();
 }
 
 /**

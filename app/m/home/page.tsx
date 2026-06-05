@@ -6,9 +6,9 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { registerPush } from '@/lib/capacitor/push';
-import { getCurrentPosition } from '@/lib/capacitor/geolocation';
+import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
 import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
-import { GpsPermissionGuide } from '@/components/mobile/gps-permission-guide';
+import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
@@ -70,14 +70,18 @@ export default function HomePage() {
   useEffect(() => {
     load();
     registerPush('worker');
-    // 백그라운드 GPS 추적 시작 — 위치 변경 시 서버에 기록
-    startBackgroundTracking((lat, lng) => {
+    // GPS 3 레이어 — 위치 획득 시 서버에 기록
+    const reportGps = (lat: number, lng: number) => {
       fetch('/api/m/gps-log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude: lat, longitude: lng }),
       }).catch(() => {});
-    });
+    };
+    // ① 백그라운드 워처 (항상 허용 시, 50m 이동마다)
+    startBackgroundTracking(reportGps);
+    // ② 포그라운드 폴링 (앱 사용 중 허용만으로 작동, 5분마다)
+    startForegroundPolling(reportGps);
   }, [load]);
 
   const todayRecord = me?.recent.find((r) => r.work_date === TODAY_ISO) ?? null;
@@ -89,8 +93,8 @@ export default function HomePage() {
     setBusy(true);
     setError(undefined);
 
-    // GPS 좌표 가져오기
-    const pos = await getCurrentPosition();
+    // ③ GPS 좌표 가져오기 — 실패 시 재시도 + 최근 위치 폴백
+    const pos = await getPositionWithRetry();
 
     const { error: rpcErr } = await sb.rpc('yeseong_mobile_register_attendance', {
       p_work_date: TODAY_ISO,
@@ -137,7 +141,6 @@ export default function HomePage() {
 
   return (
     <MobileShell showTabs activeTab="home">
-      <GpsPermissionGuide />
       <div className="px-7 pt-20 pb-4">
         <p className="text-[24px] font-bold text-zinc-700">{TODAY_LABEL}</p>
         <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900">
