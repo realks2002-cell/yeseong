@@ -8,6 +8,7 @@ import { getBrowserSupabase } from '@/lib/supabase/client';
 import { registerPush } from '@/lib/capacitor/push';
 import { getCurrentPosition } from '@/lib/capacitor/geolocation';
 import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
+import { GpsPermissionGuide } from '@/components/mobile/gps-permission-guide';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
@@ -136,6 +137,7 @@ export default function HomePage() {
 
   return (
     <MobileShell showTabs activeTab="home">
+      <GpsPermissionGuide />
       <div className="px-7 pt-20 pb-4">
         <p className="text-[24px] font-bold text-zinc-700">{TODAY_LABEL}</p>
         <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900">
