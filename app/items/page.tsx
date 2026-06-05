@@ -36,17 +36,36 @@ export default function ItemsPage() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // 공종 필터 — '' = 전체, '__common__' = 공통(공종 미지정), 그 외 = 공종명
+  const [tradeFilter, setTradeFilter] = useState('');
 
   const filtered = useMemo(() => {
     if (!list) return null;
+    let result = list;
+    if (tradeFilter === '__common__') {
+      result = result.filter((it) => !it.trades || it.trades.length === 0);
+    } else if (tradeFilter) {
+      result = result.filter((it) => it.trades?.includes(tradeFilter));
+    }
     const raw = query.trim().toLowerCase();
-    if (!raw) return list;
-    return list.filter((it) =>
+    if (!raw) return result;
+    return result.filter((it) =>
       it.name.toLowerCase().includes(raw) ||
       (it.item_code?.toLowerCase().includes(raw)) ||
       (it.spec?.toLowerCase().includes(raw))
     );
-  }, [list, query]);
+  }, [list, query, tradeFilter]);
+
+  // 공종별 품목 수 (필터 버튼 배지)
+  const tradeCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    let common = 0;
+    for (const it of list ?? []) {
+      if (!it.trades || it.trades.length === 0) { common++; continue; }
+      for (const t of it.trades) map.set(t, (map.get(t) ?? 0) + 1);
+    }
+    return { map, common };
+  }, [list]);
 
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors]);
 
@@ -102,6 +121,31 @@ export default function ItemsPage() {
           </Button>
         </div>
 
+        {/* 공종 선택 버튼 — 누르면 해당 공종 품목만 표시 */}
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <FilterChip
+            label="전체"
+            count={list?.length}
+            active={tradeFilter === ''}
+            onClick={() => setTradeFilter('')}
+          />
+          <FilterChip
+            label="공통"
+            count={tradeCounts.common}
+            active={tradeFilter === '__common__'}
+            onClick={() => setTradeFilter('__common__')}
+          />
+          {trades.map((t) => (
+            <FilterChip
+              key={t.id}
+              label={t.name}
+              count={tradeCounts.map.get(t.name) ?? 0}
+              active={tradeFilter === t.name}
+              onClick={() => setTradeFilter(tradeFilter === t.name ? '' : t.name)}
+            />
+          ))}
+        </div>
+
         <div className="mb-4 relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
           <input
@@ -140,7 +184,11 @@ export default function ItemsPage() {
                   <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">
-                    {query ? '검색 결과가 없습니다.' : '등록된 품목이 없습니다.'}
+                    {query
+                      ? '검색 결과가 없습니다.'
+                      : tradeFilter
+                        ? `${tradeFilter === '__common__' ? '공통' : tradeFilter} 품목이 없습니다. 품목 추가에서 공종을 선택해 등록하세요.`
+                        : '등록된 품목이 없습니다.'}
                   </td></tr>
                 ) : (
                   filtered.map((it, i) => (
@@ -177,14 +225,45 @@ export default function ItemsPage() {
         </Card>
       </div>
 
-      {showAdd && <ItemForm title="품목 추가" vendors={vendors} trades={trades} onSubmit={handleAdd} onCancel={() => setShowAdd(false)} />}
+      {showAdd && (
+        <ItemForm
+          title="품목 추가"
+          vendors={vendors}
+          trades={trades}
+          // 공종 필터 선택 중이면 그 공종이 미리 선택된 채로 등록
+          initialTrades={tradeFilter && tradeFilter !== '__common__' ? [tradeFilter] : undefined}
+          onSubmit={handleAdd}
+          onCancel={() => setShowAdd(false)}
+        />
+      )}
       {editing && <ItemForm title={`${editing.name} 수정`} vendors={vendors} trades={trades} initial={editing} onSubmit={handleEdit} onCancel={() => setEditing(null)} />}
     </AdminShell>
   );
 }
 
-function ItemForm({ title, vendors, trades, initial, onSubmit, onCancel }: {
-  title: string; vendors: Vendor[]; trades: Trade[]; initial?: Item;
+function FilterChip({ label, count, active, onClick }: {
+  label: string; count?: number; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-[5px] border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? 'border-[#273F4F] bg-[#273F4F] text-white'
+          : 'border-[#D7D7D7] bg-white text-[#091413] hover:bg-[#F5F5F5]'
+      }`}
+    >
+      {label}
+      {typeof count === 'number' && (
+        <span className={`ml-1 tabular-nums ${active ? 'text-white/70' : 'text-[#9CA3AF]'}`}>{count}</span>
+      )}
+    </button>
+  );
+}
+
+function ItemForm({ title, vendors, trades, initial, initialTrades, onSubmit, onCancel }: {
+  title: string; vendors: Vendor[]; trades: Trade[]; initial?: Item; initialTrades?: string[];
   onSubmit: (i: ItemInput) => Promise<void>; onCancel: () => void;
 }) {
   const [itemCode, setItemCode] = useState(initial?.item_code ?? '');
@@ -192,7 +271,7 @@ function ItemForm({ title, vendors, trades, initial, onSubmit, onCancel }: {
   const [spec, setSpec] = useState(initial?.spec ?? '');
   const [unit, setUnit] = useState(initial?.unit ?? '');
   const [vendorId, setVendorId] = useState(initial?.vendor_id ?? '');
-  const [selectedTrades, setSelectedTrades] = useState<string[]>(initial?.trades ?? []);
+  const [selectedTrades, setSelectedTrades] = useState<string[]>(initial?.trades ?? initialTrades ?? []);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
