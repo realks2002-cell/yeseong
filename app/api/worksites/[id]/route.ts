@@ -26,6 +26,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof body?.is_active === 'boolean') {
     patch.is_active = body.is_active;
   }
+  if (typeof body?.latitude === 'number') {
+    patch.latitude = body.latitude;
+  }
+  if (typeof body?.longitude === 'number') {
+    patch.longitude = body.longitude;
+  }
+  if (typeof body?.geofence_radius === 'number') {
+    patch.geofence_radius = body.geofence_radius;
+  }
+  if ('latitude' in (body ?? {}) && body.latitude === null) {
+    patch.latitude = null;
+    patch.longitude = null;
+    patch.gps_registered_at = null;
+    patch.gps_registered_by = null;
+  }
+  if (typeof body?.latitude === 'number' && typeof body?.longitude === 'number') {
+    patch.gps_registered_at = new Date().toISOString();
+    patch.gps_registered_by = user.id;
+  }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: '변경할 필드가 없습니다' }, { status: 400 });
   }
@@ -34,7 +53,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from('yeseong_worksites')
     .update(patch)
     .eq('id', id)
-    .select('id, name, address, client_id, subcontractor_id, is_active, created_at')
+    .select('id, name, address, client_id, subcontractor_id, is_active, latitude, longitude, geofence_radius, gps_registered_at, created_at')
     .single();
 
   if (error) {

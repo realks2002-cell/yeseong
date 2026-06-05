@@ -5,6 +5,8 @@ import { Check, AlertTriangle } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { registerPush } from '@/lib/capacitor/push';
+import { getCurrentPosition } from '@/lib/capacitor/geolocation';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
@@ -63,7 +65,7 @@ export default function HomePage() {
     }
   }, [sb, router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); registerPush('worker'); }, [load]);
 
   const todayRecord = me?.recent.find((r) => r.work_date === TODAY_ISO) ?? null;
   const isRejected = todayRecord?.approval_status === 'rejected';
@@ -73,9 +75,15 @@ export default function HomePage() {
     if (busy) return;
     setBusy(true);
     setError(undefined);
+
+    // GPS 좌표 가져오기
+    const pos = await getCurrentPosition();
+
     const { error: rpcErr } = await sb.rpc('yeseong_mobile_register_attendance', {
       p_work_date: TODAY_ISO,
       p_hours: h,
+      p_latitude: pos?.latitude ?? null,
+      p_longitude: pos?.longitude ?? null,
     });
     setBusy(false);
     setConfirm(null);

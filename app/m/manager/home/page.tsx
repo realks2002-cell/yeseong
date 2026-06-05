@@ -6,6 +6,7 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
+import { registerPush } from '@/lib/capacitor/push';
 
 type PendingItem = {
   attendance_id: string;
@@ -86,7 +87,7 @@ export default function ManagerHomePage() {
     setLoading(false);
   }, [sb, router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); registerPush('manager'); }, [load]);
 
   const approve = async (item: PendingItem) => {
     if (readOnly || busyId) return;

@@ -19,6 +19,10 @@ export type Worksite = {
   client_id: string | null;
   subcontractor_id: string | null;
   is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  geofence_radius: number;
+  gps_registered_at: string | null;
   created_at: string;
 };
 

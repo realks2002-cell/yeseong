@@ -4,7 +4,8 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WorksiteForm, type Worksite, type WorksiteInput, type Option } from '@/components/worksite-form';
-import { Building2, Pencil, Trash2 } from 'lucide-react';
+import { WorksiteGpsModal } from '@/components/worksite-gps-modal';
+import { Building2, MapPin, Pencil, Trash2 } from 'lucide-react';
 
 export default function WorksitesPage() {
   const [list, setList] = useState<Worksite[] | null>(null);
@@ -12,6 +13,7 @@ export default function WorksitesPage() {
   const [subcontractors, setSubcontractors] = useState<Option[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Worksite | null>(null);
+  const [gpsTarget, setGpsTarget] = useState<Worksite | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -126,14 +128,15 @@ export default function WorksitesPage() {
                   <th className="px-3 py-2 font-medium">원청사</th>
                   <th className="px-3 py-2 font-medium">전문건설사</th>
                   <th className="px-3 py-2 font-medium">주소</th>
+                  <th className="px-3 py-2 font-medium text-center">GPS</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={7} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">등록된 현장이 없습니다.</td></tr>
+                  <tr><td colSpan={7} className="py-10 text-center text-[#9CA3AF]">등록된 현장이 없습니다.</td></tr>
                 ) : (
                   list.map((w, i) => (
                     <tr key={w.id} className="hover:bg-[#F5F5F5]">
@@ -166,6 +169,20 @@ export default function WorksitesPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2 text-[#4B5563]">{w.address ?? '-'}</td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          onClick={() => setGpsTarget(w)}
+                          className={`inline-flex items-center gap-1 rounded-[5px] px-2 py-1 text-[10px] font-semibold ${
+                            w.latitude
+                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              : 'bg-[#F5F5F5] text-[#9CA3AF] hover:bg-[#EAEAEA] hover:text-[#6B7280]'
+                          }`}
+                          title={w.latitude ? `${w.latitude.toFixed(5)}, ${w.longitude!.toFixed(5)} (${w.geofence_radius}m)` : '좌표 미등록'}
+                        >
+                          <MapPin className="h-3 w-3" />
+                          {w.latitude ? `${w.geofence_radius}m` : '미등록'}
+                        </button>
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
                           <button
@@ -210,6 +227,37 @@ export default function WorksitesPage() {
           subcontractors={subcontractors}
           onSubmit={handleEdit}
           onCancel={() => setEditing(null)}
+        />
+      )}
+      {gpsTarget && (
+        <WorksiteGpsModal
+          worksiteId={gpsTarget.id}
+          worksiteName={gpsTarget.name}
+          address={gpsTarget.address}
+          initialLat={gpsTarget.latitude}
+          initialLng={gpsTarget.longitude}
+          initialRadius={gpsTarget.geofence_radius}
+          onSave={async (lat, lng, radius) => {
+            const r = await fetch(`/api/worksites/${gpsTarget.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ latitude: lat, longitude: lng, geofence_radius: radius }),
+            });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? '저장 실패');
+            setGpsTarget(null);
+            load();
+          }}
+          onClear={async () => {
+            const r = await fetch(`/api/worksites/${gpsTarget.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ latitude: null }),
+            });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? '삭제 실패');
+            setGpsTarget(null);
+            load();
+          }}
+          onClose={() => setGpsTarget(null)}
         />
       )}
     </AdminShell>

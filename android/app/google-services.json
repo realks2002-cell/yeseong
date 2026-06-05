@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "137547815761",
+    "project_id": "yesung-d8885",
+    "storage_bucket": "yesung-d8885.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137547815761:android:0e98ce6ad99e30aec31170",
+        "android_client_info": {
+          "package_name": "com.yeseong.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsTuln0-n9TAzNXaS2u3cDY9d7qtcoRs0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -10,7 +10,7 @@ export async function GET(req: Request) {
 
   let query = sb
     .from('yeseong_worksites')
-    .select('id, name, address, client_id, subcontractor_id, is_active, created_at')
+    .select('id, name, address, client_id, subcontractor_id, is_active, latitude, longitude, geofence_radius, gps_registered_at, created_at')
     .order('name');
   if (!includeArchived) query = query.eq('is_active', true);
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   const { data, error } = await sb
     .from('yeseong_worksites')
     .insert({ name, address, client_id, subcontractor_id })
-    .select('id, name, address, client_id, subcontractor_id, is_active, created_at')
+    .select('id, name, address, client_id, subcontractor_id, is_active, latitude, longitude, geofence_radius, gps_registered_at, created_at')
     .single();
 
   if (error) {
