@@ -31,10 +31,11 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
         <div className={'flex-1 overflow-y-auto' + (showTabs ? ' pb-32' : '')}>{children}</div>
 
         {/* 플로팅 하단 메뉴 — Android 엣지투엣지에서 시스템 내비게이션 바 위에 떠 있도록
-            safe-area-inset-bottom 만큼 띄운다 */}
+            safe-area-inset-bottom 만큼 띄운다.
+            모바일: 뷰포트 고정(fixed) — 페이지가 길어도 항상 보임 / 데스크톱 프레임: absolute */}
         {showTabs && (
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3"
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 sm:absolute"
             style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
           >
             <div className="pointer-events-auto space-y-2">
