@@ -57,7 +57,9 @@ export async function GET(req: Request) {
   if (to) query = query.lte('photo_date', to);
   if (worksiteId) query = query.eq('worksite_id', worksiteId);
   if (workerId) query = query.eq('worker_id', workerId);
+  // 카테고리 미지정 시 expense 제외 — 비용·영수증은 /expenses(비용처리) 전용
   if (category) query = query.eq('category', category);
+  else query = query.neq('category', 'expense');
 
   const { data: rows, error } = await query.returns<Row[]>();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

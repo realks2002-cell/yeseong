@@ -60,7 +60,7 @@ const groups: Group[] = [
     label: '현장 운영',
     items: [
       { label: '발주', href: '/orders', icon: ShoppingCart },
-      { label: '영수증', href: '/expenses', icon: Receipt },
+      { label: '비용처리', href: '/expenses', icon: Receipt },
       { label: '장비 렌탈', href: '/equipment', icon: Wrench },
       { label: '현장증빙', href: '/admin/site-photos', icon: Images, badge: 'NEW' },
     ],

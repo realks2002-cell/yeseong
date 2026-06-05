@@ -14,7 +14,8 @@ const CATEGORY_META: Record<Category, { label: string; icon: typeof Camera; chip
   general: { label: '일반', icon: ImageIcon, chip: 'bg-blue-50 text-blue-700' },
   expense: { label: '비용·영수증', icon: Receipt, chip: 'bg-rose-50 text-rose-700' },
 };
-const CATEGORY_ORDER: Category[] = ['tbm', 'materials', 'general', 'expense'];
+// expense(비용·영수증)는 /expenses 전용 — 이 화면 그룹에는 나타나지 않음
+const CATEGORY_ORDER: Category[] = ['tbm', 'materials', 'general'];
 
 type ApiPhoto = {
   id: string;
@@ -211,11 +212,11 @@ export default function SitePhotosPage() {
               value={category}
               onChange={(v) => setCategory(v as Category | '')}
               options={[
+                // 비용·영수증은 별도 [영수증] 메뉴(/expenses)에서 — 여기서는 제외
                 { value: '', label: '전체' },
                 { value: 'tbm', label: 'TBM' },
                 { value: 'materials', label: '자재·송장' },
                 { value: 'general', label: '일반' },
-                { value: 'expense', label: '비용·영수증' },
               ]}
             />
             <FieldSelect
