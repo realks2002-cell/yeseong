@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 도구 메타데이터 (bkit 플러그인 / Supabase CLI 캐시)
+.bkit/
+docs/.bkit-memory.json
+docs/.pdca-snapshots/
+docs/.pdca-status.json
+supabase/.temp/
