@@ -5,8 +5,8 @@
 //   - 사진 선택 → 압축 → 메모 시트 → 업로드 → finalize
 //   - 오늘 본인 사진만 표시 (?date=today)
 
-import { useCallback, useEffect, useState } from 'react';
-import { Camera, Image as ImageIcon, Plus, Loader2, X, ImageOff } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Camera, Image as ImageIcon, Plus, Loader2, X, ImageOff, CheckCircle2 } from 'lucide-react';
 import { ActionSheet } from '@/components/mobile/action-sheet';
 import { MemoInputSheet } from '@/components/mobile/memo-input-sheet';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
@@ -179,6 +179,12 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
+  const [done, setDone] = useState(false);
+  const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (doneTimer.current) clearTimeout(doneTimer.current);
+  }, []);
 
   const pick = async (source: 'camera' | 'gallery') => {
     setErr(null);
@@ -234,6 +240,9 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
         throw new Error(j.error || '저장 실패');
       }
       onUploaded();
+      setDone(true);
+      if (doneTimer.current) clearTimeout(doneTimer.current);
+      doneTimer.current = setTimeout(() => setDone(false), 2500);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -268,6 +277,16 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
       </button>
       {err && (
         <p className="mt-1 rounded-[5px] bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{err}</p>
+      )}
+
+      {/* 제출 완료 토스트 — 2.5초 후 자동 사라짐 */}
+      {done && (
+        <div className="pointer-events-none fixed inset-x-0 top-8 z-[60] flex justify-center px-6">
+          <div className="flex items-center gap-2 rounded-full bg-zinc-900/90 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_30px_rgba(15,23,42,0.35)] backdrop-blur">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            제출되었습니다
+          </div>
+        </div>
       )}
 
       <ActionSheet
