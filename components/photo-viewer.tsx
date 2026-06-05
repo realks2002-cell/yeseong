@@ -1,11 +1,27 @@
 'use client';
 
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Download, X } from 'lucide-react';
+import { Download, Loader2, X } from 'lucide-react';
+import { downloadFile } from '@/lib/utils/download';
 
 export type Photo = { url: string; label: string; uploadedAt: string; memo?: string };
 
 export function PhotoViewer({ photo, onClose }: { photo: Photo | null; onClose: () => void }) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!photo || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadFile(photo.url, photo.label);
+    } catch {
+      alert('다운로드에 실패했습니다.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <Dialog open={!!photo} onOpenChange={(o) => !o && onClose()}>
       {photo && (
@@ -18,16 +34,19 @@ export function PhotoViewer({ photo, onClose }: { photo: Photo | null; onClose: 
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
             <div className="text-sm font-semibold text-white">{photo.label}</div>
             <div className="flex items-center gap-1">
-              <a
-                href={photo.url}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-white/80 hover:bg-white/10 hover:text-white"
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={downloading}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-white/80 hover:bg-white/10 hover:text-white disabled:opacity-50"
               >
-                <Download className="h-3.5 w-3.5" />
+                {downloading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
                 다운로드
-              </a>
+              </button>
               <DialogClose className="rounded p-1 text-white/80 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#447D9B]">
                 <X className="h-4 w-4" />
                 <span className="sr-only">닫기</span>

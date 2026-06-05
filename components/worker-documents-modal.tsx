@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
-import { CreditCard, Wallet, Award, ImageOff, Trash2, Loader2 } from 'lucide-react';
+import { CreditCard, Wallet, Award, ImageOff, Trash2, Loader2, Download } from 'lucide-react';
+import { downloadFile } from '@/lib/utils/download';
 
 type DocType = 'id_card' | 'bankbook' | 'certificate';
 
@@ -66,6 +67,19 @@ export function WorkerDocumentsModal({
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Photo | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (doc: InternalDoc) => {
+    if (!subject || downloadingId) return;
+    setDownloadingId(doc.id);
+    try {
+      await downloadFile(doc.url, `${subject.name}_${doc.label}`);
+    } catch {
+      alert('다운로드에 실패했습니다.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const load = useCallback(async (s: DocSubject) => {
     setLoading(true);
@@ -136,7 +150,9 @@ export function WorkerDocumentsModal({
                   docs={docs}
                   onView={setViewing}
                   onDelete={handleDelete}
+                  onDownload={handleDownload}
                   deletingId={deletingId}
+                  downloadingId={downloadingId}
                 />
               )}
             </div>
@@ -153,12 +169,16 @@ function DocsContent({
   docs,
   onView,
   onDelete,
+  onDownload,
   deletingId,
+  downloadingId,
 }: {
   docs: DocSet;
   onView: (p: Photo) => void;
   onDelete: (d: InternalDoc) => void;
+  onDownload: (d: InternalDoc) => void;
   deletingId: string | null;
+  downloadingId: string | null;
 }) {
   return (
     <>
@@ -168,7 +188,9 @@ function DocsContent({
             doc={docs.id_card}
             onClick={() => onView(docs.id_card!)}
             onDelete={() => onDelete(docs.id_card!)}
+            onDownload={() => onDownload(docs.id_card!)}
             deleting={deletingId === docs.id_card.id}
+            downloading={downloadingId === docs.id_card.id}
             aspect="aspect-[16/10]"
             maxWidth="max-w-[280px]"
           />
@@ -183,7 +205,9 @@ function DocsContent({
             doc={docs.bankbook}
             onClick={() => onView(docs.bankbook!)}
             onDelete={() => onDelete(docs.bankbook!)}
+            onDownload={() => onDownload(docs.bankbook!)}
             deleting={deletingId === docs.bankbook.id}
+            downloading={downloadingId === docs.bankbook.id}
             aspect="aspect-[3/4]"
             maxWidth="max-w-[180px]"
           />
@@ -201,7 +225,9 @@ function DocsContent({
                 doc={c}
                 onClick={() => onView(c)}
                 onDelete={() => onDelete(c)}
+                onDownload={() => onDownload(c)}
                 deleting={deletingId === c.id}
+                downloading={downloadingId === c.id}
                 aspect="aspect-[4/3]"
               />
             ))}
@@ -245,14 +271,18 @@ function Thumb({
   doc,
   onClick,
   onDelete,
+  onDownload,
   deleting,
+  downloading,
   aspect,
   maxWidth = '',
 }: {
   doc: InternalDoc;
   onClick: () => void;
   onDelete: () => void;
+  onDownload: () => void;
   deleting: boolean;
+  downloading: boolean;
   aspect: string;
   maxWidth?: string;
 }) {
@@ -275,15 +305,26 @@ function Thumb({
           {fmtDate(doc.uploadedAt)}
         </div>
       </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={deleting}
-        className="absolute right-1 top-1 hidden rounded p-1 text-white opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 bg-red-600/80 hover:bg-red-600 disabled:opacity-50"
-        title="삭제"
-      >
-        {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-      </button>
+      <div className="absolute right-1 top-1 hidden gap-1 opacity-0 transition-opacity group-hover:flex group-hover:opacity-100">
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={downloading}
+          className="rounded p-1 text-white bg-[#273F4F]/80 hover:bg-[#273F4F] disabled:opacity-50"
+          title="다운로드"
+        >
+          {downloading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="rounded p-1 text-white bg-red-600/80 hover:bg-red-600 disabled:opacity-50"
+          title="삭제"
+        >
+          {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+        </button>
+      </div>
     </div>
   );
 }
