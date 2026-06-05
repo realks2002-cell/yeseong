@@ -7,6 +7,7 @@ import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { registerPush } from '@/lib/capacitor/push';
 import { getCurrentPosition } from '@/lib/capacitor/geolocation';
+import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
@@ -65,7 +66,18 @@ export default function HomePage() {
     }
   }, [sb, router]);
 
-  useEffect(() => { load(); registerPush('worker'); }, [load]);
+  useEffect(() => {
+    load();
+    registerPush('worker');
+    // 백그라운드 GPS 추적 시작 — 위치 변경 시 서버에 기록
+    startBackgroundTracking((lat, lng) => {
+      fetch('/api/m/gps-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      }).catch(() => {});
+    });
+  }, [load]);
 
   const todayRecord = me?.recent.find((r) => r.work_date === TODAY_ISO) ?? null;
   const isRejected = todayRecord?.approval_status === 'rejected';
