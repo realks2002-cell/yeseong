@@ -74,7 +74,7 @@ export default function ItemsPage() {
     const [iRes, vRes, tRes] = await Promise.all([
       fetch('/api/items', { cache: 'no-store' }),
       fetch('/api/vendors', { cache: 'no-store' }),
-      fetch('/api/trades', { cache: 'no-store' }),
+      fetch('/api/trades?managersOnly=1', { cache: 'no-store' }), // 팀장에게 등록된 직종만
     ]);
     if (!iRes.ok) { setError('목록을 불러오지 못했습니다'); setList([]); return; }
     setList(await iRes.json());
