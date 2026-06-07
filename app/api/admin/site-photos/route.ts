@@ -19,6 +19,10 @@ type Row = {
   file_size: number;
   memo: string | null;
   uploaded_at: string;
+  receipt_store: string | null;
+  receipt_amount: number | null;
+  receipt_date: string | null;
+  ocr_status: 'pending' | 'done' | 'failed' | null;
 };
 
 export async function GET(req: Request) {
@@ -46,7 +50,7 @@ export async function GET(req: Request) {
   let query = admin
     .from('yeseong_site_photos')
     .select(
-      'id, worker_id, worksite_id, photo_date, category, storage_path, mime_type, file_size, memo, uploaded_at',
+      'id, worker_id, worksite_id, photo_date, category, storage_path, mime_type, file_size, memo, uploaded_at, receipt_store, receipt_amount, receipt_date, ocr_status',
     )
     .order('photo_date', { ascending: false })
     .order('worksite_id', { ascending: true })
@@ -109,6 +113,10 @@ export async function GET(req: Request) {
     memo: r.memo,
     uploaded_at: r.uploaded_at,
     signed_url: signedMap.get(r.storage_path) ?? null,
+    receipt_store: r.receipt_store,
+    receipt_amount: r.receipt_amount === null ? null : Number(r.receipt_amount),
+    receipt_date: r.receipt_date,
+    ocr_status: r.ocr_status,
   }));
 
   return NextResponse.json({ photos });

@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { resolveSelfWorkerId } from '@/lib/auth/self-worker';
 import { resolveWorksiteForPhoto } from '@/lib/site-photo/resolve-context';
+import { analyzeReceiptPhoto } from '@/lib/receipt-ocr';
 
 export const runtime = 'nodejs';
 
@@ -61,19 +62,32 @@ export async function POST(req: Request) {
     );
   }
 
-  const { error } = await admin.from('yeseong_site_photos').insert({
-    worker_id: workerId,
-    worksite_id: ctx.worksite_id,
-    category,
-    storage_path: storagePath,
-    mime_type: mimeType,
-    file_size: Math.floor(fileSize),
-    memo,
-    // photo_date는 컬럼 default (KST today)로 결정
-  });
-  if (error) {
+  const { data: inserted, error } = await admin
+    .from('yeseong_site_photos')
+    .insert({
+      worker_id: workerId,
+      worksite_id: ctx.worksite_id,
+      category,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      file_size: Math.floor(fileSize),
+      memo,
+      // 영수증은 OCR 분석 대기 상태로 시작
+      ocr_status: category === 'expense' ? 'pending' : null,
+      // photo_date는 컬럼 default (KST today)로 결정
+    })
+    .select('id')
+    .single();
+  if (error || !inserted) {
     await admin.storage.from(BUCKET).remove([storagePath]);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error?.message ?? 'insert failed' }, { status: 500 });
+  }
+
+  // 영수증이면 응답 후 백그라운드로 OCR 분석 (실패해도 제출은 성공 — 관리자가 재분석 가능)
+  if (category === 'expense') {
+    after(async () => {
+      await analyzeReceiptPhoto(admin, inserted.id);
+    });
   }
 
   return NextResponse.json({ ok: true });
