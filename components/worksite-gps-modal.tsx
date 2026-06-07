@@ -37,6 +37,7 @@ export function WorksiteGpsModal({
   const [lat, setLat] = useState<number | null>(initialLat);
   const [lng, setLng] = useState<number | null>(initialLng);
   const [radius, setRadius] = useState(initialRadius || 300);
+  const [searchAddr, setSearchAddr] = useState(address ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -161,9 +162,12 @@ export function WorksiteGpsModal({
   }, [radius]);
 
   const handleGeocode = async () => {
-    if (!address || !mapInstanceRef.current) return;
+    const q = searchAddr.trim();
+    if (!q || !mapInstanceRef.current) return;
+    setError(null);
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address }, (results, status) => {
+    // 한국 내 검색으로 한정 (지역 코드 KR)
+    geocoder.geocode({ address: q, region: 'KR' }, (results, status) => {
       if (status === 'OK' && results?.[0]) {
         const loc = results[0].geometry.location;
         setLat(loc.lat());
@@ -256,6 +260,32 @@ export function WorksiteGpsModal({
 
         {/* 컨트롤 */}
         <div className="space-y-3 border-t border-[#D7D7D7] px-5 py-4">
+          {/* 주소 검색 */}
+          <div className="flex items-center gap-2">
+            <input
+              value={searchAddr}
+              onChange={(e) => setSearchAddr(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleGeocode(); }}
+              placeholder="주소 입력 (예: 동탄기흥로 864)"
+              className="h-9 flex-1 rounded-[5px] border border-[#D7D7D7] px-2 text-sm"
+            />
+            <button
+              onClick={handleGeocode}
+              disabled={!searchAddr.trim()}
+              className="flex h-9 shrink-0 items-center gap-1 rounded-[5px] bg-[#273F4F] px-3 text-xs font-semibold text-white hover:bg-[#1d303d] disabled:opacity-40"
+            >
+              <Navigation className="h-3 w-3" />
+              주소로 검색
+            </button>
+            <button
+              onClick={handleMyLocation}
+              className="flex h-9 shrink-0 items-center gap-1 rounded-[5px] border border-[#D7D7D7] px-3 text-xs font-medium text-[#4B5563] hover:bg-[#F5F5F5]"
+            >
+              <LocateFixed className="h-3 w-3" />
+              현재 위치
+            </button>
+          </div>
+
           {/* 좌표 표시 */}
           <div className="flex items-center gap-4 text-sm">
             <span className="text-[#6B7280]">좌표:</span>
@@ -266,24 +296,6 @@ export function WorksiteGpsModal({
             ) : (
               <span className="text-xs text-[#9CA3AF]">지도를 클릭하거나 주소 검색을 사용하세요</span>
             )}
-            <div className="ml-auto flex gap-1.5">
-              <button
-                onClick={handleMyLocation}
-                className="flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] px-2.5 py-1 text-xs font-medium text-[#4B5563] hover:bg-[#F5F5F5]"
-              >
-                <LocateFixed className="h-3 w-3" />
-                현재 위치
-              </button>
-              {address && (
-                <button
-                  onClick={handleGeocode}
-                  className="flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] px-2.5 py-1 text-xs font-medium text-[#4B5563] hover:bg-[#F5F5F5]"
-                >
-                  <Navigation className="h-3 w-3" />
-                  주소로 검색
-                </button>
-              )}
-            </div>
           </div>
 
           {/* 반경 */}

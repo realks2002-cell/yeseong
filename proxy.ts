@@ -16,6 +16,11 @@ const PROTECTED_PREFIXES = [
   '/monitoring',
   '/settings',
   '/vendors',
+  '/items',
+  '/trades',
+  '/masonry-prices',
+  '/notifications',
+  '/announcements',
 ];
 
 export async function proxy(req: NextRequest) {
@@ -38,7 +43,10 @@ export async function proxy(req: NextRequest) {
 
   const { data: { user } } = await sb.auth.getUser();
   const path = req.nextUrl.pathname;
-  const isProtected = PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+  // /admin 자체는 로그인 페이지, /admin/* 하위(현장증빙·팀장 화면 보기 등)는 보호
+  const isProtected =
+    PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(p + '/')) ||
+    path.startsWith('/admin/');
 
   if (isProtected && !user) {
     const url = req.nextUrl.clone();
