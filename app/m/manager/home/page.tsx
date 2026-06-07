@@ -7,6 +7,7 @@ import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 import { registerPush } from '@/lib/capacitor/push';
+import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
 
 type PendingItem = {
   attendance_id: string;
@@ -16,11 +17,32 @@ type PendingItem = {
   worker_name: string;
   worker_phone: string | null;
   worker_trade: string | null;
+  is_self?: boolean;
   worksite_id: string;
   worksite_name: string;
   subcontractor_name: string | null;
   created_at: string;
 };
+
+type MyAttendance = {
+  attendance_id: string;
+  work_date: string;
+  hours: number;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  rejection_reason: string | null;
+  worksite_name: string;
+} | null;
+
+const TODAY_ISO = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+})();
+
+const TODAY_LABEL = (() => {
+  const d = new Date();
+  const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${dow})`;
+})();
 
 type Me = {
   manager: { id: string; name: string; phone: string };
@@ -40,6 +62,9 @@ export default function ManagerHomePage() {
   const [approveAllBusy, setApproveAllBusy] = useState(false);
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [myAtt, setMyAtt] = useState<MyAttendance>(null);
+  const [myAttBusy, setMyAttBusy] = useState(false);
+  const [confirmMyHours, setConfirmMyHours] = useState<0.5 | 1 | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,9 +85,10 @@ export default function ManagerHomePage() {
       router.replace('/m/manager/signup');
       return;
     }
-    const [meRes, listRes] = await Promise.all([
+    const [meRes, listRes, myAttRes] = await Promise.all([
       sb.rpc('yeseong_manager_get_me'),
       sb.rpc('yeseong_manager_list_pending_attendance'),
+      sb.rpc('yeseong_manager_my_attendance', { p_work_date: TODAY_ISO }),
     ]);
     if (meRes.error) {
       setError(meRes.error.message);
@@ -84,10 +110,36 @@ export default function ManagerHomePage() {
     } else {
       setItems((listRes.data as unknown as PendingItem[]) ?? []);
     }
+    if (!myAttRes.error) {
+      setMyAtt((myAttRes.data as unknown as MyAttendance) ?? null);
+    }
     setLoading(false);
   }, [sb, router]);
 
   useEffect(() => { load(); registerPush('manager'); }, [load]);
+
+  // 내 출역 제출 (0.5 / 1일) — 본인 출역도 아래 검토 리스트에 포함된다
+  const submitMyAttendance = async (h: 0.5 | 1) => {
+    if (readOnly || myAttBusy) return;
+    setMyAttBusy(true);
+    setError(undefined);
+    const pos = await getPositionWithRetry();
+    const { error: rpcErr } = await sb.rpc('yeseong_manager_register_my_attendance', {
+      p_work_date: TODAY_ISO,
+      p_hours: h,
+      p_latitude: pos?.latitude ?? null,
+      p_longitude: pos?.longitude ?? null,
+    });
+    setMyAttBusy(false);
+    setConfirmMyHours(null);
+    if (rpcErr) {
+      setError(rpcErr.message.includes('already approved')
+        ? '이미 승인 완료된 출역입니다.'
+        : rpcErr.message);
+      return;
+    }
+    await load();
+  };
 
   const approve = async (item: PendingItem) => {
     if (readOnly || busyId) return;
@@ -166,6 +218,65 @@ export default function ManagerHomePage() {
   return (
     <MobileShell showTabs activeTab="home" variant="manager">
       <section className="px-7 pt-8 pb-10">
+        {/* 내 출역 — 팀장 본인 출역 제출 */}
+        {!readOnly && (
+          <div className="mb-7">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-zinc-900">내 출역</h2>
+              <span className="text-sm font-semibold text-zinc-400">{TODAY_LABEL}</span>
+            </div>
+            {myAtt && myAtt.approval_status !== 'rejected' ? (
+              <div className="mt-3 flex items-center gap-3 rounded-[5px] bg-zinc-50 px-4 py-4 ring-1 ring-zinc-200">
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                  myAtt.approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-900'
+                }`}>
+                  <Check className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-bold text-zinc-900">
+                    {myAtt.hours}일 제출됨
+                    <span className={`ml-2 text-sm font-semibold ${
+                      myAtt.approval_status === 'approved' ? 'text-emerald-600' : 'text-blue-900'
+                    }`}>
+                      {myAtt.approval_status === 'approved' ? '승인 완료' : '검토 대기'}
+                    </span>
+                  </p>
+                  <p className="truncate text-sm text-zinc-500">
+                    {myAtt.worksite_name}
+                    {myAtt.approval_status === 'pending' && ' · 아래 목록에서 함께 승인하세요'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {myAtt?.approval_status === 'rejected' && (
+                  <p className="mt-3 rounded-[5px] bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+                    반려됨{myAtt.rejection_reason ? ` · ${myAtt.rejection_reason}` : ''} — 다시 제출해주세요
+                  </p>
+                )}
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setConfirmMyHours(0.5)}
+                    disabled={myAttBusy}
+                    className="flex h-[64px] flex-col items-center justify-center rounded-[5px] bg-white ring-2 ring-blue-200 active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <span className="text-lg font-bold text-blue-900">0.5 일</span>
+                    <span className="text-xs font-medium text-zinc-400">반나절</span>
+                  </button>
+                  <button
+                    onClick={() => setConfirmMyHours(1)}
+                    disabled={myAttBusy}
+                    className="flex h-[64px] flex-col items-center justify-center rounded-[5px] bg-blue-900 ring-2 ring-blue-900 active:scale-[0.99] disabled:opacity-60"
+                  >
+                    <span className="text-lg font-bold text-white">1 일</span>
+                    <span className="text-xs font-medium text-blue-200">정상</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-zinc-900">검토 대기 출역</h2>
           <span className="text-sm font-semibold text-zinc-400">{items?.length ?? 0}건</span>
@@ -214,6 +325,36 @@ export default function ManagerHomePage() {
         )}
       </section>
 
+      {confirmMyHours !== null && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
+          <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
+            <p className="text-center text-base text-zinc-500">{TODAY_LABEL} 내 출역</p>
+            <p className="mt-2 text-center text-[28px] font-bold text-zinc-900">
+              {confirmMyHours}일 제출할까요?
+            </p>
+            <p className="mt-3 text-center text-sm text-zinc-500">
+              제출 후 검토 대기 목록에서 함께 승인됩니다
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setConfirmMyHours(null)}
+                disabled={myAttBusy}
+                className="h-[60px] rounded-[5px] bg-zinc-100 text-lg font-bold text-zinc-700 disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => submitMyAttendance(confirmMyHours)}
+                disabled={myAttBusy}
+                className="h-[60px] rounded-[5px] bg-blue-900 text-lg font-bold text-white disabled:opacity-60"
+              >
+                {myAttBusy ? '제출 중...' : '제출'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmApproveAll && items && items.length > 0 && (
         <ApproveAllDialog
           count={items.length}
@@ -250,6 +391,9 @@ function PendingCard({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-zinc-900">
           {item.worker_name}
+          {item.is_self && (
+            <span className="ml-1.5 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">나</span>
+          )}
           {item.worker_trade && <span className="ml-1.5 text-[11px] font-medium text-zinc-400">({item.worker_trade})</span>}
         </p>
         <p className="text-[10px] text-zinc-400 tabular-nums">{formatTime(item.created_at)}</p>
