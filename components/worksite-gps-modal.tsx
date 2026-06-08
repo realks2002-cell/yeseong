@@ -38,6 +38,7 @@ export function WorksiteGpsModal({
   const [lng, setLng] = useState<number | null>(initialLng);
   const [radius, setRadius] = useState(initialRadius || 300);
   const [searchAddr, setSearchAddr] = useState(address ?? '');
+  const [coordInput, setCoordInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -175,10 +176,35 @@ export function WorksiteGpsModal({
         mapInstanceRef.current!.setCenter(loc);
         mapInstanceRef.current!.setZoom(16);
         updateMarker(mapInstanceRef.current!, loc, radius);
+      } else if (status === 'REQUEST_DENIED') {
+        setError('주소 검색 기능(Geocoding API)이 비활성화되어 있습니다. 아래 "좌표 직접 입력"을 사용하거나 지도를 클릭하세요.');
       } else {
-        setError('주소를 찾을 수 없습니다.');
+        setError('주소를 찾을 수 없습니다. 좌표 직접 입력 또는 지도 클릭을 사용하세요.');
       }
     });
+  };
+
+  // 위/경도 직접 입력 ("37.268884, 127.307617" 형식)
+  const handleCoordInput = () => {
+    if (!mapInstanceRef.current) return;
+    setError(null);
+    const m = coordInput.trim().match(/(-?\d+\.?\d*)\s*[,\s]\s*(-?\d+\.?\d*)/);
+    if (!m) {
+      setError('좌표 형식이 올바르지 않습니다. 예: 37.268884, 127.307617');
+      return;
+    }
+    const newLat = parseFloat(m[1]);
+    const newLng = parseFloat(m[2]);
+    if (newLat < 33 || newLat > 39 || newLng < 124 || newLng > 132) {
+      setError('한국 좌표 범위를 벗어났습니다. 위도(앞), 경도(뒤) 순서를 확인하세요.');
+      return;
+    }
+    const loc = new google.maps.LatLng(newLat, newLng);
+    setLat(newLat);
+    setLng(newLng);
+    mapInstanceRef.current.setCenter(loc);
+    mapInstanceRef.current.setZoom(17);
+    updateMarker(mapInstanceRef.current, loc, radius);
   };
 
   // 현재 위치(브라우저 geolocation)로 마커 이동
@@ -283,6 +309,25 @@ export function WorksiteGpsModal({
             >
               <LocateFixed className="h-3 w-3" />
               현재 위치
+            </button>
+          </div>
+
+          {/* 좌표 직접 입력 */}
+          <div className="flex items-center gap-2">
+            <input
+              value={coordInput}
+              onChange={(e) => setCoordInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCoordInput(); }}
+              placeholder="좌표 직접 입력 (예: 37.268884, 127.307617)"
+              className="h-9 flex-1 rounded-[5px] border border-[#D7D7D7] px-2 text-sm font-mono"
+            />
+            <button
+              onClick={handleCoordInput}
+              disabled={!coordInput.trim()}
+              className="flex h-9 shrink-0 items-center gap-1 rounded-[5px] bg-[#447D9B] px-3 text-xs font-semibold text-white hover:bg-[#366379] disabled:opacity-40"
+            >
+              <MapPin className="h-3 w-3" />
+              좌표 적용
             </button>
           </div>
 
