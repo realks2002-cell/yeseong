@@ -30,7 +30,6 @@ type OrderRow = {
 };
 
 const STATUS_TABS = [
-  { value: '', label: '전체' },
   { value: 'requested', label: '요청됨' },
   { value: 'sent', label: '발주완료' },
   { value: 'delivered', label: '입고완료' },
@@ -52,6 +51,8 @@ function fmtDateTime(iso: string): string {
 export default function OrdersPage() {
   const [list, setList] = useState<OrderRow[] | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
+  const [worksiteFilter, setWorksiteFilter] = useState('');
+  const [requesterFilter, setRequesterFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -75,6 +76,28 @@ export default function OrdersPage() {
     for (const o of list ?? []) c[o.status] = (c[o.status] ?? 0) + 1;
     return c;
   }, [list]);
+
+  const worksiteOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const o of list ?? []) if (o.worksite) m.set(o.worksite.id, o.worksite.name);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'ko'));
+  }, [list]);
+
+  const requesterOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const o of list ?? []) if (o.requester) m.set(o.requester.id, o.requester.name);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'ko'));
+  }, [list]);
+
+  const filtered = useMemo(
+    () =>
+      (list ?? []).filter(
+        (o) =>
+          (!worksiteFilter || o.worksite?.id === worksiteFilter) &&
+          (!requesterFilter || o.requester?.id === requesterFilter),
+      ),
+    [list, worksiteFilter, requesterFilter],
+  );
 
   async function copyOrderText(order: OrderRow, groupKey: string, text: string) {
     try {
@@ -120,7 +143,7 @@ export default function OrdersPage() {
           {STATUS_TABS.map((t) => (
             <button
               key={t.value}
-              onClick={() => setStatusFilter(t.value)}
+              onClick={() => setStatusFilter((prev) => (prev === t.value ? '' : t.value))}
               className={`rounded-[5px] border px-3 py-1.5 text-xs font-semibold ${
                 statusFilter === t.value
                   ? 'border-[#273F4F] bg-[#273F4F] text-white'
@@ -133,6 +156,28 @@ export default function OrdersPage() {
               )}
             </button>
           ))}
+
+          {/* 현장·팀장 분류 */}
+          <select
+            value={worksiteFilter}
+            onChange={(e) => setWorksiteFilter(e.target.value)}
+            className="ml-auto h-[31px] rounded-[5px] border border-[#D7D7D7] bg-white px-2 text-xs font-semibold text-[#091413] outline-none focus:ring-2 focus:ring-[#447D9B]"
+          >
+            <option value="">현장 전체</option>
+            {worksiteOptions.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={requesterFilter}
+            onChange={(e) => setRequesterFilter(e.target.value)}
+            className="h-[31px] rounded-[5px] border border-[#D7D7D7] bg-white px-2 text-xs font-semibold text-[#091413] outline-none focus:ring-2 focus:ring-[#447D9B]"
+          >
+            <option value="">팀장 전체</option>
+            {requesterOptions.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
         </div>
 
         {error && <p className="rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
@@ -141,12 +186,14 @@ export default function OrdersPage() {
         <div className="space-y-4">
           {list === null ? (
             <p className="py-10 text-center text-sm text-[#9CA3AF]">불러오는 중...</p>
-          ) : list.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <Card className="py-12 text-center text-sm text-[#9CA3AF]">
-              {statusFilter ? '해당 상태의 발주가 없습니다.' : '발주 요청이 없습니다. 팀장앱에서 자재를 요청하면 여기에 표시됩니다.'}
+              {statusFilter || worksiteFilter || requesterFilter
+                ? '조건에 맞는 발주가 없습니다.'
+                : '발주 요청이 없습니다. 팀장앱에서 자재를 요청하면 여기에 표시됩니다.'}
             </Card>
           ) : (
-            list.map((o) => {
+            filtered.map((o) => {
               const badge = STATUS_BADGE[o.status];
               const lines: OrderLineForText[] = o.items.map((it) => ({
                 item_name: it.item_name,
