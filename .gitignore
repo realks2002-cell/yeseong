@@ -46,3 +46,8 @@ docs/.bkit-memory.json
 docs/.pdca-snapshots/
 docs/.pdca-status.json
 supabase/.temp/
+
+# E2E
+/e2e/.e2e-state.json
+/test-results/
+/playwright-report/
