@@ -163,9 +163,6 @@ export default function AnnouncementsPage() {
             공지 작성
           </button>
         </div>
-        <p className="mt-1 text-sm text-[#6B7280]">
-          앱을 열 때 표시되는 공지 팝업을 관리합니다. 글씨 크기를 자유롭게 설정할 수 있습니다.
-        </p>
 
         {/* 작성 폼 */}
         {showForm && (

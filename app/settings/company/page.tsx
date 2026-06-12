@@ -63,10 +63,9 @@ export default function CompanySettingsPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-2xl p-6 space-y-4">
+      <div className="max-w-2xl p-6 space-y-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight">회사 정보</h1>
-          <p className="text-sm text-[#6B7280]">노임대장 등 출력물에 사용되는 회사 기본 정보입니다.</p>
         </div>
 
         <Card>

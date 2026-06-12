@@ -141,9 +141,6 @@ export default function VolumesReviewPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">매사 성과 검토</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              작업자가 제출한 성과(물량)의 승인·반려. 승인된 성과만 급여(임금총액)에 반영됩니다.
-            </p>
           </div>
           <Button variant="outline" onClick={load} disabled={busy}>
             <RefreshCw className="h-4 w-4" />

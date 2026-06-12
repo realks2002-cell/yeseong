@@ -68,7 +68,6 @@ export default function VendorsPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">거래처</h1>
-            <p className="text-sm text-[#6B7280] mt-1">총 {list?.length ?? '...'}개 거래처</p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4" />

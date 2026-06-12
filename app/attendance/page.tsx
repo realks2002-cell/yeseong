@@ -4,7 +4,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import {
   MapPin, Users, CheckCircle2, Clock, XCircle, AlertTriangle,
-  ExternalLink, RefreshCw,
+  RefreshCw,
 } from 'lucide-react';
 
 type LiveRow = {
@@ -39,19 +39,6 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 function fmtTime(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function fmtDistance(m: number | null): string {
-  if (m === null) return '-';
-  if (m >= 1000) return `${(m / 1000).toFixed(1)}km`;
-  return `${m}m`;
-}
-
-function fmtAgo(iso: string): string {
-  const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (diffMin < 1) return '방금';
-  if (diffMin < 60) return `${diffMin}분 전`;
-  return `${Math.floor(diffMin / 60)}시간 전`;
 }
 
 export default function AttendanceLivePage() {
@@ -90,6 +77,20 @@ export default function AttendanceLivePage() {
     [items, siteFilter],
   );
 
+  // 현장별 출역 인원 (전체 기준 — 필터와 무관)
+  const bySite = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; total: number; approved: number; pending: number; rejected: number }>();
+    for (const r of items ?? []) {
+      const s = m.get(r.worksite_id) ?? { id: r.worksite_id, name: r.worksite_name, total: 0, approved: 0, pending: 0, rejected: 0 };
+      s.total += 1;
+      if (r.approval_status === 'approved') s.approved += 1;
+      else if (r.approval_status === 'pending') s.pending += 1;
+      else s.rejected += 1;
+      m.set(r.worksite_id, s);
+    }
+    return Array.from(m.values()).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'ko'));
+  }, [items]);
+
   const summary = useMemo(() => {
     const s = { total: 0, approved: 0, pending: 0, rejected: 0, out: 0 };
     for (const r of filtered) {
@@ -115,9 +116,6 @@ export default function AttendanceLivePage() {
                 LIVE
               </span>
             </h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              오늘 출역한 작업자와 최근 GPS 위치입니다. {REFRESH_SEC}초마다 자동 갱신됩니다.
-            </p>
           </div>
           <div className="flex items-center gap-3">
             {lastUpdated && (
@@ -174,6 +172,36 @@ export default function AttendanceLivePage() {
           </Card>
         </div>
 
+        {/* 현장별 출역 인원 */}
+        {bySite.length > 0 && (
+          <Card className="p-4">
+            <p className="text-sm font-semibold text-[#091413] mb-2.5">현장별 출역 인원</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {bySite.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSiteFilter(siteFilter === s.id ? '' : s.id)}
+                  className={`flex items-center justify-between rounded-[5px] border px-3 py-2.5 text-left transition-colors ${
+                    siteFilter === s.id
+                      ? 'border-[#273F4F] bg-[#273F4F] text-white'
+                      : 'border-[#D7D7D7] bg-white hover:bg-[#F5F5F5]'
+                  }`}
+                >
+                  <span className="min-w-0 truncate text-xs font-semibold">{s.name}</span>
+                  <span className="ml-2 shrink-0 text-right">
+                    <span className="text-base font-bold tabular-nums">{s.total}</span>
+                    <span className="text-[11px] font-medium">명</span>
+                    <span className={`ml-1.5 text-[10px] ${siteFilter === s.id ? 'text-white/70' : 'text-[#9CA3AF]'}`}>
+                      승인 {s.approved} · 대기 {s.pending}
+                      {s.rejected > 0 && ` · 반려 ${s.rejected}`}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* 현장 필터 */}
         {worksites.length > 1 && (
           <div className="flex items-center gap-2 flex-wrap">
@@ -217,16 +245,14 @@ export default function AttendanceLivePage() {
                   <th className="px-3 py-2 font-medium">현장</th>
                   <th className="px-3 py-2 font-medium w-14">공수</th>
                   <th className="px-3 py-2 font-medium w-14">상태</th>
-                  <th className="px-3 py-2 font-medium w-16">출역 시간</th>
-                  <th className="px-3 py-2 font-medium w-20">출역 시 거리</th>
-                  <th className="px-3 py-2 font-medium">최근 위치</th>
+                  <th className="px-3 py-2 font-medium w-20">출역제출시간</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {items === null ? (
-                  <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">오늘 출역 기록이 없습니다.</td></tr>
+                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">오늘 출역 기록이 없습니다.</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const badge = STATUS_BADGE[r.approval_status];
@@ -242,48 +268,6 @@ export default function AttendanceLivePage() {
                           </span>
                         </td>
                         <td className="px-3 py-2 text-center tabular-nums text-[#4B5563]">{fmtTime(r.created_at)}</td>
-                        <td className="px-3 py-2 text-center">
-                          {!r.site_has_gps ? (
-                            <span className="text-[#C0C0C0]" title="현장 좌표 미등록">-</span>
-                          ) : r.gps_distance_m === null ? (
-                            <span className="text-[#C0C0C0]" title="GPS 미수집">-</span>
-                          ) : (
-                            <span className={`font-semibold ${
-                              r.gps_distance_m <= r.geofence_radius ? 'text-emerald-600' : 'text-red-600'
-                            }`}>
-                              {fmtDistance(r.gps_distance_m)}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {r.last_seen_at === null ? (
-                            <span className="text-[#C0C0C0]">기록 없음</span>
-                          ) : (
-                            <span className="flex items-center gap-1.5 flex-wrap">
-                              {r.last_within === false ? (
-                                <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600">
-                                  이탈 {fmtDistance(r.last_distance_m)}
-                                </span>
-                              ) : r.last_within === true ? (
-                                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                  현장 내
-                                </span>
-                              ) : null}
-                              <span className="text-[#9CA3AF]">{fmtAgo(r.last_seen_at)}</span>
-                              {r.last_latitude !== null && (
-                                <a
-                                  href={`https://maps.google.com/?q=${r.last_latitude},${r.last_longitude}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-0.5 text-[#447D9B] hover:underline"
-                                >
-                                  지도
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              )}
-                            </span>
-                          )}
-                        </td>
                       </tr>
                     );
                   })

@@ -141,11 +141,6 @@ export default function WorkersPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">작업자 마스터</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              총 {list?.length ?? '...'}명
-              {list && ` · 앱 가입 ${list.filter((w) => w.auth_user_id).length}명`}
-              {(query || wageTypeFilter) && filtered ? ` · 검색결과 ${filtered.length}명` : ''}
-            </p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => setShowAdd(true)}>

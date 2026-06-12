@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, MapPin, Navigation, RotateCcw, LocateFixed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { loadGoogleMaps } from '@/lib/google-maps';
 
 type Props = {
   worksiteId: string;
@@ -50,16 +51,9 @@ export function WorksiteGpsModal({
       setError('Google Maps API 키가 설정되지 않았습니다.');
       return;
     }
-    if (window.google?.maps) {
-      setMapLoaded(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`;
-    script.async = true;
-    script.onload = () => setMapLoaded(true);
-    script.onerror = () => setError('Google Maps 로드 실패');
-    document.head.appendChild(script);
+    loadGoogleMaps(apiKey)
+      .then(() => setMapLoaded(true))
+      .catch(() => setError('Google Maps 로드 실패'));
   }, []);
 
   const updateMarker = useCallback((map: google.maps.Map, position: google.maps.LatLng, r: number) => {

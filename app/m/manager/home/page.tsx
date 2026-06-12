@@ -217,7 +217,7 @@ export default function ManagerHomePage() {
 
   return (
     <MobileShell showTabs activeTab="home" variant="manager">
-      <section className="px-7 pt-8 pb-10">
+      <section className="px-7 pt-14 pb-10">
         {/* 내 출역 — 팀장 본인 출역 제출 */}
         {!readOnly && (
           <div className="mb-7">

@@ -191,8 +191,8 @@ function DocsContent({
             onDownload={() => onDownload(docs.id_card!)}
             deleting={deletingId === docs.id_card.id}
             downloading={downloadingId === docs.id_card.id}
-            aspect="aspect-[16/10]"
-            maxWidth="max-w-[280px]"
+            aspect="aspect-[4/3]"
+            maxWidth="max-w-[200px]"
           />
         ) : (
           <EmptyPlaceholder label="미등록" />
@@ -208,8 +208,8 @@ function DocsContent({
             onDownload={() => onDownload(docs.bankbook!)}
             deleting={deletingId === docs.bankbook.id}
             downloading={downloadingId === docs.bankbook.id}
-            aspect="aspect-[3/4]"
-            maxWidth="max-w-[180px]"
+            aspect="aspect-[4/3]"
+            maxWidth="max-w-[200px]"
           />
         ) : (
           <EmptyPlaceholder label="미등록" />
@@ -218,7 +218,7 @@ function DocsContent({
 
       <Section icon={Award} title="자격증" count={docs.certificates.length} max={5}>
         {docs.certificates.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-[repeat(auto-fill,200px)] gap-2">
             {docs.certificates.map((c) => (
               <Thumb
                 key={c.id}

@@ -28,6 +28,7 @@ import {
   LogOut as LogOutIcon,
   KeyRound,
   Images,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
@@ -45,6 +46,7 @@ type Item = {
 type Group = {
   label: string;
   items: Item[];
+  collapsible?: boolean;
 };
 
 const groups: Group[] = [
@@ -62,11 +64,12 @@ const groups: Group[] = [
       { label: '발주', href: '/orders', icon: ShoppingCart },
       { label: '비용처리', href: '/expenses', icon: Receipt },
       { label: '장비 렌탈', href: '/equipment', icon: Wrench },
-      { label: '현장증빙', href: '/admin/site-photos', icon: Images, badge: 'NEW' },
+      { label: '현장증빙', href: '/admin/site-photos', icon: Images },
     ],
   },
   {
     label: '마스터 데이터',
+    collapsible: true,
     items: [
       { label: '작업자', href: '/workers', icon: Users },
       { label: '직종', href: '/trades', icon: Tags },
@@ -94,7 +97,6 @@ const groups: Group[] = [
       { label: '매사 성과 검토', href: '/monitoring/volumes-review', icon: ClipboardList },
       { label: '변경 이력', href: '/admin/audit-log', icon: History },
       { label: '앱 종료 알림', href: '/monitoring/offline', icon: BellOff },
-      { label: '이탈 기록', href: '/monitoring/departures', icon: LogOutIcon },
     ],
   },
   {
@@ -117,6 +119,22 @@ export function Sidebar() {
   const router = useRouter();
   const [userId, setUserId] = useState<string>('');
   const [orderCount, setOrderCount] = useState(0);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      if (saved) setCollapsed(JSON.parse(saved));
+    } catch { /* 무시 */ }
+  }, []);
+
+  const toggleGroup = (label: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      try { localStorage.setItem('sidebar-collapsed', JSON.stringify(next)); } catch { /* 무시 */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const sb = getBrowserSupabase();
@@ -160,11 +178,25 @@ export function Sidebar() {
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-        {groups.map(group => (
+        {groups.map(group => {
+          const isCollapsed = group.collapsible && collapsed[group.label];
+          return (
           <div key={group.label}>
-            <p className="mb-1.5 rounded-[5px] bg-[#273F4F] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
-              {group.label}
-            </p>
+            {group.collapsible ? (
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.label)}
+                className="mb-1.5 flex w-full items-center justify-between rounded-[5px] bg-[#273F4F] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white"
+              >
+                {group.label}
+                <ChevronDown className={cn('h-3 w-3 transition-transform', isCollapsed && '-rotate-90')} />
+              </button>
+            ) : (
+              <p className="mb-1.5 rounded-[5px] bg-[#273F4F] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
+                {group.label}
+              </p>
+            )}
+            {!isCollapsed && (
             <ul className="space-y-0.5">
               {group.items.map(item => {
                 const active = isActive(pathname, item.href);
@@ -197,8 +229,10 @@ export function Sidebar() {
                 );
               })}
             </ul>
+            )}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <button

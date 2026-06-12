@@ -21,35 +21,66 @@ export async function resolveTargetTokens(
     tokens = (data ?? []).map((r) => r.token);
 
   } else if (targetType === 'leaders') {
-    const { data: leaders } = await sb
-      .from('yeseong_workers')
-      .select('id')
-      .eq('skill_grade', '팀장')
-      .eq('is_active', true);
-    const leaderIds = (leaders ?? []).map((l) => l.id);
-    if (leaderIds.length > 0) {
+    // 팀장 명단의 진실 원천 = site_managers (worker.skill_grade 아님)
+    // ① 팀장앱 세션 토큰(auth_user_id) ② 팀장 worker 행 토큰(phone 매칭)
+    const { data: managers } = await sb
+      .from('yeseong_site_managers')
+      .select('auth_user_id, phone');
+    const authIds = (managers ?? []).map((m) => m.auth_user_id).filter(Boolean) as string[];
+    const phones = (managers ?? []).map((m) => m.phone).filter(Boolean) as string[];
+    let leaderWorkerIds: string[] = [];
+    if (phones.length > 0) {
+      const { data: lw } = await sb
+        .from('yeseong_workers')
+        .select('id')
+        .in('phone', phones)
+        .eq('is_active', true);
+      leaderWorkerIds = (lw ?? []).map((w) => w.id);
+    }
+    const ors: string[] = [];
+    if (authIds.length > 0) ors.push(`auth_user_id.in.(${authIds.join(',')})`);
+    if (leaderWorkerIds.length > 0) ors.push(`worker_id.in.(${leaderWorkerIds.join(',')})`);
+    if (ors.length > 0) {
       const { data } = await sb
         .from('yeseong_fcm_tokens')
         .select('token')
-        .in('worker_id', leaderIds)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .or(ors.join(','));
       tokens = (data ?? []).map((r) => r.token);
     }
 
   } else if (targetType === 'team') {
     if (!targetValue) return [];
+    // targetValue = site_manager id — 팀원(worker.team_leader_id) + 팀장 본인(phone·auth)
+    const { data: leader } = await sb
+      .from('yeseong_site_managers')
+      .select('auth_user_id, phone')
+      .eq('id', targetValue)
+      .maybeSingle();
     const { data: members } = await sb
       .from('yeseong_workers')
       .select('id')
       .eq('is_active', true)
-      .or(`id.eq.${targetValue},team_leader_id.eq.${targetValue}`);
+      .eq('team_leader_id', targetValue);
     const memberIds = (members ?? []).map((m) => m.id);
-    if (memberIds.length > 0) {
+    if (leader?.phone) {
+      const { data: lw } = await sb
+        .from('yeseong_workers')
+        .select('id')
+        .eq('phone', leader.phone)
+        .eq('is_active', true)
+        .limit(1);
+      memberIds.push(...(lw ?? []).map((w) => w.id));
+    }
+    const ors: string[] = [];
+    if (memberIds.length > 0) ors.push(`worker_id.in.(${memberIds.join(',')})`);
+    if (leader?.auth_user_id) ors.push(`auth_user_id.eq.${leader.auth_user_id}`);
+    if (ors.length > 0) {
       const { data } = await sb
         .from('yeseong_fcm_tokens')
         .select('token')
-        .in('worker_id', memberIds)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .or(ors.join(','));
       tokens = (data ?? []).map((r) => r.token);
     }
 

@@ -106,9 +106,6 @@ export default function MasonryPricesPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">매사 단가</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              {isBrick ? '현장별 조적 장당 단가 관리' : `현장별 ${category} 단위별 단가 관리`}
-            </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4" />

@@ -158,9 +158,6 @@ export default function AttendanceReviewPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">팀장출역 검토</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              작업자 제출 출역의 승인·미승인 내역. 관리자가 직접 처리할 수 있습니다.
-            </p>
           </div>
           <Button variant="outline" onClick={load} disabled={busy}>
             <RefreshCw className="h-4 w-4" />

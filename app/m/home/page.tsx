@@ -7,7 +7,6 @@ import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
-import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
 import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
@@ -78,9 +77,8 @@ export default function HomePage() {
         body: JSON.stringify({ latitude: lat, longitude: lng }),
       }).catch(() => {});
     };
-    // ① 백그라운드 워처 (항상 허용 시, 50m 이동마다)
-    startBackgroundTracking(reportGps);
-    // ② 포그라운드 폴링 (앱 사용 중 허용만으로 작동, 5분마다)
+    // 백그라운드 워처 비활성화 (구글 심사 대응) — 복구 시 startBackgroundTracking(reportGps) + 매니페스트 권한 2줄 복원
+    // 포그라운드 폴링 (앱 사용 중 허용만으로 작동, 5분마다)
     startForegroundPolling(reportGps);
   }, [load]);
 
@@ -141,7 +139,7 @@ export default function HomePage() {
 
   return (
     <MobileShell showTabs activeTab="home">
-      <div className="px-7 pt-20 pb-4">
+      <div className="px-7 pt-14 pb-4">
         <p className="text-[24px] font-bold text-zinc-700">{TODAY_LABEL}</p>
         <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900">
           {me.worker.name}님
@@ -151,11 +149,6 @@ export default function HomePage() {
             </span>
           )}
         </h1>
-        <div className="mt-2 space-y-0.5 text-base font-semibold text-zinc-500">
-          <p>현장 : {me.worksite.name}</p>
-          <p>소속 : {me.subcontractor?.name ?? '-'}</p>
-          <p>팀장 : {me.team_leader?.name ?? '-'}</p>
-        </div>
       </div>
 
       {isRejected && todayRecord && (
@@ -261,63 +254,79 @@ function HistorySection({
 }: {
   recent: Array<{ work_date: string; hours: number; approval_status: AttendanceStatus; rejection_reason: string | null }>;
 }) {
-  const days: Array<{ date: string; label: string; hours: number; status: AttendanceStatus | null }> = [];
   const now = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const dow = ['일','월','화','수','목','금','토'][d.getDay()];
-    const r = recent.find((x) => x.work_date === iso);
-    days.push({
-      date: iso,
-      label: `${d.getMonth() + 1}/${d.getDate()} ${dow}`,
-      hours: r?.hours ?? 0,
-      status: r?.approval_status ?? null,
-    });
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const todayDate = now.getDate();
+  const startDow = new Date(y, m, 1).getDay();
+  const numDays = new Date(y, m + 1, 0).getDate();
+  const iso = (day: number) =>
+    `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const byDate = new Map(recent.map((r) => [r.work_date, r]));
+
+  // 합계는 이번 달, 반려 건 제외
+  let total = 0;
+  for (let d = 1; d <= numDays; d++) {
+    const r = byDate.get(iso(d));
+    if (r && r.approval_status !== 'rejected') total += r.hours;
   }
-  // 합계는 반려 건 제외
-  const total = days.reduce((s, d) => s + (d.status === 'rejected' ? 0 : d.hours), 0);
+
+  const cells: Array<number | null> = [
+    ...Array.from({ length: startDow }, () => null),
+    ...Array.from({ length: numDays }, (_, i) => i + 1),
+  ];
+
   return (
     <section className="mt-10 px-7 pb-10">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-zinc-900">최근 7일</h2>
+        <h2 className="text-xl font-bold text-zinc-900">{m + 1}월 출역</h2>
         <span className="text-base font-semibold text-zinc-400">합계 {total}일</span>
       </div>
-      <ul className="mt-4 divide-y divide-zinc-100 rounded-[5px] bg-white ring-1 ring-zinc-200">
-        {days.map((h) => {
-          const isRejected = h.status === 'rejected';
-          const isPending = h.status === 'pending';
-          const hoursClass =
-            h.hours === 0
-              ? 'text-zinc-400'
-              : isRejected
-              ? 'text-red-400 line-through'
+      <div className="mt-4 rounded-[5px] bg-white p-3 ring-1 ring-zinc-200">
+        <div className="grid grid-cols-7 text-center text-xs font-semibold text-zinc-400">
+          {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+            <span key={d} className={i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : ''}>
+              {d}
+            </span>
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-7">
+          {cells.map((day, idx) => {
+            if (day === null) return <div key={`e${idx}`} className="h-14" />;
+            const r = byDate.get(iso(day));
+            const isToday = day === todayDate;
+            const isFuture = day > todayDate;
+            const isRejected = r?.approval_status === 'rejected';
+            const isPending = r?.approval_status === 'pending';
+            const hoursClass = isRejected
+              ? 'text-red-500 line-through'
               : isPending
-              ? 'text-amber-700'
+              ? 'text-amber-600'
               : 'text-blue-900';
-          return (
-            <li key={h.date} className="flex items-center justify-between px-5 py-4">
-              <span className="text-lg font-semibold text-zinc-700">
-                {h.label}
-                {isRejected && (
-                  <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-                    반려
-                  </span>
+            return (
+              <div key={day} className="flex h-14 flex-col items-center pt-1">
+                <span
+                  className={
+                    'flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ' +
+                    (isToday
+                      ? 'bg-blue-900 text-white'
+                      : isFuture
+                      ? 'text-zinc-300'
+                      : 'text-zinc-600')
+                  }
+                >
+                  {day}
+                </span>
+                {r ? (
+                  <span className={'mt-0.5 text-[13px] font-bold ' + hoursClass}>{r.hours}일</span>
+                ) : (
+                  !isFuture && <span className="mt-0.5 text-sm text-zinc-200">─</span>
                 )}
-                {isPending && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                    검토 중
-                  </span>
-                )}
-              </span>
-              <span className={'text-xl font-bold ' + hoursClass}>
-                {h.hours === 0 ? '─' : `${h.hours}일`}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </section>
   );
 }

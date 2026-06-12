@@ -56,9 +56,6 @@ export default function TradesPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">직종 마스터</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              총 {list?.length ?? '...'}개 · 작업자 추가/수정 시 직종 드롭다운의 기준 목록
-            </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4" />

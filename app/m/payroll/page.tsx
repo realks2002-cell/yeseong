@@ -31,7 +31,7 @@ export default function PayrollPage() {
 
   return (
     <MobileShell showTabs activeTab="payroll">
-      <div className="px-7 pt-10">
+      <div className="px-7 pt-14">
         <h1 className="text-[34px] font-bold text-zinc-900">급여 내역</h1>
         <p className="mt-1 text-base text-zinc-500">팀장 승인이 완료된 출역 기준입니다</p>
       </div>
@@ -64,9 +64,20 @@ export default function PayrollPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold text-blue-900">
-                    {m.total_amount != null ? fmtWon(m.total_amount) : '성과 정산'}
-                  </span>
+                  {m.total_amount != null ? (
+                    <div className="text-right">
+                      <span className="text-xl font-bold text-blue-900">{fmtWon(m.total_amount)}</span>
+                      {m.volumes_pending && (
+                        <p className="text-xs font-semibold text-amber-700">검토 중 성과 포함</p>
+                      )}
+                    </div>
+                  ) : m.wage_type === '월급/일급' ? (
+                    <span className="max-w-[110px] text-right text-sm font-semibold leading-snug text-zinc-400">
+                      월말 성과 입력 후 표시
+                    </span>
+                  ) : (
+                    <span className="text-xl font-bold text-blue-900">-</span>
+                  )}
                   <ChevronRight className="h-6 w-6 text-zinc-300" />
                 </div>
               </Link>

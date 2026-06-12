@@ -91,7 +91,7 @@ export default function ManagerMePage() {
 
   return (
     <MobileShell showTabs activeTab="profile" variant="manager">
-      <div className="px-7 pt-10 pb-8">
+      <div className="px-7 pt-14 pb-8">
         <h1 className="text-[34px] font-bold text-zinc-900">내 정보</h1>
       </div>
 

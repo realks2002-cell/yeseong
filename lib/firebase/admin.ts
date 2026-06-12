@@ -1,5 +1,20 @@
 import admin from 'firebase-admin';
 
+// 환경변수 저장 과정(대시보드 붙여넣기·CLI)에서 private_key의 \n이
+// 실제 줄바꿈으로 바뀌거나 값 끝에 잔여 문자가 붙는 변형을 복구해서 파싱
+function parseServiceAccount(raw: string): Record<string, unknown> {
+  const s = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+  try {
+    return JSON.parse(s);
+  } catch {
+    return JSON.parse(
+      s.replace(/("private_key"\s*:\s*")([\s\S]*?)("\s*,)/, (_, a: string, k: string, c: string) =>
+        a + k.replace(/\r?\n/g, '\\n') + c,
+      ),
+    );
+  }
+}
+
 function getApp(): admin.app.App {
   if (admin.apps.length > 0) return admin.apps[0]!;
 
@@ -11,7 +26,7 @@ function getApp(): admin.app.App {
     );
   }
 
-  const credential = JSON.parse(raw);
+  const credential = parseServiceAccount(raw);
   return admin.initializeApp({
     credential: admin.credential.cert(credential),
   });

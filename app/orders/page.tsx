@@ -133,9 +133,6 @@ export default function OrdersPage() {
             <ShoppingCart className="h-6 w-6 text-[#447D9B]" />
             발주
           </h1>
-          <p className="text-sm text-[#6B7280] mt-1">
-            팀장이 요청한 자재를 확인하고, 발주서를 복사해 카카오톡으로 거래처에 전달하세요.
-          </p>
         </div>
 
         {/* 상태 필터 */}

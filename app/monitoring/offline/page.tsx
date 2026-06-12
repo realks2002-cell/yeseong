@@ -133,9 +133,6 @@ export default function OfflineMonitoringPage() {
               <BellOff className="h-6 w-6 text-[#447D9B]" />
               앱 종료 알림
             </h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              오늘 출역한 작업자 중 GPS 신호가 끊긴(앱 종료 추정) 작업자를 감지합니다.
-            </p>
           </div>
           <button
             onClick={load}

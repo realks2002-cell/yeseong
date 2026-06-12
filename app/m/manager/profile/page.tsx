@@ -46,7 +46,7 @@ export default function ManagerProfilePage() {
 
   return (
     <MobileShell showTabs activeTab="affiliation" variant="manager">
-      <div className="px-7 pt-10 pb-8">
+      <div className="px-7 pt-14 pb-8">
         <h1 className="text-[34px] font-bold text-zinc-900">소속</h1>
       </div>
 

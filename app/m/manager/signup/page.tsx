@@ -43,6 +43,7 @@ type CheckResult = {
   worker_has_auth: boolean;
   worker_name: string | null;
   has_manager: boolean;
+  manager_registered?: boolean;
   missing: string[];
   prefilled: Prefilled | null;
 };
@@ -163,6 +164,11 @@ export default function ManagerSignupPage() {
       const r = data as unknown as CheckResult;
       if (r.has_manager) {
         setMode('login_pin');
+        return;
+      }
+      // 팀장 마스터(/managers)에 등록된 전화번호만 진입 가능 — 자가 등록 차단
+      if (!r.manager_registered) {
+        setPhoneError('로그인이 불가합니다. 관리자에게 문의 바랍니다.');
         return;
       }
       if (r.has_worker) {
@@ -303,7 +309,7 @@ export default function ManagerSignupPage() {
 
         {mode === 'login_pin' && (
           <PinStep
-            title={<>다시 만나서 반가워요<br />PIN을 입력해주세요</>}
+            title={<>PIN을 입력해주세요</>}
             value={loginPin}
             onChange={setLoginPin}
             errorMessage={loginError}
@@ -749,20 +755,24 @@ function PinStep({
   return (
     <>
       <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">{title}</h1>
-      <div className="mt-16 flex items-center justify-center gap-5">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={'h-5 w-5 rounded-full transition ' + (i < value.length ? 'bg-blue-900 scale-110' : 'bg-zinc-200')} />
-        ))}
+      {/* 입력 input은 투명하게 점 위에 겹침 — 점만 채워지며 입력 표시 */}
+      <div className="relative mt-16 py-3">
+        <div className="flex items-center justify-center gap-5">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={'h-5 w-5 rounded-full transition ' + (i < value.length ? 'bg-blue-900 scale-110' : 'bg-zinc-200')} />
+          ))}
+        </div>
+        <input
+          type="password"
+          inputMode="numeric"
+          value={value}
+          maxLength={4}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          autoFocus
+          aria-label="PIN 입력"
+          className="absolute inset-0 h-full w-full opacity-0 outline-none"
+        />
       </div>
-      <input
-        type="password"
-        inputMode="numeric"
-        value={value}
-        maxLength={4}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
-        autoFocus
-        className="mt-10 mx-auto w-44 border-b-[3px] border-zinc-200 bg-transparent pb-2 text-center text-[40px] font-bold tracking-[20px] text-zinc-900 outline-none focus:border-blue-900"
-      />
       {errorMessage && (
         <p className="mt-6 text-center text-lg font-semibold text-red-800">{errorMessage}</p>
       )}

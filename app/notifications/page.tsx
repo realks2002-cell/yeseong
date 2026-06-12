@@ -123,9 +123,10 @@ export default function NotificationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
-        setError(data.error || '발송 실패');
+        setError(data.error || `발송 실패 (HTTP ${res.status})`);
       } else {
         setResult(`발송 완료: 성공 ${data.sent}건, 실패 ${data.failed}건${data.message ? ` (${data.message})` : ''}`);
         setTitle('');
@@ -147,9 +148,6 @@ export default function NotificationsPage() {
           <Bell className="h-5 w-5 text-[#273F4F]" />
           <h1 className="text-2xl font-bold tracking-tight">알림 발송</h1>
         </div>
-        <p className="mt-1 text-sm text-[#6B7280]">
-          FCM 푸시 알림을 작업자·팀장 앱으로 발송합니다.
-        </p>
 
         {/* 발송 대상 탭 */}
         <div className="mt-6 grid grid-cols-4 gap-2">

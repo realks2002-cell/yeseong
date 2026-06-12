@@ -57,8 +57,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ sent: 0, failed: 0, message: '발송 대상이 없습니다.' });
   }
 
-  // FCM 발송
-  const { successCount, failureCount } = await sendMulticast(tokens, title, body);
+  // FCM 발송 — 실패 원인을 빈 500 대신 메시지로 반환
+  let successCount = 0;
+  let failureCount = 0;
+  try {
+    ({ successCount, failureCount } = await sendMulticast(tokens, title, body));
+  } catch (e) {
+    return NextResponse.json(
+      { error: `FCM 발송 실패: ${(e as Error).message}` },
+      { status: 500 },
+    );
+  }
 
   // 이력 저장
   await sb.from('yeseong_notifications').insert({

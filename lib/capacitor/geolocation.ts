@@ -9,7 +9,7 @@ export type Position = { latitude: number; longitude: number };
 // 출역 제출 순간 GPS가 안 잡혀도 최근 좌표로 폴백할 수 있다.
 let lastKnown: { latitude: number; longitude: number; at: number } | null = null;
 
-const FALLBACK_MAX_AGE_MS = 10 * 60 * 1000; // 폴백 허용 최대 나이: 10분
+const FALLBACK_MAX_AGE_MS = 30 * 60 * 1000; // 폴백 허용 최대 나이: 30분 (콘크리트 실내 제출 — 도착 시 실외 좌표 커버)
 
 /** 위치 획득 성공 시 캐시에 기록 (모든 레이어에서 호출) */
 export function rememberPosition(latitude: number, longitude: number) {

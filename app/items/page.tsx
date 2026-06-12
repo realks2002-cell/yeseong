@@ -48,12 +48,21 @@ export default function ItemsPage() {
       result = result.filter((it) => it.trades?.includes(tradeFilter));
     }
     const raw = query.trim().toLowerCase();
-    if (!raw) return result;
-    return result.filter((it) =>
-      it.name.toLowerCase().includes(raw) ||
-      (it.item_code?.toLowerCase().includes(raw)) ||
-      (it.spec?.toLowerCase().includes(raw))
-    );
+    if (raw) {
+      result = result.filter((it) =>
+        it.name.toLowerCase().includes(raw) ||
+        (it.item_code?.toLowerCase().includes(raw)) ||
+        (it.spec?.toLowerCase().includes(raw))
+      );
+    }
+    // 공종순 정렬 — 공통(공종 미지정)은 마지막, 같은 공종 내에서는 품목명순
+    return [...result].sort((a, b) => {
+      const ta = a.trades?.[0] ?? '';
+      const tb = b.trades?.[0] ?? '';
+      if (!ta && tb) return 1;
+      if (ta && !tb) return -1;
+      return ta.localeCompare(tb, 'ko') || a.name.localeCompare(b.name, 'ko');
+    });
   }, [list, query, tradeFilter]);
 
   // 공종별 품목 수 (필터 버튼 배지)
@@ -110,10 +119,6 @@ export default function ItemsPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">품목 마스터</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              총 {list?.length ?? '...'}개 품목
-              {query && filtered ? ` · 검색결과 ${filtered.length}건` : ''}
-            </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
             <PackagePlus className="h-4 w-4" />
@@ -170,11 +175,11 @@ export default function ItemsPage() {
               <thead className="bg-[#F5F5F5] text-[#4B5563]">
                 <tr className="text-center text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
+                  <th className="px-3 py-2 font-medium">공종</th>
                   <th className="px-3 py-2 font-medium">품번</th>
                   <th className="px-3 py-2 font-medium">품목</th>
                   <th className="px-3 py-2 font-medium">규격</th>
                   <th className="px-3 py-2 font-medium">단위</th>
-                  <th className="px-3 py-2 font-medium">공종</th>
                   <th className="px-3 py-2 font-medium">거래처</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
@@ -194,10 +199,6 @@ export default function ItemsPage() {
                   filtered.map((it, i) => (
                     <tr key={it.id} className="hover:bg-[#F5F5F5]">
                       <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
-                      <td className="px-3 py-2 font-mono text-[#4B5563]">{it.item_code ?? '-'}</td>
-                      <td className="px-3 py-2 font-medium">{it.name}</td>
-                      <td className="px-3 py-2 text-[#4B5563]">{it.spec ?? '-'}</td>
-                      <td className="px-3 py-2">{it.unit}</td>
                       <td className="px-3 py-2 text-center">
                         {it.trades && it.trades.length > 0 ? (
                           <span className="inline-flex flex-wrap gap-0.5 justify-center">
@@ -209,6 +210,10 @@ export default function ItemsPage() {
                           <span className="rounded bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] font-semibold text-[#9CA3AF]">공통</span>
                         )}
                       </td>
+                      <td className="px-3 py-2 font-mono text-[#4B5563]">{it.item_code ?? '-'}</td>
+                      <td className="px-3 py-2 font-medium">{it.name}</td>
+                      <td className="px-3 py-2 text-[#4B5563]">{it.spec ?? '-'}</td>
+                      <td className="px-3 py-2">{it.unit}</td>
                       <td className="px-3 py-2 text-[#4B5563]">{it.vendor_id ? vendorMap.get(it.vendor_id) ?? '-' : <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">

@@ -68,6 +68,7 @@ export default function ExpensesPage() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [ocrBusy, setOcrBusy] = useState(false);
+  const [excelBusy, setExcelBusy] = useState(false);
   const [ocrMsg, setOcrMsg] = useState<string | null>(null);
   const [editing, setEditing] = useState<ApiPhoto | null>(null);
 
@@ -191,6 +192,29 @@ export default function ExpensesPage() {
     }
   };
 
+  const downloadExcel = async () => {
+    if (excelBusy) return;
+    setExcelBusy(true);
+    try {
+      const { from, to } = monthRange(ym);
+      const qs = new URLSearchParams({ from, to });
+      if (siteId) qs.set('worksite', siteId);
+      const r = await fetch(`/api/expenses/excel?${qs.toString()}`);
+      if (!r.ok) throw new Error('엑셀 생성 실패');
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `비용처리_${ym}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setExcelBusy(false);
+    }
+  };
+
   const openViewer = (p: ApiPhoto) => {
     if (!p.signed_url) return;
     setViewing({
@@ -209,9 +233,6 @@ export default function ExpensesPage() {
             <Receipt className="h-6 w-6 text-[#447D9B]" />
             비용처리
           </h1>
-          <p className="text-sm text-[#6B7280] mt-1">
-            팀장이 앱(현장증빙 → 비용·영수증)으로 올린 영수증을 AI가 읽어 상점·금액·날짜를 정리합니다.
-          </p>
         </div>
 
         {/* 필터 + 보기 전환 */}
@@ -278,6 +299,14 @@ export default function ExpensesPage() {
                 미분석 {unanalyzed.length}건 분석
               </button>
             )}
+            <button
+              onClick={downloadExcel}
+              disabled={excelBusy || (photos ?? []).length === 0}
+              className="flex items-center gap-1.5 rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-1.5 text-xs font-bold text-[#091413] hover:bg-[#F5F5F5] disabled:opacity-50"
+            >
+              {excelBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              엑셀
+            </button>
           </div>
         </div>
 

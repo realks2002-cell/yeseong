@@ -68,12 +68,25 @@ export default function PayrollDetailPage({
             <p className="mt-1 text-[44px] font-bold leading-none">{month.approved_hours}일</p>
             <div className="mt-5 flex items-end justify-between">
               <p className="text-base text-blue-200">
-                {month.total_amount != null ? '예상 금액' : '정산 방식'}
+                {month.total_amount != null
+                  ? month.wage_type === '월급/일급'
+                    ? '성과 금액'
+                    : '예상 금액'
+                  : '정산 방식'}
               </p>
-              <p className="text-2xl font-bold">
-                {month.total_amount != null ? fmtWon(month.total_amount) : '성과 기준'}
-              </p>
+              {month.total_amount != null ? (
+                <p className="text-2xl font-bold">{fmtWon(month.total_amount)}</p>
+              ) : month.wage_type === '월급/일급' ? (
+                <p className="text-base font-semibold text-blue-100">월말 성과 입력 후 표시돼요</p>
+              ) : (
+                <p className="text-2xl font-bold">-</p>
+              )}
             </div>
+            {month.volumes_pending && (
+              <p className="mt-3 text-sm text-blue-200">
+                검토 중인 성과가 포함돼 있어요 — 승인되면 확정돼요
+              </p>
+            )}
             {month.pending_hours > 0 && (
               <p className="mt-3 text-sm text-blue-200">
                 검토 중 {month.pending_hours}일은 승인되면 반영돼요

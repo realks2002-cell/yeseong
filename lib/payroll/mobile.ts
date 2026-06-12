@@ -5,7 +5,8 @@ export type PayrollMonth = {
   wage_type: string | null;
   approved_hours: number;
   pending_hours: number;
-  total_amount: number | null; // null = 성과 기준 정산(월급/일급)
+  total_amount: number | null; // 월급/일급(매사)은 성과 총액, 미입력이면 null
+  volumes_pending?: boolean; // 매사: 검토 중 성과 포함 여부
   entries: Array<{
     work_date: string;
     hours: number;

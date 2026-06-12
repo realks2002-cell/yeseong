@@ -85,9 +85,6 @@ export default function ClientsPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">원청사 마스터</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              총 {list?.length ?? '...'}개 원청사
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-[#4B5563] cursor-pointer select-none">

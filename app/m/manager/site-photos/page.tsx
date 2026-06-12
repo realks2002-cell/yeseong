@@ -33,7 +33,7 @@ export default function ManagerSitePhotosPage() {
 
   return (
     <MobileShell showTabs activeTab="proofs" variant="manager">
-      <div className="px-7 pt-10 pb-2">
+      <div className="px-7 pt-14 pb-2">
         <h1 className="text-[34px] font-bold text-zinc-900">현장증빙 제출</h1>
       </div>
 

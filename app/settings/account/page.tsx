@@ -73,9 +73,6 @@ export default function AccountPage() {
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">관리자 계정</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              총 {list?.length ?? '...'}명. 여러 관리자가 동시에 접속할 수 있습니다.
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-[#4B5563] cursor-pointer select-none">

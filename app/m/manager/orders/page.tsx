@@ -118,7 +118,7 @@ export default function ManagerOrdersPage() {
   return (
     <MobileShell showTabs activeTab="orders" variant="manager">
       <div className="px-5 pt-14 pb-8">
-        <h1 className="text-[26px] font-bold text-zinc-900 flex items-center gap-2">
+        <h1 className="text-[34px] font-bold text-zinc-900 flex items-center gap-2">
           <PackagePlus className="h-7 w-7 text-blue-900" />
           자재 발주
         </h1>

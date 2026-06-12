@@ -80,7 +80,6 @@ export default async function PayrollIndexPage() {
       <div className="max-w-7xl p-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">노임대장</h1>
-          <p className="mt-1 text-sm text-[#6B7280]">유형을 선택하고 현장을 선택하여 월별 노임대장을 관리하세요.</p>
         </div>
 
         {error && (

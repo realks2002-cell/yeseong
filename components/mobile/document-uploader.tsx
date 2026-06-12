@@ -69,9 +69,6 @@ export function DocumentsSection({ readOnly = false }: { readOnly?: boolean }) {
     <>
       <section className="px-7 pb-10">
         <h2 className="text-lg font-bold text-zinc-900">내 서류</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          신분증·통장사본·자격증 사본을 등록하면 관리자가 바로 확인할 수 있어요.
-        </p>
 
         {error && (
           <p className="mt-3 rounded-[5px] bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">

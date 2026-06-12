@@ -93,7 +93,7 @@ export default function ManagerAssignmentsPage() {
 
   return (
     <MobileShell>
-      <div className="flex h-full min-h-svh sm:min-h-[860px] flex-col px-7 pt-8 pb-10">
+      <div className="flex h-full min-h-svh sm:min-h-[860px] flex-col px-7 pt-14 pb-10">
         <div className="flex items-center">
           {!isFirstSetup && (
             <button
@@ -105,7 +105,7 @@ export default function ManagerAssignmentsPage() {
           )}
         </div>
 
-        <h1 className="mt-6 text-[32px] font-bold leading-tight text-zinc-900">
+        <h1 className="mt-6 text-[34px] font-bold leading-tight text-zinc-900">
           담당하시는<br />현장을 선택해주세요
         </h1>
         <p className="mt-3 text-base text-zinc-500">

@@ -12,8 +12,8 @@ export default function WorkerVolumesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 재조회 시 loading을 켜면 폼이 언마운트돼 저장 토스트가 사라짐 — 첫 로드만 로딩 표시
   const load = useCallback(async () => {
-    setLoading(true);
     setError(null);
     const { data: { user } } = await sb.auth.getUser();
     if (!user) {
@@ -34,9 +34,9 @@ export default function WorkerVolumesPage() {
 
   return (
     <MobileShell showTabs activeTab="volumes" variant="worker">
-      <div className="p-5">
+      <div className="p-5 pt-14">
         <header className="mb-4">
-          <h1 className="text-xl font-bold text-zinc-900">매사 성과</h1>
+          <h1 className="text-[34px] font-bold text-zinc-900">매사 성과</h1>
           <p className="text-sm text-zinc-500 mt-0.5">조적·미장 작업 물량을 입력합니다</p>
         </header>
 

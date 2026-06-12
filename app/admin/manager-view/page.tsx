@@ -26,13 +26,10 @@ export default function ManagerViewPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-7xl p-6 space-y-5">
+      <div className="max-w-7xl p-6 space-y-5">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-[#091413]">팀장 화면 보기</h1>
-            <p className="mt-0.5 text-sm text-[#6B7280]">
-              팀장 앱에 실제로 표시되는 화면과 데이터를 그대로 미러링합니다
-            </p>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
             <Eye className="h-3.5 w-3.5" /> 보기 전용 · 승인/저장은 동작하지 않습니다

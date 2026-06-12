@@ -1,11 +1,12 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Check, RefreshCw, AlertTriangle } from 'lucide-react';
+import { MapPin, Check, RefreshCw, AlertTriangle, LocateFixed } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId } from '@/lib/manager/mirror';
 import { getCurrentPosition, type Position } from '@/lib/capacitor/geolocation';
+import { loadGoogleMaps } from '@/lib/google-maps';
 
 type SiteGps = {
   id: string;
@@ -59,16 +60,9 @@ export default function ManagerSiteGpsPage() {
       setMapError('지도 API 키가 설정되지 않았습니다.');
       return;
     }
-    if (window.google?.maps) {
-      setMapLoaded(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`;
-    script.async = true;
-    script.onload = () => setMapLoaded(true);
-    script.onerror = () => setMapError('지도를 불러오지 못했습니다.');
-    document.head.appendChild(script);
+    loadGoogleMaps(apiKey)
+      .then(() => setMapLoaded(true))
+      .catch((e) => setMapError((e as Error).message));
   }, []);
 
   useEffect(() => {
@@ -175,10 +169,51 @@ export default function ManagerSiteGpsPage() {
     await load();
   };
 
+  // 현위치 버튼 — 위치를 새로 잡아 그 좌표로 바로 등록 (등록되면 초록핀이 이동)
+  const registerHere = async () => {
+    if (readOnly || busyId) return;
+    setError(undefined);
+    setPosLoading(true);
+    const p = await getCurrentPosition();
+    setPos(p);
+    setPosLoading(false);
+    if (!p) {
+      setError('위치를 가져올 수 없습니다. 위치 권한을 확인해주세요.');
+      return;
+    }
+    const list = sites ?? [];
+    if (list.length === 0) {
+      setError('담당 현장이 없습니다.');
+      return;
+    }
+    if (list.length > 1) {
+      setError('담당 현장이 여러 개입니다. 아래 현장별 등록 버튼을 사용해주세요.');
+      return;
+    }
+    const site = list[0];
+    if (site.latitude !== null) {
+      const ok = confirm(`"${site.name}" 현장 좌표를 현 위치로 다시 등록할까요?`);
+      if (!ok) return;
+    }
+    setBusyId(site.id);
+    const { error: rpcErr } = await sb.rpc('yeseong_manager_register_site_gps', {
+      p_worksite_id: site.id,
+      p_latitude: p.latitude,
+      p_longitude: p.longitude,
+    });
+    setBusyId(null);
+    if (rpcErr) {
+      setError(rpcErr.message);
+      return;
+    }
+    setDoneId(site.id);
+    await load();
+  };
+
   return (
     <MobileShell showTabs activeTab="home" variant="manager">
-      <div className="px-5 pt-16 pb-8">
-        <h1 className="text-[26px] font-bold text-zinc-900 flex items-center gap-2">
+      <div className="px-5 pt-14 pb-8">
+        <h1 className="text-[34px] font-bold text-zinc-900 flex items-center gap-2">
           <MapPin className="h-7 w-7 text-emerald-700" />
           현장 위치 등록
         </h1>
@@ -226,6 +261,16 @@ export default function ManagerSiteGpsPage() {
             <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm font-semibold text-red-600">
               {mapError}
             </div>
+          )}
+          {!readOnly && mapLoaded && (
+            <button
+              onClick={registerHere}
+              disabled={posLoading || busyId !== null}
+              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-[5px] bg-emerald-700 px-3.5 py-2.5 text-sm font-bold text-white shadow-lg active:scale-95 disabled:opacity-50"
+            >
+              <LocateFixed className={`h-4 w-4 ${posLoading || busyId ? 'animate-spin' : ''}`} />
+              {busyId ? '등록 중...' : '현위치 등록'}
+            </button>
           )}
         </div>
         <p className="mt-1.5 text-[11px] text-zinc-400">

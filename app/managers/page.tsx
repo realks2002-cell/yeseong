@@ -185,10 +185,6 @@ export default function ManagersPage() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">현장 팀장</h1>
-            <p className="mt-1 text-sm text-[#6B7280]">
-              총 {list?.length ?? '...'}명{query && filtered ? ` · 검색결과 ${filtered.length}명` : ''}.
-              관리자가 직접 추가/수정하거나 팀장 앱에서 가입한 사용자가 노출됩니다.
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-[#4B5563] cursor-pointer select-none">

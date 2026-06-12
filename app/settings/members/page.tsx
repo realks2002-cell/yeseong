@@ -106,9 +106,6 @@ export default function MembersPage() {
               <UserCog className="h-6 w-6 text-[#447D9B]" />
               사용자 관리
             </h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              로그인 계정을 관리합니다. 관리자 {counts.admin} · 팀장 {counts.manager} · 작업자 {counts.worker}
-            </p>
           </div>
           <Button onClick={() => setShowAdd(true)}>
             <UserPlus className="h-4 w-4" />

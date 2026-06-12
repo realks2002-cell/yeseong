@@ -24,7 +24,7 @@ export default async function UploadPage({
   return (
     <div className="min-h-svh">
       <Nav />
-      <main className="mx-auto max-w-3xl p-6">
+      <main className="max-w-3xl p-6">
         <Link href={`/payroll/${siteId}/${yyyymm}`} className="inline-flex items-center gap-1 text-sm text-[#6B7280] hover:text-[#091413]">
           <ArrowLeft className="h-4 w-4" />
           노임대장으로

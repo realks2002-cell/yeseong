@@ -25,11 +25,8 @@ export default function WorkerSitePhotosPage() {
 
   return (
     <MobileShell showTabs activeTab="proofs" variant="worker">
-      <div className="px-7 pt-10 pb-2">
+      <div className="px-7 pt-14 pb-2">
         <h1 className="text-[34px] font-bold text-zinc-900">현장증빙 제출</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          TBM·자재·일반 사진을 올리면 관리자가 바로 확인합니다.
-        </p>
       </div>
 
       {ready ? (

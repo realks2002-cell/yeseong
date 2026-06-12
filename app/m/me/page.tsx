@@ -59,7 +59,7 @@ export default function MePage() {
   const w = me.worker;
   return (
     <MobileShell showTabs activeTab="profile">
-      <div className="px-7 pt-10 pb-8">
+      <div className="px-7 pt-14 pb-8">
         <h1 className="text-[34px] font-bold text-zinc-900">내 정보</h1>
         <p className="mt-1 text-sm text-zinc-500">수정이 필요하면 관리자에게 문의하세요.</p>
       </div>
@@ -73,7 +73,6 @@ export default function MePage() {
 
       <section className="px-7 space-y-4 pb-8">
         <h2 className="text-lg font-bold text-zinc-900">소속</h2>
-        <p className="-mt-2 text-sm text-zinc-500">팀장에 따라 자동으로 정해져요. 변경은 관리자에게 문의하세요.</p>
         <ReadField label="팀장" value={me.team_leader?.name} />
         <ReadField label="현장" value={me.worksite?.name} />
         <ReadField label="소속(전문건설사)" value={me.subcontractor?.name} />
