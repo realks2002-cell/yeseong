@@ -98,18 +98,24 @@ export default function AttendanceReviewPage() {
     const raw = filters.query.trim().toLowerCase();
     const digits = raw.replace(/\D/g, '');
     const { startDate, endDate } = filters;
-    return rows.filter((r) => {
-      // 날짜 범위
-      if (startDate && r.work_date < startDate) return false;
-      if (endDate && r.work_date > endDate) return false;
-      // 텍스트 검색 (입력 있을 때만)
-      if (!raw) return true;
-      if (r.worker_name?.toLowerCase().includes(raw)) return true;
-      if (r.worksite_name?.toLowerCase().includes(raw)) return true;
-      if (r.subcontractor_name?.toLowerCase().includes(raw)) return true;
-      if (digits && (r.worker_phone ?? '').replace(/\D/g, '').includes(digits)) return true;
-      return false;
-    });
+    return rows
+      .filter((r) => {
+        // 날짜 범위
+        if (startDate && r.work_date < startDate) return false;
+        if (endDate && r.work_date > endDate) return false;
+        // 텍스트 검색 (입력 있을 때만)
+        if (!raw) return true;
+        if (r.worker_name?.toLowerCase().includes(raw)) return true;
+        if (r.worksite_name?.toLowerCase().includes(raw)) return true;
+        if (r.subcontractor_name?.toLowerCase().includes(raw)) return true;
+        if (digits && (r.worker_phone ?? '').replace(/\D/g, '').includes(digits)) return true;
+        return false;
+      })
+      .sort(
+        (a, b) =>
+          b.work_date.localeCompare(a.work_date) ||
+          (a.approver_name ?? '').localeCompare(b.approver_name ?? '', 'ko')
+      );
   }, [rows, filters.query, filters.startDate, filters.endDate]);
 
   const allChecked = useMemo(() => {
@@ -267,13 +273,13 @@ export default function AttendanceReviewPage() {
                     </th>
                   )}
                   <th className="px-3 py-2 font-medium">날짜</th>
+                  <th className="px-3 py-2 font-medium">승인자(팀장)</th>
                   <th className="px-3 py-2 font-medium">제출시간</th>
                   <th className="px-3 py-2 font-medium">작업자</th>
                   <th className="px-3 py-2 font-medium">현장</th>
                   <th className="px-3 py-2 font-medium">전문건설사</th>
                   <th className="px-3 py-2 font-medium text-center">공수</th>
                   <th className="px-3 py-2 font-medium text-center">상태</th>
-                  <th className="px-3 py-2 font-medium">승인자(팀장)</th>
                   {statusFilter === 'rejected' && (
                     <th className="px-3 py-2 font-medium text-center w-32">처리</th>
                   )}
@@ -300,6 +306,7 @@ export default function AttendanceReviewPage() {
                         </td>
                       )}
                       <td className="px-3 py-2 tabular-nums">{fmtDate(r.work_date)}</td>
+                      <td className="px-3 py-2 text-[#4B5563]">{r.approver_name ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2 tabular-nums text-[#6B7280]">{fmtTime(r.created_at)}</td>
                       <td className="px-3 py-2 font-medium">
                         {r.worker_name}
@@ -313,7 +320,6 @@ export default function AttendanceReviewPage() {
                           {STATUS_LABEL[r.approval_status]}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-[#4B5563]">{r.approver_name ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       {statusFilter === 'rejected' && (
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-1">
