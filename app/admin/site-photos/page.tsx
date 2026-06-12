@@ -60,14 +60,13 @@ export default function SitePhotosPage() {
   const [toDate, setToDate] = useState(today);
   const [siteId, setSiteId] = useState<string>('');
   const [category, setCategory] = useState<Category | ''>('');
-  const [workerId, setWorkerId] = useState<string>('');
 
   const [photos, setPhotos] = useState<ApiPhoto[] | null>(null);
   const [worksiteOptions, setWorksiteOptions] = useState<Option[]>([]);
-  const [workerOptions, setWorkerOptions] = useState<Option[]>([]);
   const [viewing, setViewing] = useState<Photo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [zipping, setZipping] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,7 +76,6 @@ export default function SitePhotosPage() {
     qs.set('to', toDate);
     if (siteId) qs.set('worksite', siteId);
     if (category) qs.set('category', category);
-    if (workerId) qs.set('worker', workerId);
     try {
       const r = await fetch(`/api/admin/site-photos?${qs.toString()}`, { cache: 'no-store' });
       if (!r.ok) {
@@ -92,26 +90,19 @@ export default function SitePhotosPage() {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, siteId, category, workerId]);
+  }, [fromDate, toDate, siteId, category]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   useEffect(() => {
-    // 필터용 마스터 데이터 (현장·작업자)
+    // 필터용 마스터 데이터 (현장)
     (async () => {
-      const [wsRes, wkRes] = await Promise.all([
-        fetch('/api/worksites?includeArchived=true', { cache: 'no-store' }),
-        fetch('/api/workers', { cache: 'no-store' }),
-      ]);
+      const wsRes = await fetch('/api/worksites?includeArchived=true', { cache: 'no-store' });
       if (wsRes.ok) {
         const wss: { id: string; name: string }[] = await wsRes.json();
         setWorksiteOptions(wss.map((w) => ({ id: w.id, name: w.name })));
-      }
-      if (wkRes.ok) {
-        const wks: { id: string; name: string }[] = await wkRes.json();
-        setWorkerOptions(wks.map((w) => ({ id: w.id, name: w.name })));
       }
     })();
   }, []);
@@ -170,12 +161,37 @@ export default function SitePhotosPage() {
     load();
   }
 
+  async function downloadZip() {
+    if (zipping) return;
+    setZipping(true);
+    try {
+      const qs = new URLSearchParams();
+      qs.set('from', fromDate);
+      qs.set('to', toDate);
+      if (siteId) qs.set('worksite', siteId);
+      if (category) qs.set('category', category);
+      const r = await fetch(`/api/admin/site-photos/zip?${qs.toString()}`);
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        alert(e.error || 'ZIP 다운로드 실패');
+        return;
+      }
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `현장증빙_${fromDate}_${toDate}.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } finally {
+      setZipping(false);
+    }
+  }
+
   function resetFilters() {
     setFromDate(yesterday);
     setToDate(today);
     setSiteId('');
     setCategory('');
-    setWorkerId('');
   }
 
   return (
@@ -199,7 +215,7 @@ export default function SitePhotosPage() {
             <Filter className="h-3.5 w-3.5" />
             필터
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-5">
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
             <FieldDateRange from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
             <FieldSelect
               label="현장"
@@ -219,25 +235,25 @@ export default function SitePhotosPage() {
                 { value: 'general', label: '일반' },
               ]}
             />
-            <FieldSelect
-              label="업로더"
-              value={workerId}
-              onChange={setWorkerId}
-              options={[{ value: '', label: '전체' }, ...workerOptions.map((w) => ({ value: w.id, label: w.name }))]}
-            />
             <div className="flex items-end gap-2">
               <Button variant="outline" size="sm" className="flex-1" onClick={resetFilters}>
                 초기화
               </Button>
-              <Button size="sm" variant="outline" disabled className="flex-1 gap-1" title="다음 PR에서 활성화">
-                <Download className="h-3.5 w-3.5" />
-                ZIP
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={zipping || totalCount === 0}
+                onClick={downloadZip}
+                className="flex-1 gap-1"
+                title="현재 필터 조건의 사진을 ZIP으로 내려받기"
+              >
+                <Download className={`h-3.5 w-3.5 ${zipping ? 'animate-bounce' : ''}`} />
+                {zipping ? '생성 중...' : 'ZIP'}
               </Button>
             </div>
           </div>
           <p className="mt-3 text-[11px] text-[#9CA3AF]">
             총 <span className="font-semibold text-[#091413]">{totalCount}</span>장 · {groups.length}개 그룹
-            <span className="ml-2 text-[#FE7743]">ZIP 다운로드는 다음 PR</span>
           </p>
         </Card>
 
