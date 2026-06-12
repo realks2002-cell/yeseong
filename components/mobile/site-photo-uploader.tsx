@@ -87,7 +87,6 @@ export function SitePhotosSection({
   if (photos === null && !error) {
     return (
       <section className="px-7 pb-10">
-        <h2 className="text-lg font-bold text-zinc-900">현장증빙 제출</h2>
         <div className="mt-3 flex items-center justify-center rounded-[5px] bg-zinc-50 py-10 text-sm text-zinc-400 ring-1 ring-zinc-100">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           불러오는 중…
@@ -101,11 +100,6 @@ export function SitePhotosSection({
   return (
     <>
       <section className="px-7 pb-10">
-        <h2 className="text-lg font-bold text-zinc-900">현장증빙 제출</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          오늘({today}) 본인이 올린 사진이에요. 관리자가 바로 확인합니다.
-        </p>
-
         {error && (
           <p className="mt-3 rounded-[5px] bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {error}
