@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -55,7 +56,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (path === '/admin' && user) {
+  // 작업자/팀장 세션이 관리자 페이지에 접근하면 모바일 앱으로 (같은 도메인 세션 공유 대비)
+  if (isProtected && user && !isAdminEmail(user.email)) {
+    return NextResponse.redirect(new URL('/m', req.url));
+  }
+
+  if (path === '/admin' && user && isAdminEmail(user.email)) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
