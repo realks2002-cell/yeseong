@@ -8,6 +8,7 @@ import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
+import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
 
 type PendingItem = {
   attendance_id: string;
@@ -116,7 +117,18 @@ export default function ManagerHomePage() {
     setLoading(false);
   }, [sb, router]);
 
-  useEffect(() => { load(); registerPush('manager'); }, [load]);
+  useEffect(() => {
+    load();
+    registerPush('manager');
+    // 위치 폴링 — 앱 실행·재오픈 즉시 + 5분마다 (팀장도 작업자와 동일하게 기록)
+    startForegroundPolling((lat, lng) => {
+      fetch('/api/m/gps-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      }).catch(() => {});
+    });
+  }, [load]);
 
   // 내 출역 제출 (0.5 / 1일) — 본인 출역도 아래 검토 리스트에 포함된다
   const submitMyAttendance = async (h: 0.5 | 1) => {

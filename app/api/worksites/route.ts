@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
+import { geocodeAddress } from '@/lib/geocode';
 
 export async function GET(req: Request) {
   const sb = await getServerSupabase();
@@ -34,9 +35,12 @@ export async function POST(req: Request) {
   const subcontractor_id = typeof body?.subcontractor_id === 'string' && body.subcontractor_id ? body.subcontractor_id : null;
   if (!name) return NextResponse.json({ error: '현장명을 입력하세요' }, { status: 400 });
 
+  // 주소가 있으면 좌표 자동 등록 (지오코딩) — 이후 팀장 앱에서 등록하면 그 좌표가 최우선
+  const geo = address ? await geocodeAddress(address) : null;
+
   const { data, error } = await sb
     .from('yeseong_worksites')
-    .insert({ name, address, client_id, subcontractor_id })
+    .insert({ name, address, client_id, subcontractor_id, latitude: geo?.lat ?? null, longitude: geo?.lng ?? null })
     .select('id, name, address, client_id, subcontractor_id, is_active, latitude, longitude, geofence_radius, gps_registered_at, created_at')
     .single();
 

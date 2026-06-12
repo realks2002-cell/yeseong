@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
+import { geocodeAddress } from '@/lib/geocode';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,6 +50,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: '변경할 필드가 없습니다' }, { status: 400 });
+  }
+
+  // 주소 변경 시 좌표 자동 갱신 — 단, 사람(팀장 앱·관리자 지도)이 등록한 좌표(gps_registered_at 있음)는 최우선이라 덮지 않음
+  if ('address' in (body ?? {}) && patch.latitude === undefined) {
+    const { data: cur } = await sb
+      .from('yeseong_worksites')
+      .select('gps_registered_at')
+      .eq('id', id)
+      .single();
+    if (cur && !cur.gps_registered_at) {
+      const geo = patch.address ? await geocodeAddress(patch.address as string) : null;
+      patch.latitude = geo?.lat ?? null;
+      patch.longitude = geo?.lng ?? null;
+    }
   }
 
   const { data, error } = await sb

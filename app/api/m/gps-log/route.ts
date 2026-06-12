@@ -13,23 +13,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'latitude/longitude required' }, { status: 400 });
   }
 
-  // 작업자 조회
-  const { data: worker } = await sb
-    .from('yeseong_workers')
-    .select('id, default_worksite_id')
-    .eq('auth_user_id', user.id)
-    .single();
-  if (!worker) return NextResponse.json({ error: 'worker not found' }, { status: 404 });
+  // 작업자 해석 — auth 직접 매칭 외에 팀장 phone·이메일 폴백까지 통일
+  const { data: workerId } = await sb.rpc('yeseong_resolve_worker_id', { p_uid: user.id });
+  if (!workerId) return NextResponse.json({ error: 'worker not found' }, { status: 404 });
+
+  // 현장 결정 — 팀원은 팀장 추종 (default_worksite_id가 아닌 team_context가 진실)
+  const { data: ctx } = await sb.rpc('yeseong_worker_team_context', { p_worker_id: workerId });
+  const worksiteId: string | null = ctx?.[0]?.worksite_id ?? null;
 
   // 현장 좌표와 거리 계산
   let distanceM: number | null = null;
   let withinGeofence: boolean | null = null;
 
-  if (worker.default_worksite_id) {
+  if (worksiteId) {
     const { data: site } = await sb
       .from('yeseong_worksites')
       .select('latitude, longitude, geofence_radius')
-      .eq('id', worker.default_worksite_id)
+      .eq('id', worksiteId)
       .single();
 
     if (site?.latitude && site?.longitude) {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const { error } = await sb
     .from('yeseong_gps_logs')
     .insert({
-      worker_id: worker.id,
+      worker_id: workerId,
       latitude: lat,
       longitude: lng,
       distance_from_site_m: distanceM,

@@ -185,7 +185,7 @@ const inlineSelectCls =
                         >
                           <MapPin className="h-3 w-3" />
                           {w.latitude
-                            ? `${w.geofence_radius}m${w.gps_registered_at ? ` · ${fmtGpsDate(w.gps_registered_at)}` : ''}`
+                            ? <span className="font-mono tabular-nums">{w.latitude.toFixed(5)}, {w.longitude!.toFixed(5)}</span>
                             : '미등록'}
                         </button>
                       </td>
