@@ -58,9 +58,11 @@ function todayIso(): string {
 export function SitePhotosSection({
   categories,
   readOnly = false,
+  mirrorId = null,
 }: {
   categories: Category[];
   readOnly?: boolean;
+  mirrorId?: string | null;
 }) {
   const today = todayIso();
   const [photos, setPhotos] = useState<ApiPhoto[] | null>(null);
@@ -70,7 +72,9 @@ export function SitePhotosSection({
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await fetch(`/api/m/site-photos?date=${today}`, { cache: 'no-store' });
+      const qs = new URLSearchParams({ date: today });
+      if (mirrorId) qs.set('managerId', mirrorId);
+      const res = await fetch(`/api/m/site-photos?${qs.toString()}`, { cache: 'no-store' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '불러오기 실패');
       setPhotos((json.photos ?? []) as ApiPhoto[]);
@@ -78,7 +82,7 @@ export function SitePhotosSection({
       setError((e as Error).message);
       setPhotos([]);
     }
-  }, [today]);
+  }, [today, mirrorId]);
 
   useEffect(() => {
     load();

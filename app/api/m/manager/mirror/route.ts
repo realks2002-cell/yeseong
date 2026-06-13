@@ -5,13 +5,15 @@ import { isAdminEmail } from '@/lib/auth/admin-guard';
 export const runtime = 'nodejs';
 
 // 관리자 웹 팀장앱 미러링(보기 전용) 데이터 소스.
-//   GET ?managerId=<uuid>&kind=me|pending|team|volumes&ym=YYYY-MM
+//   GET ?managerId=<uuid>&kind=me|pending|team|volumes|order_items|orders&ym=YYYY-MM
 //   isAdminEmail 가드 후 service_role 로 admin RPC 호출.
 const RPC: Record<string, string> = {
   me: 'yeseong_admin_manager_get_me',
   pending: 'yeseong_admin_manager_list_pending_attendance',
   team: 'yeseong_admin_manager_list_team_members',
   volumes: 'yeseong_admin_manager_get_volumes',
+  order_items: 'yeseong_admin_manager_list_order_items',
+  orders: 'yeseong_admin_manager_list_orders',
 };
 
 export async function GET(req: Request) {

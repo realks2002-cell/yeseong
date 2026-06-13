@@ -7,7 +7,7 @@ export function getMirrorId(): string | null {
   return new URLSearchParams(window.location.search).get('mirror');
 }
 
-type Kind = 'me' | 'pending' | 'team' | 'volumes';
+type Kind = 'me' | 'pending' | 'team' | 'volumes' | 'order_items' | 'orders';
 
 export async function mirrorFetch<T = unknown>(kind: Kind, managerId: string, ym?: string): Promise<T> {
   const qs = new URLSearchParams({ kind, managerId });

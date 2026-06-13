@@ -11,11 +11,13 @@ export default function ManagerSitePhotosPage() {
   const sb = getBrowserSupabase();
   const [ready, setReady] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [mirrorId, setMirrorId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       const mirror = getMirrorId();
       if (mirror) {
+        setMirrorId(mirror);
         setReadOnly(true);
         setReady(true);
         return;
@@ -41,6 +43,7 @@ export default function ManagerSitePhotosPage() {
         <SitePhotosSection
           categories={['tbm', 'materials', 'general', 'expense']}
           readOnly={readOnly}
+          mirrorId={mirrorId}
         />
       ) : (
         <div className="flex h-40 items-center justify-center text-zinc-400">로딩…</div>

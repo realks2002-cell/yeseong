@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { PackagePlus, Search, X, Check, ClipboardList } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { getMirrorId } from '@/lib/manager/mirror';
+import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 
 type OrderItem = {
   id: string;
@@ -56,8 +56,24 @@ export default function ManagerOrdersPage() {
   const [error, setError] = useState<string | undefined>();
 
   const load = useCallback(async () => {
+    const mirror = getMirrorId();
+    if (mirror) {
+      try {
+        const [its, ords] = await Promise.all([
+          mirrorFetch<OrderItem[]>('order_items', mirror),
+          mirrorFetch<MyOrder[]>('orders', mirror),
+        ]);
+        setItems(its ?? []);
+        setOrders(ords ?? []);
+      } catch (e) {
+        setError((e as Error).message);
+        setItems([]);
+        setOrders([]);
+      }
+      return;
+    }
     const { data: { user } } = await sb.auth.getUser();
-    if (!user && !readOnly) {
+    if (!user) {
       router.replace('/m/manager/signup');
       return;
     }
@@ -68,7 +84,7 @@ export default function ManagerOrdersPage() {
     if (itemsRes.error) setError(itemsRes.error.message);
     setItems((itemsRes.data as unknown as OrderItem[]) ?? []);
     setOrders((ordersRes.data as unknown as MyOrder[]) ?? []);
-  }, [sb, router, readOnly]);
+  }, [sb, router]);
 
   useEffect(() => { load(); }, [load]);
 
