@@ -294,7 +294,7 @@ function WorksiteSectionForm({
                     value={r.masonry_price_id}
                     onChange={(e) => update(i, { masonry_price_id: e.target.value })}
                     disabled={busy}
-                    className="flex-1 h-10 rounded-[8px] border border-zinc-300 bg-white px-2.5 text-sm"
+                    className="min-w-0 flex-1 h-10 rounded-[8px] border border-zinc-300 bg-white px-2.5 text-sm"
                   >
                     {section.prices.map((opt) => (
                       <option key={opt.id} value={opt.id}>{priceLabel(opt)}</option>
@@ -303,7 +303,7 @@ function WorksiteSectionForm({
                   <button
                     onClick={() => removeRow(i)}
                     disabled={busy}
-                    className="rounded p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                    className="shrink-0 rounded p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
                     aria-label="삭제"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -319,10 +319,10 @@ function WorksiteSectionForm({
                     step={p?.unit === '㎡' ? '0.01' : '1'}
                     disabled={busy}
                     inputMode="decimal"
-                    className="flex-1 h-12 rounded-[8px] border border-zinc-300 bg-white px-3 text-right text-lg font-semibold tabular-nums"
+                    className="min-w-0 flex-1 h-12 rounded-[8px] border border-zinc-300 bg-white px-3 text-right text-lg font-semibold tabular-nums"
                   />
-                  <span className="w-12 text-center text-sm text-zinc-500">{p?.unit ?? ''}</span>
-                  <span className="w-28 text-right text-sm tabular-nums text-zinc-700">
+                  <span className="w-10 shrink-0 text-center text-sm text-zinc-500">{p?.unit ?? ''}</span>
+                  <span className="w-24 shrink-0 text-right text-sm tabular-nums text-zinc-700">
                     {p ? `${Math.round(r.quantity * p.unit_price).toLocaleString()}원` : '-'}
                   </span>
                 </div>
