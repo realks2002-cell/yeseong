@@ -1,4 +1,4 @@
-package com.yeseong.app;
+package com.yeseong.manager;
 
 import android.Manifest;
 import android.content.Intent;
