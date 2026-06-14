@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
+import { pushVolumeRejectedToManager } from '@/lib/push/volumes';
+
+export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const sb = await getServerSupabase();
@@ -38,5 +41,10 @@ export async function PATCH(req: Request) {
     p_reason: typeof body.reason === 'string' && body.reason.trim() ? body.reason.trim() : null,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 반려 시 담당 팀장에게 푸시 (보조 채널 — 실패해도 무시)
+  if (body.approve === false) {
+    await pushVolumeRejectedToManager(body.ids);
+  }
   return NextResponse.json({ updated: data ?? 0 });
 }

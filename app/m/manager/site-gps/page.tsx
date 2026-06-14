@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { MapPin, Check, RefreshCw, AlertTriangle, LocateFixed } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -129,7 +130,7 @@ export default function ManagerSiteGpsPage() {
     }
     const { data, error: rpcErr } = await sb.rpc('yeseong_manager_list_site_gps');
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       setSites([]);
       return;
     }
@@ -162,7 +163,7 @@ export default function ManagerSiteGpsPage() {
     });
     setBusyId(null);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     setDoneId(site.id);
@@ -178,7 +179,7 @@ export default function ManagerSiteGpsPage() {
     setPos(p);
     setPosLoading(false);
     if (!p) {
-      setError('위치를 가져올 수 없습니다. 위치 권한을 확인해주세요.');
+      setError('위치를 가져올 수 없습니다. 위치 권한을 확인해 주십시오.');
       return;
     }
     const list = sites ?? [];
@@ -187,7 +188,7 @@ export default function ManagerSiteGpsPage() {
       return;
     }
     if (list.length > 1) {
-      setError('담당 현장이 여러 개입니다. 아래 현장별 등록 버튼을 사용해주세요.');
+      setError('담당 현장이 여러 개입니다. 아래 현장별 등록 버튼을 사용해 주십시오.');
       return;
     }
     const site = list[0];
@@ -203,7 +204,7 @@ export default function ManagerSiteGpsPage() {
     });
     setBusyId(null);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     setDoneId(site.id);
@@ -244,7 +245,7 @@ export default function ManagerSiteGpsPage() {
           ) : (
             <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-red-600">
               <AlertTriangle className="h-4 w-4" />
-              위치를 가져올 수 없습니다. 위치 권한을 확인해주세요.
+              위치를 가져올 수 없습니다. 위치 권한을 확인해 주십시오.
             </p>
           )}
         </div>

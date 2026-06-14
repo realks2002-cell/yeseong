@@ -8,18 +8,19 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { fmtMonthLabel, fmtWon, type PayrollMonth } from '@/lib/payroll/mobile';
 
-export default function PayrollPage() {
+export default function ManagerPayrollPage() {
   const router = useRouter();
   const [months, setMonths] = useState<PayrollMonth[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const sb = getBrowserSupabase();
-    sb.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) {
-        router.replace('/m/signup');
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        router.replace('/m/manager/signup');
         return;
       }
+      // 팀장도 작업자 — resolve_worker_id가 전화번호로 본인 작업자 행을 찾아 동일하게 동작
       const { data, error: rpcErr } = await sb.rpc('yeseong_mobile_get_payroll');
       if (rpcErr) {
         setError(toUserMessage(rpcErr));
@@ -31,10 +32,10 @@ export default function PayrollPage() {
   }, [router]);
 
   return (
-    <MobileShell showTabs activeTab="payroll">
+    <MobileShell showTabs activeTab="payroll" variant="manager">
       <div className="px-7 pt-14">
         <h1 className="text-[34px] font-bold text-zinc-900">급여 내역</h1>
-        <p className="mt-1 text-base text-zinc-500">팀장 승인이 완료된 출역 기준입니다</p>
+        <p className="mt-1 text-base text-zinc-500">관리자 승인이 완료된 출역 기준입니다</p>
       </div>
 
       {error && <p className="mx-7 mt-6 text-base font-semibold text-red-800">{error}</p>}
@@ -52,7 +53,7 @@ export default function PayrollPage() {
           {months.map((m) => (
             <li key={m.year_month}>
               <Link
-                href={`/m/payroll/${m.year_month}`}
+                href={`/m/manager/payroll/${m.year_month}`}
                 className="flex items-center justify-between rounded-[5px] bg-white px-6 py-5 ring-1 ring-zinc-200 active:bg-zinc-50"
               >
                 <div>

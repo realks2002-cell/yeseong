@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, ChevronDown, ChevronUp, MapPin, Users } from 'lucide-react';
@@ -61,7 +62,7 @@ export default function ManagerMePage() {
       }
       const { data, error: rpcErr } = await sb.rpc('yeseong_manager_get_me');
       if (rpcErr) {
-        setError(rpcErr.message);
+        setError(toUserMessage(rpcErr));
         return;
       }
       meData = data as unknown as Me | null;
@@ -69,7 +70,7 @@ export default function ManagerMePage() {
       teamData = td as unknown as TeamMember[] | null;
     }
     if (!meData?.manager) {
-      if (mirror) setError('팀장 정보를 찾을 수 없어요');
+      if (mirror) setError('팀장 정보를 찾을 수 없습니다.');
       else router.replace('/m/manager/signup');
       return;
     }

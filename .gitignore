@@ -51,3 +51,4 @@ supabase/.temp/
 /e2e/.e2e-state.json
 /test-results/
 /playwright-report/
+keystore/

@@ -83,7 +83,6 @@ export function DocumentsSection({ readOnly = false }: { readOnly?: boolean }) {
             current={single('id_card')}
             readOnly={readOnly}
             onUploaded={load}
-            onDeleted={load}
             onView={setViewing}
             aspect="aspect-[16/10]"
           />
@@ -93,7 +92,6 @@ export function DocumentsSection({ readOnly = false }: { readOnly?: boolean }) {
             current={single('bankbook')}
             readOnly={readOnly}
             onUploaded={load}
-            onDeleted={load}
             onView={setViewing}
             aspect="aspect-[3/4]"
             maxWidth="max-w-[200px]"
@@ -122,7 +120,6 @@ function SingleSlot({
   current,
   readOnly,
   onUploaded,
-  onDeleted,
   onView,
   aspect,
   maxWidth = '',
@@ -132,7 +129,6 @@ function SingleSlot({
   current: ApiDoc | undefined;
   readOnly: boolean;
   onUploaded: () => void;
-  onDeleted: () => void;
   onView: (p: Photo) => void;
   aspect: string;
   maxWidth?: string;
@@ -140,10 +136,10 @@ function SingleSlot({
   return (
     <Card title={title} count={current ? 1 : 0} max={1}>
       {current?.signed_url ? (
+        // 신분증·통장사본은 삭제 불가 — 교체로만 갱신 (증빙 무결성 보호)
         <Thumb
           doc={toView(current, title)}
           onView={onView}
-          onDelete={readOnly ? undefined : () => deleteDoc(current.id, onDeleted)}
           aspect={aspect}
           maxWidth={maxWidth}
         />

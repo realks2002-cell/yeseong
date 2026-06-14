@@ -460,6 +460,24 @@ function ManagerForm({
   const [worksiteId, setWorksiteId] = useState<string>(initial?.worksite_ids?.[0] ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pulled, setPulled] = useState<{ name: string; trade: string | null } | null>(null);
+
+  // 전화번호 입력 시 작업자 마스터에서 이름·직종 자동 채움 (팀장도 작업자)
+  useEffect(() => {
+    const d = phone.replace(/\D/g, '');
+    if (d.length < 10) { setPulled(null); return; }
+    let cancelled = false;
+    fetch(`/api/workers/lookup?phone=${d}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled) return;
+        if (!j?.exists) { setPulled(null); return; }
+        setPulled({ name: j.name, trade: j.default_trade ?? null });
+        setName((prev) => (prev.trim() ? prev : j.name));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [phone]);
 
   const derivedSubName = (() => {
     const ws = worksites.find((w) => w.id === worksiteId);
@@ -470,7 +488,7 @@ function ManagerForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!name.trim()) return setErr('성명을 입력하세요');
+    if (!name.trim() && !pulled) return setErr('성명을 입력하거나, 작업자 마스터에 등록된 번호를 입력하세요');
     if (phone.replace(/\D/g, '').length < 10) return setErr('전화번호 형식 오류');
     if (pin && !/^\d{4}$/.test(pin)) return setErr('PIN은 4자리 숫자');
     setSubmitting(true);
@@ -502,12 +520,19 @@ function ManagerForm({
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[#4B5563]">성명 *</label>
+            <label className="mb-1 block text-xs font-medium text-[#4B5563]">
+              성명 <span className="text-[#9CA3AF]">(전화번호 입력 시 작업자 마스터에서 자동)</span>
+            </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-[5px] border border-[#D7D7D7] px-3 py-2 text-sm outline-none focus:border-[#447D9B]"
             />
+            {pulled && (
+              <p className="mt-1 text-[11px] text-emerald-700">
+                작업자 마스터 연동: {pulled.name}{pulled.trade ? ` · ${pulled.trade}` : ''} 자동 적용
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[#4B5563]">전화번호 *</label>

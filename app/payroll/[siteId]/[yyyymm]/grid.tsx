@@ -304,7 +304,7 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={handleDownload} disabled={!!downloadBusy}>
             <Download className="h-4 w-4" />
-            {downloadBusy === 'download' ? '생성 중...' : '엑셀 다운로드'}
+            {downloadBusy === 'download' ? '생성 중...' : '일반 노임대장'}
           </Button>
           {hasMasonry && (
             <Button variant="outline" onClick={handleMasonryDownload} disabled={!!downloadBusy}>

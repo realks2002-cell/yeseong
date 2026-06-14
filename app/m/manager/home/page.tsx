@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { Check, CheckCheck, ClipboardCheck, X } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -9,6 +10,8 @@ import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
 import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
+import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
+import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt';
 
 type PendingItem = {
   attendance_id: string;
@@ -81,8 +84,8 @@ export default function ManagerHomePage() {
       setLoading(false);
       return;
     }
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
       router.replace('/m/manager/signup');
       return;
     }
@@ -117,18 +120,23 @@ export default function ManagerHomePage() {
     setLoading(false);
   }, [sb, router]);
 
+  const reportGps = useCallback((lat: number, lng: number) => {
+    fetch('/api/m/gps-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude: lat, longitude: lng }),
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     load();
     registerPush('manager');
     // 위치 폴링 — 앱 실행·재오픈 즉시 + 5분마다 (팀장도 작업자와 동일하게 기록)
-    startForegroundPolling((lat, lng) => {
-      fetch('/api/m/gps-log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
-      }).catch(() => {});
-    });
-  }, [load]);
+    startForegroundPolling(reportGps);
+  }, [load, reportGps]);
+
+  // "항상 허용" 부여 시 백그라운드 워처 시작 (권한 요청 없음 — 상태 확인만)
+  const onAlways = useCallback(() => { startBackgroundTracking(reportGps); }, [reportGps]);
 
   // 내 출역 제출 (0.5 / 1일) — 본인 출역도 아래 검토 리스트에 포함된다
   const submitMyAttendance = async (h: 0.5 | 1) => {
@@ -147,7 +155,7 @@ export default function ManagerHomePage() {
     if (rpcErr) {
       setError(rpcErr.message.includes('already approved')
         ? '이미 승인 완료된 출역입니다.'
-        : rpcErr.message);
+        : toUserMessage(rpcErr));
       return;
     }
     await load();
@@ -164,7 +172,7 @@ export default function ManagerHomePage() {
     });
     setBusyId(null);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     setItems((prev) => (prev ?? []).filter((x) => x.attendance_id !== item.attendance_id));
@@ -182,7 +190,7 @@ export default function ManagerHomePage() {
     setBusyId(null);
     setRejectTarget(null);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     // 작업자에게 반려 푸시 (실패해도 무시 — 보조 채널)
@@ -202,7 +210,7 @@ export default function ManagerHomePage() {
     setApproveAllBusy(false);
     setConfirmApproveAll(false);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     setItems([]);
@@ -230,6 +238,7 @@ export default function ManagerHomePage() {
   return (
     <MobileShell showTabs activeTab="home" variant="manager">
       <section className="px-7 pt-14 pb-10">
+        {!readOnly && <AlwaysLocationPrompt appName="예성건축 팀장" onAlways={onAlways} />}
         {/* 내 출역 — 팀장 본인 출역 제출 */}
         {!readOnly && (
           <div className="mb-7">

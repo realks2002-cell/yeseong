@@ -84,14 +84,13 @@ export async function POST(req: Request) {
   if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
-  const name = typeof body?.name === 'string' ? body.name.trim() : '';
+  const nameInput = typeof body?.name === 'string' ? body.name.trim() : '';
   const phoneRaw = typeof body?.phone === 'string' ? body.phone : '';
   const pin = typeof body?.pin === 'string' ? body.pin.trim() : '';
   const worksiteIds: string[] = Array.isArray(body?.worksite_ids)
     ? body.worksite_ids.filter((v: unknown) => typeof v === 'string')
     : [];
 
-  if (!name) return NextResponse.json({ error: '성명을 입력하세요' }, { status: 400 });
   const phone = normalizePhone(phoneRaw);
   if (phone.length < 10) return NextResponse.json({ error: '전화번호 형식 오류' }, { status: 400 });
   if (pin && !/^\d{4}$/.test(pin)) {
@@ -116,6 +115,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '이미 등록된 전화번호' }, { status: 409 });
   }
 
+  // 팀장도 작업자 — 같은 phone의 작업자 마스터(기준)에서 이름·직종을 끌어옴
+  const { data: existingWorker } = await admin
+    .from('yeseong_workers')
+    .select('id, name, default_trade')
+    .eq('phone', phone)
+    .maybeSingle();
+  const name = nameInput || (existingWorker?.name?.trim() ?? '');
+  if (!name) {
+    return NextResponse.json(
+      { error: '작업자 마스터에 없는 번호입니다. 성명을 입력하세요.' },
+      { status: 400 },
+    );
+  }
+  const defaultTrade = existingWorker?.default_trade ?? null;
+
   // PIN이 있으면 auth.users도 함께 생성 (모바일 앱 로그인 가능 상태)
   let authUserId: string | null = null;
   if (pin) {
@@ -136,7 +150,7 @@ export async function POST(req: Request) {
 
   const { data: inserted, error: insErr } = await admin
     .from('yeseong_site_managers')
-    .insert({ auth_user_id: authUserId, phone, name, pin: pin || null })
+    .insert({ auth_user_id: authUserId, phone, name, pin: pin || null, default_trade: defaultTrade })
     .select('id')
     .single();
   if (insErr) {
@@ -146,11 +160,6 @@ export async function POST(req: Request) {
   }
 
   // 팀장도 작업자다 — 같은 phone의 worker 행 보장 (없으면 생성, 있으면 기존 링크 유지)
-  const { data: existingWorker } = await admin
-    .from('yeseong_workers')
-    .select('id')
-    .eq('phone', phone)
-    .maybeSingle();
   if (!existingWorker) {
     const { error: wErr } = await admin
       .from('yeseong_workers')

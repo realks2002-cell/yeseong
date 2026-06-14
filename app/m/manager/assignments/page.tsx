@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, Save } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -55,7 +56,7 @@ export default function ManagerAssignmentsPage() {
       fetch('/api/m/options', { credentials: 'include' }).then((r) => r.json()),
     ]);
     if (meRes.error || !meRes.data) {
-      setError(meRes.error?.message ?? '프로필 로드 실패');
+      setError(toUserMessage(meRes.error, '프로필을 불러오지 못했습니다.'));
       setLoading(false);
       return;
     }
@@ -76,7 +77,7 @@ export default function ManagerAssignmentsPage() {
     });
     setBusy(false);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     router.replace('/m/manager/home');

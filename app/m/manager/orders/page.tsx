@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { PackagePlus, Search, X, Check, ClipboardList } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -119,7 +120,7 @@ export default function ManagerOrdersPage() {
     });
     setBusy(false);
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       return;
     }
     setQtyMap({});

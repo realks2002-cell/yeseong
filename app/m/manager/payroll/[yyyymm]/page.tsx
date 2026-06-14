@@ -40,7 +40,7 @@ function fmtDay(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} (${dow})`;
 }
 
-export default function PayrollDetailPage({
+export default function ManagerPayrollDetailPage({
   params,
 }: {
   params: Promise<{ yyyymm: string }>;
@@ -52,9 +52,9 @@ export default function PayrollDetailPage({
 
   useEffect(() => {
     const sb = getBrowserSupabase();
-    sb.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) {
-        router.replace('/m/signup');
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        router.replace('/m/manager/signup');
         return;
       }
       const { data } = await sb.rpc('yeseong_mobile_get_payroll');
@@ -62,7 +62,7 @@ export default function PayrollDetailPage({
       const found = months.find((m) => m.year_month === yyyymm) ?? null;
       setMonth(found);
 
-      // 매사(월급/일급) 작업자만 성과 품목 내역 + 가정산 표시
+      // 매사(월급/일급)인 경우만 성과 품목 내역 + 가정산 표시
       if (found?.wage_type === '월급/일급') {
         const { data: v } = await sb.rpc('yeseong_mobile_get_volumes_me', { p_year_month: yyyymm });
         const vm = v as unknown as VolumesMe | null;
@@ -81,7 +81,7 @@ export default function PayrollDetailPage({
     <MobileShell>
       <header className="flex items-center gap-2 px-5 pt-6">
         <Link
-          href="/m/payroll"
+          href="/m/manager/payroll"
           className="-ml-2 inline-flex h-12 w-12 items-center justify-center rounded-full text-zinc-700 hover:bg-zinc-100"
         >
           <ChevronLeft className="h-7 w-7" />
@@ -130,7 +130,7 @@ export default function PayrollDetailPage({
             )}
           </section>
 
-          {/* 매사 성과 가정산 내역 (매사 작업자만) */}
+          {/* 매사 성과 가정산 내역 (매사인 경우만) */}
           {isMasonry && volumes.length > 0 && (
             <section className="mt-7 px-7">
               <h2 className="text-xl font-bold text-zinc-900">성과 내역 (가정산)</h2>

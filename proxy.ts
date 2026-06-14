@@ -56,9 +56,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 작업자/팀장 세션이 관리자 페이지에 접근하면 모바일 앱으로 (같은 도메인 세션 공유 대비)
+  // 작업자/팀장 세션이 관리자 페이지에 접근하면 관리자 로그인으로 (세션 1개 공유 — 재로그인 유도)
   if (isProtected && user && !isAdminEmail(user.email)) {
-    return NextResponse.redirect(new URL('/m', req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = '/admin';
+    url.searchParams.set('next', path);
+    return NextResponse.redirect(url);
   }
 
   if (path === '/admin' && user && isAdminEmail(user.email)) {

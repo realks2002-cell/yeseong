@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronDown, ChevronUp, Hammer, Check } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -163,15 +164,18 @@ export default function SignupPage() {
       });
       setLoginBusy(false);
       if (error) {
-        setLoginError('PIN이 맞지 않아요');
-        setTimeout(() => {
+        // 자격증명 오류(실제 PIN 불일치)만 "PIN이 일치하지 않습니다." — 그 외(네트워크 등)는 실제 사유 노출
+        const isInvalidCred = error.status === 400 || /invalid|credential/i.test(error.message ?? '');
+        if (isInvalidCred) {
+          setLoginError('PIN이 일치하지 않습니다.');
+          setTimeout(() => { setLoginPin(''); setLoginError(undefined); }, 1800);
+        } else {
+          setLoginError(toUserMessage(error, '네트워크 연결을 확인해 주십시오.'));
           setLoginPin('');
-          setLoginError(undefined);
-        }, 1200);
+        }
         return;
       }
       router.replace('/m/home');
-      router.refresh();
     })();
   }, [mode, loginPin, phone, sb, router, loginBusy]);
 
@@ -187,7 +191,7 @@ export default function SignupPage() {
       });
       const j = await res.json();
       if (!res.ok) {
-        setPhoneError(j.error ?? '오류가 발생했어요');
+        setPhoneError(j.error ?? '오류가 발생했습니다.');
         return;
       }
 
@@ -264,7 +268,7 @@ export default function SignupPage() {
       });
       if (!signupRes.ok) {
         const j = await signupRes.json().catch(() => ({}));
-        setSignupError(j.error === 'already_registered' ? '이미 가입된 번호입니다' : '가입에 실패했어요');
+        setSignupError(j.error === 'already_registered' ? '이미 가입된 번호입니다' : '가입에 실패했습니다.');
         return;
       }
 
@@ -273,7 +277,7 @@ export default function SignupPage() {
         password: pinToPassword(pin1),
       });
       if (signInErr) {
-        setSignupError('로그인에 실패했어요');
+        setSignupError('로그인에 실패했습니다.');
         return;
       }
 
@@ -303,15 +307,14 @@ export default function SignupPage() {
       });
       if (rpcErr) {
         const msg = rpcErr.message;
-        if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요해요');
-        else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요해요');
-        else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요해요');
+        if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요합니다.');
+        else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요합니다.');
+        else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요합니다.');
         else setSignupError('프로필 저장 실패: ' + msg);
         return;
       }
 
       router.replace('/m/home');
-      router.refresh();
     } finally {
       setSignupBusy(false);
     }
@@ -391,7 +394,7 @@ export default function SignupPage() {
             onChange={setPin2}
             onNext={goNext}
             disabledNext={pin2.length !== 4 || pin1 !== pin2}
-            errorMessage={pin2.length === 4 && pin1 !== pin2 ? 'PIN이 일치하지 않아요' : undefined}
+            errorMessage={pin2.length === 4 && pin1 !== pin2 ? 'PIN이 일치하지 않습니다.' : undefined}
           />
         )}
 
@@ -921,9 +924,9 @@ function LeaderStep({
         소속 팀장을<br />선택해주세요
       </h1>
       <p className="mt-4 text-sm text-zinc-500">팀장에 따라 현장·전문건설사가 자동 설정됩니다.</p>
-      <div className="mt-8 flex flex-col gap-3 overflow-y-auto">
+      <div className="mt-8 grid grid-cols-3 gap-3 overflow-y-auto">
         {teamLeaders.length === 0 ? (
-          <p className="text-zinc-400">등록된 팀장이 없습니다. 관리자에게 문의하세요.</p>
+          <p className="col-span-3 text-zinc-400">등록된 팀장이 없습니다. 관리자에게 문의하세요.</p>
         ) : (
           teamLeaders.map((tl) => (
             <button
@@ -931,12 +934,12 @@ function LeaderStep({
               type="button"
               onClick={() => setTeamLeaderId(tl.id)}
               className={
-                'flex h-[68px] items-center justify-between rounded-[5px] px-5 text-xl font-bold ring-2 transition ' +
+                'relative flex aspect-square flex-col items-center justify-center rounded-[5px] px-2 text-center text-base font-bold leading-tight ring-2 transition break-keep ' +
                 (teamLeaderId === tl.id ? 'bg-blue-900 text-white ring-blue-900' : 'bg-white text-zinc-700 ring-zinc-200')
               }
             >
-              {tl.name}
-              {teamLeaderId === tl.id && <Check className="h-6 w-6" />}
+              <span className="line-clamp-2">{tl.name}</span>
+              {teamLeaderId === tl.id && <Check className="absolute right-1.5 top-1.5 h-4 w-4" />}
             </button>
           ))
         )}

@@ -16,7 +16,7 @@ type Row = {
   quantity: number;
   unit_price: number;
   amount: number;
-  approval_status: 'pending' | 'approved' | 'rejected';
+  approval_status: 'pending_admin' | 'approved' | 'rejected_admin';
   rejection_reason: string | null;
   approved_at: string | null;
   created_at: string;
@@ -29,18 +29,18 @@ type Row = {
   subcontractor_name: string | null;
 };
 
-type StatusFilter = 'pending' | 'approved' | 'rejected';
+type StatusFilter = 'pending_admin' | 'approved' | 'rejected_admin';
 
 const STATUS_LABEL: Record<StatusFilter, string> = {
-  pending: '검토 대기',
+  pending_admin: '검토 대기',
   approved: '승인',
-  rejected: '반려',
+  rejected_admin: '반려',
 };
 
 const STATUS_STYLE: Record<StatusFilter, string> = {
-  pending: 'bg-amber-50 text-amber-700',
+  pending_admin: 'bg-amber-50 text-amber-700',
   approved: 'bg-emerald-50 text-emerald-700',
-  rejected: 'bg-red-50 text-red-700',
+  rejected_admin: 'bg-red-50 text-red-700',
 };
 
 function itemLabel(r: Row): string {
@@ -56,7 +56,7 @@ function itemLabel(r: Row): string {
 export default function VolumesReviewPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending_admin');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -132,7 +132,7 @@ export default function VolumesReviewPage() {
   const approveOne = (id: string) => bulk(true, [id]);
   const rejectOne = (id: string) => setReasonModal({ ids: [id] });
 
-  const isPending = statusFilter === 'pending';
+  const isPending = statusFilter === 'pending_admin';
   const colCount = isPending ? 10 : 8;
 
   return (
@@ -149,7 +149,7 @@ export default function VolumesReviewPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          {(['pending', 'approved', 'rejected'] as StatusFilter[]).map((s) => (
+          {(['pending_admin', 'approved', 'rejected_admin'] as StatusFilter[]).map((s) => (
             <FilterChip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
               {STATUS_LABEL[s]}
             </FilterChip>
@@ -251,7 +251,7 @@ export default function VolumesReviewPage() {
                         <span className={`rounded-[5px] px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[r.approval_status]}`}>
                           {STATUS_LABEL[r.approval_status]}
                         </span>
-                        {r.approval_status === 'rejected' && r.rejection_reason && (
+                        {r.approval_status === 'rejected_admin' && r.rejection_reason && (
                           <span className="ml-1 text-[10px] text-[#9CA3AF]">{r.rejection_reason}</span>
                         )}
                       </td>

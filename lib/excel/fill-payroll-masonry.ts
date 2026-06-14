@@ -154,14 +154,28 @@ function fillWorker(sheet: ExcelJS.Worksheet, w: FillMasonryWorker): void {
     sheet.getCell(`${MASONRY_COLS.QTY2}${headRow}`).value = v1.quantity;
     sheet.getCell(`${MASONRY_COLS.PRICE2}${headRow}`).value = v1.unit_price;
   }
-  // 3종 이상: 외주칸은 2개뿐 → 상위 2종만 채우고 나머지는 비고에 경고.
-  // (행 동적 삽입은 좌측 노임대장 2행 고정 구조와 충돌 + 4대보험 신고 행 중복 위험 → 후속 과제)
-  if (items.length > 2) {
-    const rest = items.slice(2);
-    const extra = rest.reduce((s, v) => s + v.amount, 0);
-    sheet.getCell(`${MASONRY_COLS.NOTE}${headRow}`).value =
-      `외 ${rest.length}종 ${extra.toLocaleString()}원 별도 정산 필요`;
+  // 비고: 성과 내역 전체 표기 (외주칸은 상위 2종만 자동계산 → 누락분은 정산 안내 한 줄 추가)
+  if (items.length > 0) {
+    const lines = items.map(
+      (v) => `${noteLabel(v)} ${v.quantity}×${v.unit_price.toLocaleString()}원`,
+    );
+    if (items.length > 2) {
+      const extra = items.slice(2).reduce((s, v) => s + v.amount, 0);
+      lines.push(`(외 ${items.length - 2}종 ${extra.toLocaleString()}원 급여 미반영 — 별도 정산)`);
+    }
+    const note = sheet.getCell(`${MASONRY_COLS.NOTE}${headRow}`);
+    note.value = lines.join('\n');
+    note.alignment = { ...note.alignment, wrapText: true, vertical: 'middle' };
+    // 성과 종 수(=줄 수)에 비례해 비고가 잘리지 않도록 행 높이 보정
+    const needed = lines.length * 15;
+    const row = sheet.getRow(headRow);
+    if ((row.height ?? 0) < needed) row.height = needed;
   }
+}
+
+// 비고 라벨: 공종 + 작업부위(규격) 결합
+function noteLabel(v: MasonryVolume): string {
+  return [v.category, workPart(v)].filter(Boolean).join(' ');
 }
 
 // 동일 (공종·작업부위·규격·단가) 항목은 수량 합산 → 금액 내림차순.

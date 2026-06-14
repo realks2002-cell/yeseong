@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { VolumesForm, type VolumesMe } from '@/components/mobile/volumes-form';
@@ -22,7 +23,7 @@ export default function WorkerVolumesPage() {
     }
     const { data: res, error: rpcErr } = await sb.rpc('yeseong_mobile_get_volumes_me');
     if (rpcErr) {
-      setError(rpcErr.message);
+      setError(toUserMessage(rpcErr));
       setLoading(false);
       return;
     }

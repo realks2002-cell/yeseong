@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { Check, AlertTriangle } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -8,6 +9,8 @@ import { getBrowserSupabase } from '@/lib/supabase/client';
 import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
 import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
+import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
+import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
@@ -50,14 +53,14 @@ export default function HomePage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
         router.replace('/m/signup');
         return;
       }
       const { data, error: rpcErr } = await sb.rpc('yeseong_mobile_get_me');
       if (rpcErr || !data) {
-        setError(rpcErr?.message ?? '프로필 로드 실패');
+        setError(toUserMessage(rpcErr, '프로필을 불러오지 못했습니다.'));
         return;
       }
       setMe(data as unknown as Me);
@@ -66,21 +69,24 @@ export default function HomePage() {
     }
   }, [sb, router]);
 
+  const reportGps = useCallback((lat: number, lng: number) => {
+    fetch('/api/m/gps-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude: lat, longitude: lng }),
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     load();
     registerPush('worker');
-    // GPS 3 레이어 — 위치 획득 시 서버에 기록
-    const reportGps = (lat: number, lng: number) => {
-      fetch('/api/m/gps-log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
-      }).catch(() => {});
-    };
-    // 백그라운드 워처 비활성화 (구글 심사 대응) — 복구 시 startBackgroundTracking(reportGps) + 매니페스트 권한 2줄 복원
-    // 포그라운드 폴링 (앱 사용 중 허용만으로 작동, 5분마다)
+    // 포그라운드 폴링 (앱 사용 중 허용만으로 작동 — 실행·재오픈 즉시 + 5분마다)
+    // 백그라운드 워처는 "항상 허용" 확인 후 AlwaysLocationPrompt onAlways에서 시작
     startForegroundPolling(reportGps);
-  }, [load]);
+  }, [load, reportGps]);
+
+  // "항상 허용" 부여 시 백그라운드 워처 시작 (권한 요청 없음 — 상태 확인만)
+  const onAlways = useCallback(() => { startBackgroundTracking(reportGps); }, [reportGps]);
 
   const todayRecord = me?.recent.find((r) => r.work_date === TODAY_ISO) ?? null;
   const isRejected = todayRecord?.approval_status === 'rejected';
@@ -104,10 +110,10 @@ export default function HomePage() {
     setConfirm(null);
     if (rpcErr) {
       if (rpcErr.message.includes('already approved')) {
-        setError('이미 승인 완료된 출역입니다. 새로고침 후 확인해주세요.');
+        setError('이미 승인 완료된 출역입니다. 새로고침 후 다시 확인해 주십시오.');
         await load();
       } else {
-        setError(rpcErr.message);
+        setError(toUserMessage(rpcErr));
       }
       return;
     }
@@ -140,6 +146,7 @@ export default function HomePage() {
   return (
     <MobileShell showTabs activeTab="home">
       <div className="px-7 pt-14 pb-4">
+        <AlwaysLocationPrompt appName="예성건축" onAlways={onAlways} />
         <p className="text-[24px] font-bold text-zinc-700">{TODAY_LABEL}</p>
         <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900">
           {me.worker.name}님

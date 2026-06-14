@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { Plus, Trash2, AlertCircle, CheckCircle2, Clock, XCircle, MapPin } from 'lucide-react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { categoryTypes } from '@/lib/constants/masonry';
@@ -17,6 +18,13 @@ export type PriceOption = {
   unit_price: number;
 };
 
+export type ApprovalStatus =
+  | 'pending_leader'   // 작업자 제출 → 팀장 검토 대기
+  | 'pending_admin'    // 팀장 제출 → 관리자 검토 대기
+  | 'approved'         // 관리자 승인
+  | 'rejected_leader'  // 팀장이 작업자에게 반려
+  | 'rejected_admin';  // 관리자가 팀장에게 반려
+
 export type ExistingVolume = {
   id: string;
   category: string;
@@ -27,7 +35,7 @@ export type ExistingVolume = {
   unit_price: number;
   amount: number;
   note: string | null;
-  approval_status?: 'pending' | 'approved' | 'rejected';
+  approval_status?: ApprovalStatus;
   rejection_reason?: string | null;
 };
 
@@ -87,7 +95,18 @@ function fmtDate(s: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-export function VolumesForm({ data, onSaved, readOnly = false }: { data: VolumesMe; onSaved: () => void; readOnly?: boolean }) {
+// role: 'worker'=작업자 본인, 'manager'=팀장 본인. 편집 잠금 단계가 다르다.
+export function VolumesForm({
+  data,
+  onSaved,
+  readOnly = false,
+  role = 'worker',
+}: {
+  data: VolumesMe;
+  onSaved: () => void;
+  readOnly?: boolean;
+  role?: 'worker' | 'manager';
+}) {
   if (data.form_type === 'no_worker_link') {
     return <InfoBox kind="error" title="작업자 정보 미연결" desc="관리자가 본인 계정과 작업자 정보를 연결해야 합니다." />;
   }
@@ -120,34 +139,56 @@ export function VolumesForm({ data, onSaved, readOnly = false }: { data: Volumes
   const multi = sections.length > 1;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {multi && (
         <div className="rounded-[10px] bg-amber-50 p-3 text-xs text-amber-800">
           이번 달 두 곳 이상에서 작업하셨습니다. <b>현장별로 따로</b> 성과를 입력하세요.
         </div>
       )}
-      {sections.map((s) => (
-        <div key={s.worksite_id}>
-          {multi && (
-            <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-zinc-800">
-              <MapPin className="h-4 w-4 text-zinc-400" />
-              {s.worksite_name}
-              {!s.is_current && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                  이전 현장
+      {sections.map((s, i) =>
+        multi ? (
+          <div
+            key={s.worksite_id}
+            className="overflow-hidden rounded-[12px] border border-zinc-200 bg-white"
+          >
+            <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-3">
+              <MapPin className="h-5 w-5 shrink-0 text-zinc-500" />
+              <span className="min-w-0 flex-1 truncate text-lg font-bold text-zinc-900">
+                현장 {i + 1} · {s.worksite_name}
+              </span>
+              {s.is_current ? (
+                <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-800">
+                  현재
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+                  이전
                 </span>
               )}
             </div>
-          )}
+            <div className="p-4">
+              <WorksiteSectionForm
+                section={s}
+                catName={catName}
+                yearMonth={data.target_year_month}
+                onSaved={onSaved}
+                readOnly={readOnly}
+                role={role}
+              />
+            </div>
+          </div>
+        ) : (
           <WorksiteSectionForm
+            key={s.worksite_id}
             section={s}
             catName={catName}
             yearMonth={data.target_year_month}
             onSaved={onSaved}
             readOnly={readOnly}
+            role={role}
           />
-        </div>
-      ))}
+        ),
+      )}
     </div>
   );
 }
@@ -158,14 +199,25 @@ function WorksiteSectionForm({
   yearMonth,
   onSaved,
   readOnly,
+  role,
 }: {
   section: WorksiteSection;
   catName: EligibleCategory;
   yearMonth: string | null;
   onSaved: () => void;
   readOnly: boolean;
+  role: 'worker' | 'manager';
 }) {
   const sb = getBrowserSupabase();
+
+  // 상위 결재 단계로 넘어가면 모바일 본인 입력 잠금
+  //  - 작업자: 팀장이 제출(pending_admin)했거나 승인/관리자반려면 잠금 (검토 전까지만 수정)
+  //  - 팀장 본인: 승인 완료면 잠금
+  const lockStatuses: ApprovalStatus[] =
+    role === 'worker'
+      ? ['pending_admin', 'approved', 'rejected_admin']
+      : ['approved'];
+  const locked = section.existing.some((e) => e.approval_status && lockStatuses.includes(e.approval_status));
 
   const initialRows: Row[] = useMemo(() => {
     const out: Row[] = [];
@@ -218,10 +270,14 @@ function WorksiteSectionForm({
     });
     setBusy(false);
     if (error) {
-      setErr(error.message);
+      setErr(toUserMessage(error));
       return;
     }
-    setOkMsg('저장되었습니다. 관리자 승인 후 급여에 반영됩니다.');
+    setOkMsg(
+      role === 'worker'
+        ? '저장되었습니다. 팀장 검토 → 관리자 승인 후 급여에 반영됩니다.'
+        : '저장되었습니다. 관리자 승인 후 급여에 반영됩니다.',
+    );
     onSaved();
   }
 
@@ -254,6 +310,27 @@ function WorksiteSectionForm({
     );
   }
 
+  // 상위 결재 단계로 넘어가 잠긴 경우 — 제출 내역만 표시
+  if (locked) {
+    const anyApproved = section.existing.some((e) => e.approval_status === 'approved');
+    return (
+      <div className="space-y-3">
+        <InfoBox
+          kind={anyApproved ? 'info' : 'info'}
+          title={anyApproved ? '승인 완료' : '검토 중입니다'}
+          desc={
+            anyApproved
+              ? '관리자 승인이 완료되어 급여에 반영됩니다.'
+              : role === 'worker'
+                ? '팀장이 관리자에게 제출했습니다. 수정이 필요하면 팀장에게 문의하세요.'
+                : '관리자 검토 중입니다. 수정이 필요하면 관리자에게 문의하세요.'
+          }
+        />
+        {section.existing.length > 0 && <ExistingList existing={section.existing} />}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-[10px] bg-blue-50 p-3 text-sm">
@@ -269,15 +346,22 @@ function WorksiteSectionForm({
         </p>
       </div>
 
-      {section.existing.some((e) => e.approval_status === 'rejected') && (
-        <InfoBox
-          kind="warn"
-          title="반려된 성과가 있습니다"
-          desc={section.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason
-            ? `사유: ${section.existing.find((e) => e.approval_status === 'rejected')?.rejection_reason}`
-            : '관리자가 반려했습니다. 다시 입력 후 저장해 주세요.'}
-        />
-      )}
+      {(() => {
+        // 작업자는 팀장 반려(rejected_leader), 팀장 본인은 관리자 반려(rejected_admin)를 본다
+        const rejStatus: ApprovalStatus = role === 'worker' ? 'rejected_leader' : 'rejected_admin';
+        const rejected = section.existing.find((e) => e.approval_status === rejStatus);
+        if (!rejected) return null;
+        const by = role === 'worker' ? '팀장' : '관리자';
+        return (
+          <InfoBox
+            kind="warn"
+            title="반려된 성과가 있습니다"
+            desc={rejected.rejection_reason
+              ? `사유: ${rejected.rejection_reason}`
+              : `${by}가 반려했습니다. 다시 입력 후 저장해 주세요.`}
+          />
+        );
+      })()}
 
       <div className="space-y-2.5">
         {rows.length === 0 ? (
@@ -380,16 +464,23 @@ function StatusBadge({ status }: { status?: ExistingVolume['approval_status'] })
       </span>
     );
   }
-  if (status === 'rejected') {
+  if (status === 'rejected_leader' || status === 'rejected_admin') {
     return (
       <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
         <XCircle className="h-3 w-3" /> 반려
       </span>
     );
   }
+  if (status === 'pending_admin') {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+        <Clock className="h-3 w-3" /> 관리자 검토 중
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-      <Clock className="h-3 w-3" /> 검토 중
+      <Clock className="h-3 w-3" /> 팀장 검토 중
     </span>
   );
 }

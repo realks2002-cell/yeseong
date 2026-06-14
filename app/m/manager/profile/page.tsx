@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, MapPin } from 'lucide-react';
@@ -26,7 +27,7 @@ export default function ManagerProfilePage() {
     }
     const { data, error: rpcErr } = await sb.rpc('yeseong_manager_get_me');
     if (rpcErr || !data) {
-      setError(rpcErr?.message ?? '프로필 로드 실패');
+      setError(toUserMessage(rpcErr, '프로필을 불러오지 못했습니다.'));
       return;
     }
     setMe(data as unknown as Me);

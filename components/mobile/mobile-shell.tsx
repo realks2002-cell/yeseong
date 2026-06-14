@@ -8,7 +8,7 @@ import { getMirrorId, withMirror } from '@/lib/manager/mirror';
 import { LocationSettingsBar } from '@/components/mobile/location-settings-bar';
 
 type WorkerTab = 'home' | 'payroll' | 'volumes' | 'proofs' | 'profile';
-type ManagerTab = 'home' | 'orders' | 'proofs' | 'volumes' | 'affiliation' | 'profile';
+type ManagerTab = 'home' | 'payroll' | 'orders' | 'proofs' | 'volumes' | 'affiliation' | 'profile';
 type ActiveTab = WorkerTab | ManagerTab;
 
 type Props = {
@@ -24,6 +24,28 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
   // 관리자 미러 모드(?mirror=<id>): 탭 이동 시 파라미터 유지
   const [mirror, setMirror] = useState<string | null>(null);
   useEffect(() => { setMirror(getMirrorId()); }, []);
+
+  // 작업자 "성과" 탭은 급여형태가 매사(월급/일급)인 경우만 노출. 캐시로 깜빡임 최소화.
+  const [showVolumes, setShowVolumes] = useState(true);
+  useEffect(() => {
+    if (variant !== 'worker') return;
+    const cached = localStorage.getItem('ys_worker_masonry');
+    if (cached !== null) setShowVolumes(cached === '1');
+    (async () => {
+      const sb = getBrowserSupabase();
+      const { data: { session } } = await sb.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) return;
+      const { data } = await sb
+        .from('yeseong_workers')
+        .select('wage_type')
+        .eq('auth_user_id', uid)
+        .maybeSingle();
+      const isMasonry = data?.wage_type === '월급/일급';
+      setShowVolumes(isMasonry);
+      localStorage.setItem('ys_worker_masonry', isMasonry ? '1' : '0');
+    })();
+  }, [variant]);
 
   return (
     <div className="min-h-svh bg-white flex items-center justify-center p-0 sm:p-6">
@@ -41,17 +63,20 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
             <div className="pointer-events-auto space-y-2">
               {variant === 'worker' && <LocationSettingsBar />}
               {variant === 'worker' && (
-                <nav className="grid grid-cols-5 overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur">
+                <nav className={`grid ${showVolumes ? 'grid-cols-5' : 'grid-cols-4'} overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur`}>
                   <HomeTabWithLongPressLogout active={activeTab === 'home'} />
                   <Tab href="/m/payroll" icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
-                  <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
+                  {showVolumes && (
+                    <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
+                  )}
                   <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
                   <Tab href="/m/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
                 </nav>
               )}
               {variant === 'manager' && (
-                <nav className="grid grid-cols-5 overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur">
+                <nav className="grid grid-cols-6 overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur">
                   <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
+                  <Tab href={withMirror('/m/manager/payroll', mirror)} icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
                   <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
                   <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
                   <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />

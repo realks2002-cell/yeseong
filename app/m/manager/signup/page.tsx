@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronDown, ChevronUp, HardHat, Check } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -139,15 +140,18 @@ export default function ManagerSignupPage() {
       });
       setLoginBusy(false);
       if (error) {
-        setLoginError('PIN이 맞지 않아요');
-        setTimeout(() => {
+        // 자격증명 오류(실제 PIN 불일치)만 "PIN이 일치하지 않습니다." — 그 외(네트워크 등)는 실제 사유 노출
+        const isInvalidCred = error.status === 400 || /invalid|credential/i.test(error.message ?? '');
+        if (isInvalidCred) {
+          setLoginError('PIN이 일치하지 않습니다.');
+          setTimeout(() => { setLoginPin(''); setLoginError(undefined); }, 1800);
+        } else {
+          setLoginError(toUserMessage(error, '네트워크 연결을 확인해 주십시오.'));
           setLoginPin('');
-          setLoginError(undefined);
-        }, 1200);
+        }
         return;
       }
-      router.replace('/m/manager');
-      router.refresh();
+      router.replace('/m/manager/home');
     })();
   }, [mode, loginPin, phone, sb, router, loginBusy]);
 
@@ -158,7 +162,7 @@ export default function ManagerSignupPage() {
     try {
       const { data, error } = await sb.rpc('yeseong_check_phone_full', { p_phone: phone });
       if (error || !data) {
-        setPhoneError(error?.message ?? '오류가 발생했어요');
+        setPhoneError(toUserMessage(error, '오류가 발생했습니다.'));
         return;
       }
       const r = data as unknown as CheckResult;
@@ -168,7 +172,7 @@ export default function ManagerSignupPage() {
       }
       // 팀장 마스터(/managers)에 등록된 전화번호만 진입 가능 — 자가 등록 차단
       if (!r.manager_registered) {
-        setPhoneError('로그인이 불가합니다. 관리자에게 문의 바랍니다.');
+        setPhoneError('로그인할 수 없습니다. 관리자에게 문의해 주십시오.');
         return;
       }
       if (r.has_worker) {
@@ -236,7 +240,7 @@ export default function ManagerSignupPage() {
       });
       if (!signupRes.ok) {
         const j = await signupRes.json().catch(() => ({}));
-        setSignupError(j.error === 'already_registered' ? '이미 가입된 번호입니다' : '가입에 실패했어요');
+        setSignupError(j.error === 'already_registered' ? '이미 가입된 번호입니다' : '가입에 실패했습니다.');
         return;
       }
       const { error: signInErr } = await sb.auth.signInWithPassword({
@@ -244,7 +248,7 @@ export default function ManagerSignupPage() {
         password: pinToPassword(pin1),
       });
       if (signInErr) {
-        setSignupError('로그인에 실패했어요');
+        setSignupError('로그인에 실패했습니다.');
         return;
       }
       const { error: rpcErr } = await sb.rpc('yeseong_manager_signup_full', {
@@ -270,14 +274,13 @@ export default function ManagerSignupPage() {
       });
       if (rpcErr) {
         const msg = rpcErr.message;
-        if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요해요');
-        else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요해요');
-        else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요해요');
+        if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요합니다.');
+        else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요합니다.');
+        else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요합니다.');
         else setSignupError('프로필 저장 실패: ' + msg);
         return;
       }
       router.replace('/m/manager/assignments?first=1');
-      router.refresh();
     } finally {
       setSignupBusy(false);
     }
@@ -350,7 +353,7 @@ export default function ManagerSignupPage() {
             value={pin2} onChange={setPin2}
             onNext={goNextOrSubmit}
             disabledNext={pin2.length !== 4 || pin1 !== pin2 || signupBusy}
-            errorMessage={signupError ?? (pin2.length === 4 && pin1 !== pin2 ? 'PIN이 일치하지 않아요' : undefined)}
+            errorMessage={signupError ?? (pin2.length === 4 && pin1 !== pin2 ? 'PIN이 일치하지 않습니다.' : undefined)}
             nextLabel={
               flow.indexOf('signup_pin2') === flow.length - 1
                 ? (signupBusy ? '가입 중...' : '가입 완료')

@@ -11,6 +11,8 @@
     "cap:sync:manager": "CAP_TARGET=manager npx cap sync android",
     "build:apk:worker": "cd android && ./gradlew assembleRelease",
     "build:apk:manager": "cd android-manager && ./gradlew assembleRelease",
+    "build:aab:worker": "npm run cap:sync:worker && cd android && ./gradlew bundleRelease",
+    "build:aab:manager": "npm run cap:sync:manager && cd android-manager && ./gradlew bundleRelease",
     "test:e2e": "playwright test"
   },
   "dependencies": {

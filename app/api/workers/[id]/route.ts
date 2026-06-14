@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSupabase } from '@/lib/supabase/server';
+import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
 
 // PATCH: 일반 필드 + (선택) RRN 평문. RRN은 별도 RPC로 4개 컬럼 일관 업데이트.
@@ -67,6 +67,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: '중복된 값이 있습니다' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // 팀장도 작업자 — 작업자 마스터(기준)에서 이름 수정 시 팀장 마스터(site_managers)도 동기화
+  // (전화번호로 연결. site_managers는 self-only RLS라 service role로 갱신)
+  if ('name' in patch) {
+    const { data: w } = await sb
+      .from('yeseong_workers')
+      .select('phone, skill_grade')
+      .eq('id', id)
+      .single();
+    if (w?.skill_grade === '팀장' && w.phone) {
+      await getServiceSupabase()
+        .from('yeseong_site_managers')
+        .update({ name: patch.name })
+        .eq('phone', w.phone);
+    }
   }
 
   // 팀장 현장 변경 시 소속 팀원 현장 자동 배치

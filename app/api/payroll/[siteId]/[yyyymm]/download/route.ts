@@ -7,6 +7,9 @@ import { getCompanySettings } from '@/lib/settings/company';
 
 export const runtime = 'nodejs';
 
+// 일반 노임대장에서 제외할 급여형태 — 매사(월급/일급)는 매사 노임대장으로만 출력
+const MASONRY_WAGE_TYPE = '월급/일급';
+
 type PayrollData = {
   period: { id: string; year_month: string };
   worksite: { id: string; name: string };
@@ -57,14 +60,18 @@ export async function GET(
   const { data: payload, error } = await sb.rpc('yeseong_admin_get_payroll', { p_period_id: period.id });
   if (error) return new NextResponse(error.message, { status: 500 });
   const data = payload as unknown as PayrollData;
-  if (!data.slots || data.slots.length === 0) {
+  // 매사(월급/일급) 작업자는 일반 노임대장에서 제외
+  const generalSlots = (data.slots ?? []).filter(
+    (s) => s.worker.wage_type !== MASONRY_WAGE_TYPE,
+  );
+  if (generalSlots.length === 0) {
     return new NextResponse('no enrolled workers', { status: 400 });
   }
-  if (data.slots.length > 32) {
+  if (generalSlots.length > 32) {
     return new NextResponse('too many workers (max 32)', { status: 400 });
   }
 
-  const sortedSlots = [...data.slots].sort((a, b) =>
+  const sortedSlots = [...generalSlots].sort((a, b) =>
     a.worker.name.localeCompare(b.worker.name, 'ko'),
   );
   const fillWorkers: FillWorker[] = sortedSlots.map((s, i) => ({
@@ -90,7 +97,7 @@ export async function GET(
   const settings = await getCompanySettings();
   // 단일 파일 다운로드: 모든 슬롯의 전문건설사가 동일하면 그 전문건설사명을 "상 호"에 사용
   const uniqueSubs = new Set(
-    data.slots
+    generalSlots
       .map((s) => s.subcontractor_name)
       .filter((v): v is string => !!v),
   );
