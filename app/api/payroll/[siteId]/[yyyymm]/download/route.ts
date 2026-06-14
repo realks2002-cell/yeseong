@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { fillPayrollWorkbook, buildDownloadFilename, type FillWorker } from '@/lib/excel/fill-payroll';
 import { periodRange } from '@/lib/utils/date';
-import { getServerSupabase } from '@/lib/supabase/server';
+import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { getCompanySettings } from '@/lib/settings/company';
+import { persistPeriodDeductions } from '@/lib/payroll/compute-period';
 
 export const runtime = 'nodejs';
 
@@ -56,6 +57,13 @@ export async function GET(
     .eq('year_month', yyyymm)
     .single();
   if (!period) return new NextResponse('period not found', { status: 404 });
+
+  // 노임대장 다운로드 시 그 달 급여(공제) 자동 계산·저장 — 별도 버튼 불필요. 실패해도 다운로드는 진행.
+  try {
+    await persistPeriodDeductions(period.id, sb, getServiceSupabase());
+  } catch (e) {
+    console.error('급여 자동 계산 실패(다운로드는 계속):', (e as Error).message);
+  }
 
   const { data: payload, error } = await sb.rpc('yeseong_admin_get_payroll', { p_period_id: period.id });
   if (error) return new NextResponse(error.message, { status: 500 });

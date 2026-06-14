@@ -621,7 +621,7 @@ function ConsentRow({
       <span
         className={
           'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ' +
-          (checked ? 'bg-blue-900 text-white' : 'bg-zinc-200 text-zinc-400')
+          (checked ? 'bg-navy text-white' : 'bg-zinc-200 text-zinc-400')
         }
       >
         <Check className="h-4 w-4" strokeWidth={3} />
@@ -657,7 +657,7 @@ function ConsentItem({
           <span
             className={
               'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition ' +
-              (checked ? 'bg-blue-900 text-white' : 'bg-zinc-200 text-zinc-400')
+              (checked ? 'bg-navy text-white' : 'bg-zinc-200 text-zinc-400')
             }
           >
             <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -687,8 +687,8 @@ function ProgressDots({ mode, flow }: { mode: Mode; flow: Mode[] }) {
   if (mode === 'login_pin') {
     return (
       <div className="flex gap-2">
-        <span className="h-2 w-7 rounded-full bg-blue-900" />
-        <span className="h-2 w-7 rounded-full bg-blue-900" />
+        <span className="h-2 w-7 rounded-full bg-navy" />
+        <span className="h-2 w-7 rounded-full bg-navy" />
       </div>
     );
   }
@@ -697,7 +697,7 @@ function ProgressDots({ mode, flow }: { mode: Mode; flow: Mode[] }) {
   return (
     <div className="flex gap-1">
       {Array.from({ length: total }).map((_, i) => (
-        <span key={i} className={'h-2 w-4 rounded-full ' + (i <= current ? 'bg-blue-900' : 'bg-zinc-200')} />
+        <span key={i} className={'h-2 w-4 rounded-full ' + (i <= current ? 'bg-navy' : 'bg-zinc-200')} />
       ))}
     </div>
   );
@@ -715,7 +715,7 @@ function PhoneStep({
   return (
     <>
       <div className="mt-6 flex items-center gap-3">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-[5px] bg-blue-900 text-white">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-[5px] bg-navy text-white">
           <HardHat className="h-6 w-6" />
         </span>
         <div>
@@ -735,7 +735,7 @@ function PhoneStep({
           onChange={(e) => setPhone(formatPhone(e.target.value))}
           placeholder="010-1234-5678"
           autoFocus
-          className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[36px] font-bold tracking-wide text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+          className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[36px] font-bold tracking-wide text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
         />
       </div>
       {error && <p className="mt-4 text-base font-semibold text-red-800">{error}</p>}
@@ -762,7 +762,7 @@ function PinStep({
       <div className="relative mt-16 py-3">
         <div className="flex items-center justify-center gap-5">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className={'h-5 w-5 rounded-full transition ' + (i < value.length ? 'bg-blue-900 scale-110' : 'bg-zinc-200')} />
+            <div key={i} className={'h-5 w-5 rounded-full transition ' + (i < value.length ? 'bg-navy scale-110' : 'bg-zinc-200')} />
           ))}
         </div>
         <input
@@ -807,7 +807,7 @@ function IdentityStep({
             onChange={(e) => setName(e.target.value)}
             placeholder="홍길동"
             autoFocus
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[28px] font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[28px] font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
         </div>
         <div>
@@ -848,7 +848,7 @@ function RrnStep({
           onChange={(e) => setRrn(formatRrn(e.target.value))}
           placeholder="000000-0000000"
           autoFocus
-          className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[28px] font-bold tracking-wide text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+          className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-[28px] font-bold tracking-wide text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
         />
       </div>
       <NextButton valid={valid} onNext={onNext} label="다음" />
@@ -879,7 +879,7 @@ function ForeignStep({
             value={nameEnglish}
             onChange={(e) => setNameEnglish(e.target.value)}
             placeholder="WAI YAN SOE"
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
         </Field>
         <Field label="국적">
@@ -887,7 +887,7 @@ function ForeignStep({
             value={nationality}
             onChange={(e) => setNationality(e.target.value)}
             placeholder="중국 / 미얀마 / 베트남 등"
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
         </Field>
         <Field label="비자 종류">
@@ -895,7 +895,7 @@ function ForeignStep({
             value={visaStatus}
             onChange={(e) => setVisaStatus(e.target.value)}
             placeholder="F-4 / E-9 / H-2 등"
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
         </Field>
       </div>
@@ -925,7 +925,7 @@ function AddressStep({
           placeholder="서울특별시 강남구 테헤란로 100"
           autoFocus
           rows={3}
-          className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300 resize-none"
+          className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300 resize-none"
         />
       </div>
       <NextButton valid={valid} onNext={onNext} label="다음" />
@@ -965,7 +965,7 @@ function AccountStep({
                 onChange={(e) => setBankName(e.target.value)}
                 placeholder="은행명 직접 입력"
                 autoFocus
-                className="flex-1 border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+                className="flex-1 border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
               />
               <button
                 type="button"
@@ -982,7 +982,7 @@ function AccountStep({
                 if (e.target.value === '__custom__') { setBankCustom(true); setBankName(''); }
                 else setBankName(e.target.value);
               }}
-              className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+              className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-navy outline-none"
             >
               <option value="">선택하세요</option>
               {KOREAN_BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -996,7 +996,7 @@ function AccountStep({
             onChange={(e) => setAccountNumber(e.target.value)}
             placeholder="110-123-456789"
             inputMode="numeric"
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold tracking-wider text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold tracking-wider text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
         </Field>
         <Field label="예금주">
@@ -1004,7 +1004,7 @@ function AccountStep({
             value={accountHolder}
             onChange={(e) => setAccountHolder(e.target.value)}
             placeholder="홍길동"
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
         </Field>
       </div>
@@ -1042,7 +1042,7 @@ function WorkStep({
             placeholder="270000"
             inputMode="numeric"
             autoFocus
-            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-2xl font-bold tabular-nums text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+            className="mt-2 w-full border-b-[3px] border-zinc-200 bg-transparent pb-3 text-2xl font-bold tabular-nums text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
           />
           {defaultWage && /^\d+$/.test(defaultWage) && (
             <p className="mt-1 text-sm text-zinc-500">{Number(defaultWage).toLocaleString()}원</p>
@@ -1056,7 +1056,7 @@ function WorkStep({
                 onChange={(e) => setDefaultTrade(e.target.value)}
                 placeholder="공종 직접 입력"
                 autoFocus
-                className="flex-1 border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-blue-900 placeholder:text-zinc-300"
+                className="flex-1 border-b-[3px] border-zinc-200 bg-transparent pb-3 text-xl font-bold text-zinc-900 outline-none focus:border-navy placeholder:text-zinc-300"
               />
               <button
                 type="button"
@@ -1073,7 +1073,7 @@ function WorkStep({
                 if (e.target.value === '__custom__') { setTradeCustom(true); setDefaultTrade(''); }
                 else setDefaultTrade(e.target.value);
               }}
-              className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+              className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-navy outline-none"
             >
               <option value="">선택하세요</option>
               {TRADES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -1137,7 +1137,7 @@ function NextButton({ valid, onNext, label }: { valid: boolean; onNext: () => vo
         disabled={!valid}
         className={
           'h-[78px] w-full rounded-[5px] text-2xl font-bold transition ' +
-          (valid ? 'bg-blue-900 text-white active:scale-[0.98]' : 'bg-zinc-100 text-zinc-400')
+          (valid ? 'bg-navy text-white active:scale-[0.98]' : 'bg-zinc-100 text-zinc-400')
         }
       >
         {label}
@@ -1153,7 +1153,7 @@ function SelectChip({ selected, onClick, label }: { selected: boolean; onClick: 
       onClick={onClick}
       className={
         'h-[68px] rounded-[5px] text-xl font-bold ring-2 transition ' +
-        (selected ? 'bg-blue-900 text-white ring-blue-900' : 'bg-white text-zinc-700 ring-zinc-200 hover:ring-zinc-400')
+        (selected ? 'bg-navy text-white ring-navy' : 'bg-white text-zinc-700 ring-zinc-200 hover:ring-zinc-400')
       }
     >
       {label}

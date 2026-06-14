@@ -46,10 +46,10 @@ export function AnnouncementPopup() {
   if (!current) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/50 px-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 px-5">
       <div className="w-full max-w-[380px] rounded-[5px] bg-white shadow-2xl overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center gap-2 bg-blue-900 px-5 py-3">
+        <div className="flex items-center gap-2 bg-navy px-5 py-3">
           <Megaphone className="h-5 w-5 text-white" />
           <span className="flex-1 text-base font-bold text-white">공지사항</span>
           {list.length > 1 && (
@@ -79,7 +79,7 @@ export function AnnouncementPopup() {
         <div className="px-6 pb-5">
           <button
             onClick={dismiss}
-            className="h-[52px] w-full rounded-[5px] bg-blue-900 text-lg font-bold text-white active:scale-[0.99]"
+            className="h-[52px] w-full rounded-[5px] bg-navy text-lg font-bold text-white active:scale-[0.99]"
           >
             확인
           </button>

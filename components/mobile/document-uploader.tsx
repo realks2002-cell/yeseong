@@ -278,7 +278,7 @@ function UploadButton({
         type="button"
         onClick={() => setOpen(true)}
         disabled={busy}
-        className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-[5px] bg-blue-900 text-base font-bold text-white disabled:bg-zinc-300"
+        className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-[5px] bg-navy text-base font-bold text-white disabled:bg-zinc-300"
       >
         {busy ? (
           <>

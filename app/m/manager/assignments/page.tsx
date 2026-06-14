@@ -124,13 +124,13 @@ export default function ManagerAssignmentsPage() {
                   className={
                     'flex w-full items-center justify-between gap-3 rounded-[5px] px-5 py-4 text-left ring-2 transition active:scale-[0.99] ' +
                     (on
-                      ? 'bg-blue-900 text-white ring-blue-900'
+                      ? 'bg-navy text-white ring-navy'
                       : 'bg-white text-zinc-700 ring-zinc-200 hover:ring-zinc-400')
                   }
                 >
                   <span className="min-w-0 flex-1 text-lg font-bold leading-snug break-keep">{w.name}</span>
                   {on && (
-                    <span className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-blue-900">
+                    <span className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-navy">
                       <Check className="h-5 w-5" />
                     </span>
                   )}
@@ -155,7 +155,7 @@ export default function ManagerAssignmentsPage() {
               'flex h-[78px] w-full items-center justify-center gap-2 rounded-[5px] text-2xl font-bold transition ' +
               (readOnly || busy || !selected
                 ? 'bg-zinc-100 text-zinc-400'
-                : 'bg-blue-900 text-white active:scale-[0.98]')
+                : 'bg-navy text-white active:scale-[0.98]')
             }
           >
             <Save className="h-6 w-6" />

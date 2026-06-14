@@ -25,62 +25,55 @@ export function MobileShell({ children, showTabs = false, activeTab, variant = '
   const [mirror, setMirror] = useState<string | null>(null);
   useEffect(() => { setMirror(getMirrorId()); }, []);
 
-  // 작업자 "성과" 탭은 급여형태가 매사(월급/일급)인 경우만 노출. 캐시로 깜빡임 최소화.
-  const [showVolumes, setShowVolumes] = useState(true);
-  useEffect(() => {
-    if (variant !== 'worker') return;
-    const cached = localStorage.getItem('ys_worker_masonry');
-    if (cached !== null) setShowVolumes(cached === '1');
-    (async () => {
-      const sb = getBrowserSupabase();
-      const { data: { session } } = await sb.auth.getSession();
-      const uid = session?.user?.id;
-      if (!uid) return;
-      const { data } = await sb
-        .from('yeseong_workers')
-        .select('wage_type')
-        .eq('auth_user_id', uid)
-        .maybeSingle();
-      const isMasonry = data?.wage_type === '월급/일급';
-      setShowVolumes(isMasonry);
-      localStorage.setItem('ys_worker_masonry', isMasonry ? '1' : '0');
-    })();
-  }, [variant]);
-
   return (
     <div className="min-h-svh bg-white flex items-center justify-center p-0 sm:p-6">
-      <div className="relative w-full sm:max-w-[420px] sm:rounded-[40px] sm:ring-1 sm:ring-zinc-200 sm:shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:overflow-hidden bg-white min-h-svh sm:min-h-[860px] sm:max-h-[860px] flex flex-col">
-        <div className={'flex-1 overflow-y-auto' + (showTabs ? ' pb-32' : '')}>{children}</div>
+      <div className="relative w-full sm:max-w-[420px] sm:rounded-[40px] sm:ring-1 sm:ring-zinc-200 sm:shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:overflow-hidden bg-surface min-h-svh sm:min-h-[860px] sm:max-h-[860px] flex flex-col">
+        <div className={'flex-1 overflow-y-auto pt-[calc(env(safe-area-inset-top,0px)+5pt)]' + (showTabs ? ' pb-32' : '')}>{children}</div>
+
+        {/* 내 정보 — 우측 상단 플로팅 버튼 (하단 메뉴에서 이동) */}
+        {showTabs && (
+          <Link
+            href={variant === 'manager' ? withMirror('/m/manager/me', mirror) : '/m/me'}
+            aria-label="내 정보"
+            className="absolute right-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 ring-1 ring-zinc-200 shadow-sm backdrop-blur active:scale-95"
+            style={{ top: 'calc(max(env(safe-area-inset-top, 0px), 12px) + 5pt)' }}
+          >
+            <User className="h-6 w-6 text-[#8B0000]" />
+          </Link>
+        )}
 
         {/* 플로팅 하단 메뉴 — Android 엣지투엣지에서 시스템 내비게이션 바 위에 떠 있도록
             safe-area-inset-bottom 만큼 띄운다.
             모바일: 뷰포트 고정(fixed) — 페이지가 길어도 항상 보임 / 데스크톱 프레임: absolute */}
         {showTabs && (
-          <div
-            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 sm:absolute"
-            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
-          >
-            <div className="pointer-events-auto space-y-2">
-              {variant === 'worker' && <LocationSettingsBar />}
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 sm:absolute">
+            <div className="pointer-events-auto">
               {variant === 'worker' && (
-                <nav className={`grid ${showVolumes ? 'grid-cols-5' : 'grid-cols-4'} overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur`}>
+                <div className="px-3 pb-2">
+                  <LocationSettingsBar />
+                </div>
+              )}
+              {variant === 'worker' && (
+                <nav
+                  className="grid grid-cols-4 border-t border-zinc-200 bg-white shadow-[0_-4px_20px_rgba(15,23,42,0.08)]"
+                  style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                >
                   <HomeTabWithLongPressLogout active={activeTab === 'home'} />
                   <Tab href="/m/payroll" icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
-                  {showVolumes && (
-                    <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-                  )}
+                  <Tab href="/m/volumes" icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
                   <Tab href="/m/site-photos" icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
-                  <Tab href="/m/me" icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
                 </nav>
               )}
               {variant === 'manager' && (
-                <nav className="grid grid-cols-6 overflow-hidden rounded-[18px] border border-zinc-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur">
+                <nav
+                  className="grid grid-cols-5 border-t border-zinc-200 bg-white shadow-[0_-4px_20px_rgba(15,23,42,0.08)]"
+                  style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                >
                   <ManagerHomeTabWithLongPressLogout active={activeTab === 'home'} mirror={mirror} />
                   <Tab href={withMirror('/m/manager/payroll', mirror)} icon={<Wallet className="h-6 w-6" />} label="급여" active={activeTab === 'payroll'} />
                   <Tab href={withMirror('/m/manager/orders', mirror)} icon={<PackagePlus className="h-6 w-6" />} label="발주" active={activeTab === 'orders'} />
                   <Tab href={withMirror('/m/manager/site-photos', mirror)} icon={<Camera className="h-6 w-6" />} label="현장증빙" active={activeTab === 'proofs'} />
                   <Tab href={withMirror('/m/manager/volumes', mirror)} icon={<Package className="h-6 w-6" />} label="성과" active={activeTab === 'volumes'} />
-                  <Tab href={withMirror('/m/manager/me', mirror)} icon={<User className="h-6 w-6" />} label="내 정보" active={activeTab === 'profile'} />
                 </nav>
               )}
             </div>
@@ -96,8 +89,8 @@ function Tab({ href, icon, label, active }: { href: string; icon: ReactNode; lab
     <Link
       href={href}
       className={
-        'flex flex-col items-center justify-center gap-1 py-3 text-sm font-semibold transition-colors ' +
-        (active ? 'text-blue-900' : 'text-zinc-400')
+        'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors ' +
+        (active ? 'text-navy' : 'text-zinc-400')
       }
     >
       {icon}
@@ -158,8 +151,8 @@ function ManagerHomeTabWithLongPressLogout({ active, mirror }: { active: boolean
         touchAction: 'manipulation',
       }}
       className={
-        'relative flex flex-col items-center justify-center gap-1 py-3 text-sm font-semibold transition-colors overflow-hidden ' +
-        (active ? 'text-blue-900' : 'text-zinc-400')
+        'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors overflow-hidden ' +
+        (active ? 'text-navy' : 'text-zinc-400')
       }
     >
       {pressing && (
@@ -227,8 +220,8 @@ function HomeTabWithLongPressLogout({ active }: { active: boolean }) {
       onPointerCancel={cancel}
       onClick={onClick}
       className={
-        'relative flex flex-col items-center justify-center gap-1 py-3 text-sm font-semibold transition-colors overflow-hidden ' +
-        (active ? 'text-blue-900' : 'text-zinc-400')
+        'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors overflow-hidden ' +
+        (active ? 'text-navy' : 'text-zinc-400')
       }
     >
       {pressing && (

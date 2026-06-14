@@ -83,7 +83,7 @@ export function AlwaysLocationPrompt({
       <div className="fixed inset-0 z-[60] flex flex-col bg-white overflow-y-auto">
         <div className="flex-1 px-7 pt-16 pb-6">
           <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-            <MapPin className="h-7 w-7 text-blue-900" />
+            <MapPin className="h-7 w-7 text-navy" />
           </span>
           <h1 className="mt-6 text-[28px] font-bold leading-snug text-zinc-900">
             위치 권한이<br />필요해요
@@ -104,11 +104,11 @@ export function AlwaysLocationPrompt({
           </ul>
 
           <div className="mt-6 rounded-[10px] bg-blue-50 p-4">
-            <p className="text-[15px] font-bold leading-relaxed text-blue-900">
+            <p className="text-[15px] font-bold leading-relaxed text-navy">
               다음 화면에서 위치 권한을 <span className="underline">&lsquo;항상 허용&rsquo;</span>으로
               선택해주세요.
             </p>
-            <p className="mt-1 text-sm leading-relaxed text-blue-900/80">
+            <p className="mt-1 text-sm leading-relaxed text-navy/80">
               &lsquo;앱 사용 중에만 허용&rsquo;으로는 출역 자동 확인이 동작하지 않습니다.
             </p>
           </div>
@@ -123,7 +123,7 @@ export function AlwaysLocationPrompt({
           <button
             onClick={goSettings}
             disabled={busy}
-            className="h-[60px] w-full rounded-[5px] bg-blue-900 text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
+            className="h-[60px] w-full rounded-[5px] bg-navy text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
           >
             {busy ? '확인 중...' : '위치 권한 설정으로 이동'}
           </button>

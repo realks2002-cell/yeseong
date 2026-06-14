@@ -97,7 +97,7 @@ export default function ManagerMePage() {
       </div>
 
       <div className="mx-7 mb-8">
-        <section className="rounded-[5px] bg-blue-900 p-6 text-white">
+        <section className="rounded-[5px] bg-navy p-6 text-white">
           <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1">
             <p className="text-[24px] font-bold leading-tight">{me.worker?.name ?? me.manager.name}</p>
             <p className="text-lg font-semibold text-blue-200 tabular-nums">{formatPhone(me.manager.phone)}</p>

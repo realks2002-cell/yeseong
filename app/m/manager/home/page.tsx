@@ -242,14 +242,14 @@ export default function ManagerHomePage() {
         {/* 내 출역 — 팀장 본인 출역 제출 */}
         {!readOnly && (
           <div className="mb-7">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-12">
               <h2 className="text-xl font-bold text-zinc-900">내 출역</h2>
               <span className="text-sm font-semibold text-zinc-400">{TODAY_LABEL}</span>
             </div>
             {myAtt && myAtt.approval_status !== 'rejected' ? (
               <div className="mt-3 flex items-center gap-3 rounded-[5px] bg-zinc-50 px-4 py-4 ring-1 ring-zinc-200">
                 <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                  myAtt.approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-900'
+                  myAtt.approval_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-navy'
                 }`}>
                   <Check className="h-5 w-5" />
                 </span>
@@ -257,7 +257,7 @@ export default function ManagerHomePage() {
                   <p className="text-base font-bold text-zinc-900">
                     {myAtt.hours}일 제출됨
                     <span className={`ml-2 text-sm font-semibold ${
-                      myAtt.approval_status === 'approved' ? 'text-emerald-600' : 'text-blue-900'
+                      myAtt.approval_status === 'approved' ? 'text-emerald-600' : 'text-navy'
                     }`}>
                       {myAtt.approval_status === 'approved' ? '승인 완료' : '검토 대기'}
                     </span>
@@ -281,13 +281,13 @@ export default function ManagerHomePage() {
                     disabled={myAttBusy}
                     className="flex h-[64px] flex-col items-center justify-center rounded-[5px] bg-white ring-2 ring-blue-200 active:scale-[0.99] disabled:opacity-50"
                   >
-                    <span className="text-lg font-bold text-blue-900">0.5 일</span>
+                    <span className="text-lg font-bold text-navy">0.5 일</span>
                     <span className="text-xs font-medium text-zinc-400">반나절</span>
                   </button>
                   <button
                     onClick={() => setConfirmMyHours(1)}
                     disabled={myAttBusy}
-                    className="flex h-[64px] flex-col items-center justify-center rounded-[5px] bg-blue-900 ring-2 ring-blue-900 active:scale-[0.99] disabled:opacity-60"
+                    className="flex h-[64px] flex-col items-center justify-center rounded-[5px] bg-navy ring-2 ring-navy active:scale-[0.99] disabled:opacity-60"
                   >
                     <span className="text-lg font-bold text-white">1 일</span>
                     <span className="text-xs font-medium text-blue-200">정상</span>
@@ -298,7 +298,7 @@ export default function ManagerHomePage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pr-12">
           <h2 className="text-xl font-bold text-zinc-900">검토 대기 출역</h2>
           <span className="text-sm font-semibold text-zinc-400">{items?.length ?? 0}건</span>
         </div>
@@ -337,7 +337,7 @@ export default function ManagerHomePage() {
             <button
               onClick={() => setConfirmApproveAll(true)}
               disabled={approveAllBusy}
-              className="mt-6 flex h-[60px] w-full items-center justify-center gap-2 rounded-[5px] bg-blue-900 text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
+              className="mt-6 flex h-[60px] w-full items-center justify-center gap-2 rounded-[5px] bg-signal text-lg font-bold text-[#0f172a] active:scale-[0.99] disabled:opacity-60"
             >
               <CheckCheck className="h-6 w-6" />
               {approveAllBusy ? '처리 중...' : `모두 승인 (${items?.length ?? 0}건)`}
@@ -347,7 +347,7 @@ export default function ManagerHomePage() {
       </section>
 
       {confirmMyHours !== null && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
           <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
             <p className="text-center text-base text-zinc-500">{TODAY_LABEL} 내 출역</p>
             <p className="mt-2 text-center text-[28px] font-bold text-zinc-900">
@@ -367,7 +367,7 @@ export default function ManagerHomePage() {
               <button
                 onClick={() => submitMyAttendance(confirmMyHours)}
                 disabled={myAttBusy}
-                className="h-[60px] rounded-[5px] bg-blue-900 text-lg font-bold text-white disabled:opacity-60"
+                className="h-[60px] rounded-[5px] bg-navy text-lg font-bold text-white disabled:opacity-60"
               >
                 {myAttBusy ? '제출 중...' : '제출'}
               </button>
@@ -419,7 +419,7 @@ function PendingCard({
         </p>
         <p className="text-[10px] text-zinc-400 tabular-nums">{formatTime(item.created_at)}</p>
       </div>
-      <p className="shrink-0 text-base font-bold tabular-nums text-blue-900">{item.hours}일</p>
+      <p className="shrink-0 text-base font-bold tabular-nums text-navy">{item.hours}일</p>
       <div className="shrink-0 flex gap-1.5">
         <button
           onClick={onReject}
@@ -433,7 +433,7 @@ function PendingCard({
           onClick={onApprove}
           disabled={busy}
           aria-label="승인"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-blue-900 text-white active:scale-[0.95] disabled:opacity-60"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-navy text-white active:scale-[0.95] disabled:opacity-60"
         >
           <Check className="h-4 w-4" />
         </button>
@@ -451,7 +451,7 @@ function ApproveAllDialog({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
       <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-base text-zinc-500">검토 대기 출역</p>
         <p className="mt-2 text-center text-[28px] font-bold text-zinc-900">
@@ -471,7 +471,7 @@ function ApproveAllDialog({
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="h-[60px] rounded-[5px] bg-blue-900 text-lg font-bold text-white disabled:opacity-60"
+            className="h-[60px] rounded-[5px] bg-signal text-lg font-bold text-[#0f172a] disabled:opacity-60"
           >
             {busy ? '처리 중...' : '모두 승인'}
           </button>
@@ -491,7 +491,7 @@ function RejectDialog({
 }) {
   const [reason, setReason] = useState('');
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
       <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-base text-zinc-500">반려 사유</p>
         <p className="mt-2 text-center text-[24px] font-bold text-zinc-900">
@@ -503,7 +503,7 @@ function RejectDialog({
           placeholder="사유를 입력해주세요 (선택)"
           rows={3}
           autoFocus
-          className="mt-5 w-full resize-none rounded-[5px] bg-zinc-50 p-4 text-base text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+          className="mt-5 w-full resize-none rounded-[5px] bg-zinc-50 p-4 text-base text-zinc-900 ring-2 ring-zinc-200 focus:ring-navy outline-none"
         />
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button

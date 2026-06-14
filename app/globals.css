@@ -42,6 +42,13 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
+/* 모바일 앱(작업자·팀장) — Industrial Integrity 디자인 토큰 (admin과 분리) */
+@theme {
+  --color-navy: #1a237e;    /* Primary — 브랜드/메인 액션/활성 탭 */
+  --color-signal: #fdd835;  /* Secondary — 핵심 강조 실행(모두 승인 등) */
+  --color-surface: #f4faff; /* 전체 화면 배경 (카드는 흰색 유지) */
+}
+
 html {
   scroll-behavior: smooth;
 }

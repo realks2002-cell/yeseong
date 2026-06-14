@@ -136,7 +136,7 @@ export default function ManagerOrdersPage() {
     <MobileShell showTabs activeTab="orders" variant="manager">
       <div className="px-5 pt-14 pb-8">
         <h1 className="text-[34px] font-bold text-zinc-900 flex items-center gap-2">
-          <PackagePlus className="h-7 w-7 text-blue-900" />
+          <PackagePlus className="h-7 w-7 text-navy" />
           자재 발주
         </h1>
 
@@ -235,7 +235,7 @@ export default function ManagerOrdersPage() {
                           disabled={readOnly}
                           onChange={(e) => setQtyMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
                           className={`h-10 w-[72px] rounded-[6px] border text-center text-base font-bold tabular-nums ${
-                            active ? 'border-blue-400 bg-white text-blue-900' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
+                            active ? 'border-blue-400 bg-white text-navy' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
                           }`}
                         />
                         <span className="text-[10px] font-semibold text-zinc-400">{it.unit}</span>
@@ -249,7 +249,7 @@ export default function ManagerOrdersPage() {
             {/* 납기 + 요청사항 + 제출 */}
             {(items?.length ?? 0) > 0 && (
               <div className="mt-4 space-y-2 rounded-[8px] bg-blue-50 ring-1 ring-blue-200 p-3">
-                <p className="text-sm font-bold text-blue-900">
+                <p className="text-sm font-bold text-navy">
                   선택한 자재 {selected.length}개
                   {selected.length > 0 && (
                     <span className="ml-1.5 font-semibold text-blue-700/70 text-xs">
@@ -258,7 +258,7 @@ export default function ManagerOrdersPage() {
                   )}
                 </p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-blue-900 w-16 shrink-0">납기 희망</label>
+                  <label className="text-xs font-semibold text-navy w-16 shrink-0">납기 희망</label>
                   <input
                     type="date"
                     value={deliveryDate}
@@ -276,7 +276,7 @@ export default function ManagerOrdersPage() {
                 <button
                   onClick={submit}
                   disabled={readOnly || busy || selected.length === 0}
-                  className="h-[52px] w-full rounded-[5px] bg-blue-900 text-base font-bold text-white active:scale-[0.99] disabled:opacity-40"
+                  className="h-[52px] w-full rounded-[5px] bg-navy text-base font-bold text-white active:scale-[0.99] disabled:opacity-40"
                 >
                   {busy ? '전송 중...' : `발주 요청 (${selected.length}개 품목)`}
                 </button>

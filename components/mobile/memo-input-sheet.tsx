@@ -75,7 +75,7 @@ export function MemoInputSheet({
             onChange={(e) => setMemo(e.target.value.slice(0, 500))}
             placeholder={placeholder ?? '예) 시멘트 50포대 입고, 자재 송장 #20260530-014'}
             rows={3}
-            className="w-full resize-none rounded-[5px] border border-zinc-200 px-4 py-3 text-base text-zinc-900 placeholder-zinc-400 outline-none focus:border-blue-900"
+            className="w-full resize-none rounded-[5px] border border-zinc-200 px-4 py-3 text-base text-zinc-900 placeholder-zinc-400 outline-none focus:border-navy"
           />
           <p className="mt-1 text-right text-xs text-zinc-400">{memo.length}/500</p>
         </div>
@@ -91,7 +91,7 @@ export function MemoInputSheet({
           <button
             type="button"
             onClick={() => onSave(memo.trim() === '' ? null : memo.trim())}
-            className="h-12 rounded-[5px] bg-blue-900 text-base font-bold text-white active:bg-blue-800"
+            className="h-12 rounded-[5px] bg-navy text-base font-bold text-white active:bg-blue-800"
           >
             저장
           </button>

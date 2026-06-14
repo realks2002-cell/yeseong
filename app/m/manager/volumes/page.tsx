@@ -98,7 +98,7 @@ function SegBtn({ active, onClick, children }: { active: boolean; onClick: () =>
       onClick={onClick}
       className={
         'h-10 rounded-[8px] text-sm font-bold transition ' +
-        (active ? 'bg-white text-blue-900 shadow-sm' : 'text-zinc-500')
+        (active ? 'bg-white text-navy shadow-sm' : 'text-zinc-500')
       }
     >
       {children}

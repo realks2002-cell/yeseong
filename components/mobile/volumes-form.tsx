@@ -115,16 +115,16 @@ export function VolumesForm({
       <InfoBox
         kind="info"
         title="해당 없음"
-        desc="성과(매사) 입력은 월급/일급 작업자만 가능합니다. 출역만 제출해 주세요."
+        desc="성과 입력 대상자가 아닙니다. 출역만 제출해 주세요."
       />
     );
   }
   if (data.form_type === 'trade_unknown') {
     return (
       <InfoBox
-        kind="warn"
-        title="직종 확인 필요"
-        desc={`현재 직종(${data.worker?.default_trade ?? '미설정'})은 매사 성과 입력 대상이 아닙니다. 관리자에게 확인 요청하세요.`}
+        kind="info"
+        title="해당 없음"
+        desc="성과 입력 대상자가 아닙니다. 출역만 제출해 주세요."
       />
     );
   }
@@ -334,7 +334,7 @@ function WorksiteSectionForm({
   return (
     <div className="space-y-4">
       <div className="rounded-[10px] bg-blue-50 p-3 text-sm">
-        <p className="font-semibold text-blue-900">
+        <p className="font-semibold text-navy">
           {yearMonth?.replace('-', '년 ')}월 {catName} 성과 입력
         </p>
         <p className="text-xs text-blue-700 mt-1">
@@ -428,7 +428,7 @@ function WorksiteSectionForm({
 
       <div className="flex items-center justify-between rounded-[10px] bg-zinc-50 px-4 py-3">
         <span className="text-sm font-semibold text-zinc-700">이 현장 성과 합계</span>
-        <span className="text-xl font-bold tabular-nums text-blue-900">{total.toLocaleString()}원</span>
+        <span className="text-xl font-bold tabular-nums text-navy">{total.toLocaleString()}원</span>
       </div>
 
       {err && (
@@ -448,7 +448,7 @@ function WorksiteSectionForm({
         type="button"
         onClick={save}
         disabled={busy || readOnly}
-        className="h-[68px] w-full rounded-[12px] bg-blue-900 text-lg font-bold text-white disabled:bg-zinc-300"
+        className="h-[68px] w-full rounded-[12px] bg-navy text-lg font-bold text-white disabled:bg-zinc-300"
       >
         {readOnly ? '보기 전용' : busy ? '저장 중...' : '저장'}
       </button>
@@ -501,7 +501,7 @@ function ExistingList({ existing }: { existing: ExistingVolume[] }) {
       ))}
       <div className="border-t border-zinc-200 pt-2 flex items-center justify-between">
         <span className="text-sm font-semibold">합계</span>
-        <span className="text-base font-bold tabular-nums text-blue-900">{total.toLocaleString()}원</span>
+        <span className="text-base font-bold tabular-nums text-navy">{total.toLocaleString()}원</span>
       </div>
     </div>
   );

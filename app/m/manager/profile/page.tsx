@@ -51,7 +51,7 @@ export default function ManagerProfilePage() {
         <h1 className="text-[34px] font-bold text-zinc-900">소속</h1>
       </div>
 
-      <section className="mx-7 mb-8 rounded-[5px] bg-blue-900 p-6 text-center text-white">
+      <section className="mx-7 mb-8 rounded-[5px] bg-navy p-6 text-center text-white">
         <p className="text-[26px] font-bold leading-tight">{me.manager.name}</p>
         <p className="mt-1 text-lg font-semibold text-blue-200">
           {formatPhone(me.manager.phone)}

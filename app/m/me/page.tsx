@@ -103,7 +103,7 @@ export default function MePage() {
         </p>
       </div>
 
-      <section className="mx-7 mb-8 rounded-[5px] bg-blue-900 p-6 text-center text-white">
+      <section className="mx-7 mb-8 rounded-[5px] bg-navy p-6 text-center text-white">
         <p className="text-[26px] font-bold leading-tight">{w.name}</p>
         <p className="mt-1 text-lg font-semibold text-blue-200">
           {w.phone ? formatPhone(w.phone) : '-'}
@@ -121,7 +121,7 @@ export default function MePage() {
               value={me.team_leader?.id ?? ''}
               onChange={(e) => changeLeader(e.target.value)}
               disabled={savingLeader}
-              className="mt-2 w-full appearance-none rounded-[5px] bg-zinc-50 px-5 py-4 text-lg font-bold text-zinc-900 ring-1 ring-zinc-200 focus:ring-2 focus:ring-blue-900 outline-none disabled:opacity-60"
+              className="mt-2 w-full appearance-none rounded-[5px] bg-zinc-50 px-5 py-4 text-lg font-bold text-zinc-900 ring-1 ring-zinc-200 focus:ring-2 focus:ring-navy outline-none disabled:opacity-60"
             >
               <option value="">미지정</option>
               {/* 현재 팀장이 활성 목록에 없으면 옵션에 살려 유실 방지 */}
@@ -133,7 +133,7 @@ export default function MePage() {
               ))}
             </select>
             {leaderMsg && (
-              <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-blue-900">
+              <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-navy">
                 <Check className="h-4 w-4" /> {leaderMsg}
               </p>
             )}

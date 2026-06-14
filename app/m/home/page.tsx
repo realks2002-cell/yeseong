@@ -15,8 +15,8 @@ import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt
 type Hours = 0.5 | 1 | 1.5 | 2;
 
 const NORMAL_OPTIONS: { value: Hours; title: string; sub: string; cls: string }[] = [
-  { value: 0.5, title: '0.5 일', sub: '반나절', cls: 'bg-white text-blue-900 ring-blue-200' },
-  { value: 1,   title: '1 일',   sub: '정상',   cls: 'bg-blue-900 text-white ring-blue-900' },
+  { value: 0.5, title: '0.5 일', sub: '반나절', cls: 'bg-white text-navy ring-blue-200' },
+  { value: 1,   title: '1 일',   sub: '정상',   cls: 'bg-navy text-white ring-navy' },
 ];
 
 type AttendanceStatus = 'pending' | 'approved' | 'rejected';
@@ -239,13 +239,13 @@ function RejectedNotice({ hours, reason }: { hours: number; reason: string | nul
 
 function LockedView({ hours }: { hours: number }) {
   return (
-    <section className="mx-7 rounded-[5px] bg-blue-900 px-8 py-10 text-white">
+    <section className="mx-7 rounded-[5px] bg-navy px-8 py-10 text-white">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-lg font-semibold text-blue-200">오늘 등록 완료</p>
           <p className="mt-2 text-[56px] font-bold leading-none">{hours}일</p>
         </div>
-        <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-white text-blue-900">
+        <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-white text-navy">
           <Check className="h-9 w-9" />
         </span>
       </div>
@@ -309,14 +309,14 @@ function HistorySection({
               ? 'text-red-500 line-through'
               : isPending
               ? 'text-amber-600'
-              : 'text-blue-900';
+              : 'text-navy';
             return (
               <div key={day} className="flex h-14 flex-col items-center pt-1">
                 <span
                   className={
                     'flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ' +
                     (isToday
-                      ? 'bg-blue-900 text-white'
+                      ? 'bg-navy text-white'
                       : isFuture
                       ? 'text-zinc-300'
                       : 'text-zinc-600')
@@ -350,7 +350,7 @@ function ConfirmDialog({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
       <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-xl text-zinc-500">오늘 근무를</p>
         <p className="mt-2 text-center text-[44px] font-bold text-zinc-900">{hours}일로 등록할까요?</p>
@@ -366,7 +366,7 @@ function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="h-[68px] rounded-[5px] bg-blue-900 text-xl font-bold text-white disabled:opacity-60"
+            className="h-[68px] rounded-[5px] bg-navy text-xl font-bold text-white disabled:opacity-60"
           >
             {busy ? '등록 중...' : '네, 등록할게요'}
           </button>

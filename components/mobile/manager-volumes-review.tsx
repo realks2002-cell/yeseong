@@ -145,7 +145,7 @@ export function ManagerVolumesReview({ onCountChange }: { onCountChange?: (n: nu
 
       {teamTotals.rows.length > 0 && (
         <div className="rounded-[12px] border border-blue-200 bg-blue-50/60 p-4">
-          <p className="mb-2 text-sm font-bold text-blue-900">종류별 팀 합계 (검토 대기)</p>
+          <p className="mb-2 text-sm font-bold text-navy">종류별 팀 합계 (검토 대기)</p>
           <ul className="space-y-1">
             {teamTotals.rows.map((r, i) => (
               <li key={i} className="flex items-center justify-between gap-2 text-sm">
@@ -157,8 +157,8 @@ export function ManagerVolumesReview({ onCountChange }: { onCountChange?: (n: nu
             ))}
           </ul>
           <div className="mt-2 flex items-center justify-between border-t border-blue-200 pt-2">
-            <span className="text-sm font-bold text-blue-900">합계</span>
-            <span className="text-base font-bold tabular-nums text-blue-900">{teamTotals.total.toLocaleString()}원</span>
+            <span className="text-sm font-bold text-navy">합계</span>
+            <span className="text-base font-bold tabular-nums text-navy">{teamTotals.total.toLocaleString()}원</span>
           </div>
         </div>
       )}
@@ -185,7 +185,7 @@ export function ManagerVolumesReview({ onCountChange }: { onCountChange?: (n: nu
             type="button"
             onClick={() => decide(groups.map((g) => g.payroll_worker_id), true)}
             disabled={busy}
-            className="flex h-[60px] w-full items-center justify-center gap-2 rounded-[10px] bg-blue-900 text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
+            className="flex h-[60px] w-full items-center justify-center gap-2 rounded-[10px] bg-navy text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
           >
             <Send className="h-5 w-5" />
             {busy ? '처리 중...' : `모두 관리자 제출 (${groups.length}건)`}
@@ -269,7 +269,7 @@ function GroupCard({
             {group.worksite_name} · {group.year_month} · {group.category}
           </p>
         </div>
-        <span className="shrink-0 text-base font-bold tabular-nums text-blue-900">
+        <span className="shrink-0 text-base font-bold tabular-nums text-navy">
           {total.toLocaleString()}원
         </span>
       </div>
@@ -373,7 +373,7 @@ function GroupCard({
             <button
               onClick={onApprove}
               disabled={busy}
-              className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-blue-900 text-sm font-bold text-white active:scale-[0.99] disabled:opacity-60"
+              className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-navy text-sm font-bold text-white active:scale-[0.99] disabled:opacity-60"
             >
               <Check className="h-4 w-4" /> 제출
             </button>
@@ -390,7 +390,7 @@ function GroupCard({
             <button
               onClick={save}
               disabled={saveBusy}
-              className="h-11 flex-[2] rounded-[10px] bg-blue-900 text-sm font-bold text-white disabled:opacity-60"
+              className="h-11 flex-[2] rounded-[10px] bg-navy text-sm font-bold text-white disabled:opacity-60"
             >
               {saveBusy ? '저장 중...' : '수정 저장'}
             </button>
@@ -411,7 +411,7 @@ function RejectDialog({
 }) {
   const [reason, setReason] = useState('');
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/50 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
       <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
         <p className="text-center text-base text-zinc-500">반려 사유</p>
         <p className="mt-2 text-center text-[22px] font-bold text-zinc-900">
@@ -423,7 +423,7 @@ function RejectDialog({
           placeholder="사유를 입력해주세요 (선택)"
           rows={3}
           autoFocus
-          className="mt-5 w-full resize-none rounded-[5px] bg-zinc-50 p-4 text-base text-zinc-900 ring-2 ring-zinc-200 focus:ring-blue-900 outline-none"
+          className="mt-5 w-full resize-none rounded-[5px] bg-zinc-50 p-4 text-base text-zinc-900 ring-2 ring-zinc-200 focus:ring-navy outline-none"
         />
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button

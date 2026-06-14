@@ -1,44 +1,10 @@
 'use client';
-import Link from 'next/link';
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Wallet } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
+import { PayrollDetail } from '@/components/mobile/payroll-detail';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { fmtMonthLabel, fmtWon, type PayrollMonth } from '@/lib/payroll/mobile';
-import { type VolumesMe, type ExistingVolume } from '@/components/mobile/volumes-form';
-
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending: { label: '검토 중', cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: '승인', cls: 'bg-blue-100 text-blue-800' },
-  rejected: { label: '반려', cls: 'bg-red-100 text-red-700' },
-};
-
-// 매사 성과 상태 배지 (가정산 내역용)
-const VOL_BADGE: Record<string, { label: string; cls: string }> = {
-  pending_leader: { label: '팀장 검토 중', cls: 'bg-amber-100 text-amber-700' },
-  pending_admin: { label: '관리자 검토 중', cls: 'bg-blue-100 text-blue-700' },
-  approved: { label: '승인', cls: 'bg-emerald-100 text-emerald-700' },
-  rejected_leader: { label: '반려', cls: 'bg-red-100 text-red-700' },
-  rejected_admin: { label: '반려', cls: 'bg-red-100 text-red-700' },
-};
-
-function volLabel(v: ExistingVolume): string {
-  if (v.category === '조적') {
-    return `${v.type_name ?? ''}${v.size_spec ? ` (${v.size_spec})` : ''}`;
-  }
-  return `${v.category} ${v.type_name ?? ''}`.trim();
-}
-
-function isRejected(s?: string): boolean {
-  return s === 'rejected_leader' || s === 'rejected_admin';
-}
-
-function fmtDay(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  const dow = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-  return `${d.getMonth() + 1}/${d.getDate()} (${dow})`;
-}
+import { currentYM, type PayrollMonth } from '@/lib/payroll/mobile';
 
 export default function ManagerPayrollDetailPage({
   params,
@@ -48,7 +14,6 @@ export default function ManagerPayrollDetailPage({
   const router = useRouter();
   const { yyyymm } = use(params);
   const [month, setMonth] = useState<PayrollMonth | null | undefined>(undefined);
-  const [volumes, setVolumes] = useState<ExistingVolume[]>([]);
 
   useEffect(() => {
     const sb = getBrowserSupabase();
@@ -57,168 +22,20 @@ export default function ManagerPayrollDetailPage({
         router.replace('/m/manager/signup');
         return;
       }
+      // 진행 중인 달은 다음 달 전까지 비공개
+      if (yyyymm >= currentYM()) {
+        setMonth(null);
+        return;
+      }
       const { data } = await sb.rpc('yeseong_mobile_get_payroll');
       const months = (data as unknown as PayrollMonth[]) ?? [];
-      const found = months.find((m) => m.year_month === yyyymm) ?? null;
-      setMonth(found);
-
-      // 매사(월급/일급)인 경우만 성과 품목 내역 + 가정산 표시
-      if (found?.wage_type === '월급/일급') {
-        const { data: v } = await sb.rpc('yeseong_mobile_get_volumes_me', { p_year_month: yyyymm });
-        const vm = v as unknown as VolumesMe | null;
-        const rows = (vm?.worksites ?? []).flatMap((ws) => ws.existing ?? []);
-        setVolumes(rows);
-      }
+      setMonth(months.find((m) => m.year_month === yyyymm) ?? null);
     });
   }, [router, yyyymm]);
 
-  const isMasonry = month?.wage_type === '월급/일급';
-  // 가정산 = 반려 제외 성과 합계
-  const estimate = volumes.filter((v) => !isRejected(v.approval_status)).reduce((s, v) => s + v.amount, 0);
-  const hasPendingVol = volumes.some((v) => v.approval_status === 'pending_leader' || v.approval_status === 'pending_admin');
-
   return (
     <MobileShell>
-      <header className="flex items-center gap-2 px-5 pt-6">
-        <Link
-          href="/m/manager/payroll"
-          className="-ml-2 inline-flex h-12 w-12 items-center justify-center rounded-full text-zinc-700 hover:bg-zinc-100"
-        >
-          <ChevronLeft className="h-7 w-7" />
-        </Link>
-        <span className="text-xl font-bold text-zinc-900">{fmtMonthLabel(yyyymm)}</span>
-      </header>
-
-      {month === undefined ? (
-        <p className="mt-16 text-center text-zinc-400">불러오는 중...</p>
-      ) : month === null ? (
-        <div className="mx-7 mt-12 flex flex-col items-center gap-3 rounded-[5px] bg-zinc-50 p-10 text-center">
-          <Wallet className="h-12 w-12 text-zinc-300" />
-          <p className="text-lg font-semibold text-zinc-700">이 달의 내역이 없어요</p>
-        </div>
-      ) : (
-        <>
-          {/* 월 요약 */}
-          <section className="mx-7 mt-5 rounded-[5px] bg-blue-900 px-7 py-7 text-white">
-            <p className="text-base font-semibold text-blue-200">승인 공수</p>
-            <p className="mt-1 text-[44px] font-bold leading-none">{month.approved_hours}일</p>
-            <div className="mt-5 flex items-end justify-between">
-              <p className="text-base text-blue-200">
-                {month.total_amount != null
-                  ? month.wage_type === '월급/일급'
-                    ? '급여 가정산'
-                    : '예상 금액'
-                  : '정산 방식'}
-              </p>
-              {month.total_amount != null ? (
-                <p className="text-2xl font-bold">{fmtWon(month.total_amount)}</p>
-              ) : month.wage_type === '월급/일급' ? (
-                <p className="text-base font-semibold text-blue-100">월말 성과 입력 후 표시돼요</p>
-              ) : (
-                <p className="text-2xl font-bold">-</p>
-              )}
-            </div>
-            {month.volumes_pending && (
-              <p className="mt-3 text-sm text-blue-200">
-                검토 중인 성과가 포함돼 있어요 — 승인되면 확정돼요
-              </p>
-            )}
-            {month.pending_hours > 0 && (
-              <p className="mt-3 text-sm text-blue-200">
-                검토 중 {month.pending_hours}일은 승인되면 반영돼요
-              </p>
-            )}
-          </section>
-
-          {/* 매사 성과 가정산 내역 (매사인 경우만) */}
-          {isMasonry && volumes.length > 0 && (
-            <section className="mt-7 px-7">
-              <h2 className="text-xl font-bold text-zinc-900">성과 내역 (가정산)</h2>
-              <ul className="mt-4 divide-y divide-zinc-100 rounded-[5px] bg-white ring-1 ring-zinc-200">
-                {volumes.map((v, i) => {
-                  const badge = VOL_BADGE[v.approval_status ?? ''];
-                  return (
-                    <li key={v.id ?? i} className="flex items-center justify-between px-5 py-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-lg font-semibold text-zinc-800">{volLabel(v)}</p>
-                        <p className="mt-0.5 text-sm text-zinc-400 tabular-nums">
-                          {v.quantity}{v.unit ?? ''} × {fmtWon(v.unit_price)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2.5">
-                        {badge && (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
-                            {badge.label}
-                          </span>
-                        )}
-                        <span
-                          className={
-                            'text-lg font-bold tabular-nums ' +
-                            (isRejected(v.approval_status) ? 'text-red-400 line-through' : 'text-blue-900')
-                          }
-                        >
-                          {fmtWon(v.amount)}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="mt-3 flex items-center justify-between rounded-[5px] bg-blue-50 px-5 py-3.5">
-                <span className="text-sm font-bold text-blue-900">
-                  가정산 합계{hasPendingVol ? ' (검토 중 포함)' : ''}
-                </span>
-                <span className="text-xl font-bold tabular-nums text-blue-900">{fmtWon(estimate)}</span>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                승인 전 금액은 가정산이며 관리자 승인 후 확정됩니다.
-              </p>
-            </section>
-          )}
-
-          {/* 일별 내역 */}
-          <section className="mt-7 px-7 pb-10">
-            <h2 className="text-xl font-bold text-zinc-900">일별 내역</h2>
-            {month.entries.length === 0 ? (
-              <p className="mt-4 text-base text-zinc-400">출역 기록이 없습니다.</p>
-            ) : (
-              <ul className="mt-4 divide-y divide-zinc-100 rounded-[5px] bg-white ring-1 ring-zinc-200">
-                {month.entries.map((e, i) => {
-                  const badge = STATUS_BADGE[e.status];
-                  return (
-                    <li key={`${e.work_date}-${i}`} className="flex items-center justify-between px-5 py-4">
-                      <div>
-                        <p className="text-lg font-semibold text-zinc-800">{fmtDay(e.work_date)}</p>
-                        {e.worksite_name && (
-                          <p className="mt-0.5 text-sm text-zinc-400">{e.worksite_name}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2.5">
-                        {badge && (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
-                            {badge.label}
-                          </span>
-                        )}
-                        <span
-                          className={
-                            'text-xl font-bold ' +
-                            (e.status === 'rejected' ? 'text-red-400 line-through' : 'text-blue-900')
-                          }
-                        >
-                          {e.hours}일
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <p className="mt-4 text-sm leading-relaxed text-zinc-400">
-              실제 지급액은 회사 정산 기준에 따라 달라질 수 있어요. 자세한 내용은 관리자에게 문의해주세요.
-            </p>
-          </section>
-        </>
-      )}
+      <PayrollDetail month={month} yyyymm={yyyymm} backHref="/m/manager/payroll" />
     </MobileShell>
   );
 }

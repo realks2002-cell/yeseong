@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Wallet, ChevronRight } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { fmtMonthLabel, fmtWon, type PayrollMonth } from '@/lib/payroll/mobile';
+import { currentYM, fmtMonthLabel, fmtWon, type PayrollMonth } from '@/lib/payroll/mobile';
 
 export default function ManagerPayrollPage() {
   const router = useRouter();
@@ -27,7 +27,9 @@ export default function ManagerPayrollPage() {
         setMonths([]);
         return;
       }
-      setMonths((data as unknown as PayrollMonth[]) ?? []);
+      // 진행 중인 달은 다음 달 전까지 숨김 — 지난 달만 표시
+      const cur = currentYM();
+      setMonths(((data as unknown as PayrollMonth[]) ?? []).filter((m) => m.year_month < cur));
     });
   }, [router]);
 
@@ -35,7 +37,6 @@ export default function ManagerPayrollPage() {
     <MobileShell showTabs activeTab="payroll" variant="manager">
       <div className="px-7 pt-14">
         <h1 className="text-[34px] font-bold text-zinc-900">급여 내역</h1>
-        <p className="mt-1 text-base text-zinc-500">관리자 승인이 완료된 출역 기준입니다</p>
       </div>
 
       {error && <p className="mx-7 mt-6 text-base font-semibold text-red-800">{error}</p>}
@@ -68,7 +69,7 @@ export default function ManagerPayrollPage() {
                 <div className="flex items-center gap-2">
                   {m.total_amount != null ? (
                     <div className="text-right">
-                      <span className="text-xl font-bold text-blue-900">{fmtWon(m.total_amount)}</span>
+                      <span className="text-xl font-bold text-navy">{fmtWon(m.total_amount)}</span>
                       {m.volumes_pending && (
                         <p className="text-xs font-semibold text-amber-700">검토 중 성과 포함</p>
                       )}
@@ -78,7 +79,7 @@ export default function ManagerPayrollPage() {
                       월말 성과 입력 후 표시
                     </span>
                   ) : (
-                    <span className="text-xl font-bold text-blue-900">-</span>
+                    <span className="text-xl font-bold text-navy">-</span>
                   )}
                   <ChevronRight className="h-6 w-6 text-zinc-300" />
                 </div>

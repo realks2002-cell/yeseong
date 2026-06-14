@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { daysInMonth, formatYearMonth, shiftMonth } from '@/lib/utils/date';
@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Upload,
   UserPlus,
   Trash2,
   X,
@@ -255,6 +256,42 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   }
   const handleDownload = () => fetchAndSave('download', `노임대장_${yearMonth}.xlsx`);
   const handleMasonryDownload = () => fetchAndSave('masonry-download', `매사노임대장_${yearMonth}.xlsx`);
+
+  // 급여(공제)는 노임대장 다운로드 시 자동 계산·저장됨. 여기선 검증(엑셀 대조)만 제공.
+  // 엑셀 대조 — 서버 계산값과 업로드 엑셀 비교(저장 안 함)
+  const [deductBusy, setDeductBusy] = useState<'compare' | null>(null);
+  const compareRef = useRef<HTMLInputElement>(null);
+  async function handleCompare(file: File) {
+    if (deductBusy) return;
+    setDeductBusy('compare');
+    try {
+      const res = await fetch(`/api/payroll/${siteId}/${yearMonth}/compare-deductions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`대조 실패: ${j.error ?? res.status}`);
+        return;
+      }
+      const mm = (j.mismatches ?? []) as Array<{ name: string; field: string; server: number; excel: number }>;
+      const extra = (j.onlyInExcel ?? []) as string[];
+      if (j.ok) {
+        alert(`대조 일치 ✓ (${j.matched}명 모두 서버 계산값 = 엑셀)`);
+      } else {
+        const lines = mm.slice(0, 20).map((d) => `${d.name} ${d.field}: 서버 ${d.server.toLocaleString()} / 엑셀 ${d.excel.toLocaleString()}`);
+        alert(
+          `대조 결과 — 일치 ${j.matched - new Set(mm.map((d) => d.name)).size}명, 불일치 ${new Set(mm.map((d) => d.name)).size}명\n\n` +
+            lines.join('\n') +
+            (mm.length > 20 ? `\n…외 ${mm.length - 20}건` : '') +
+            (extra.length ? `\n\n엑셀에만 있음: ${extra.join(', ')}` : ''),
+        );
+      }
+    } finally {
+      setDeductBusy(null);
+    }
+  }
   const hasMasonry = slots.some((s) => s.worker.wage_type === '월급/일급');
 
   // 일반 노임대장 = 일급·월급, 매사 노임대장 = 월급/일급(매사). 탭으로 분리.
@@ -312,6 +349,26 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
               {downloadBusy === 'masonry-download' ? '생성 중...' : '매사 노임대장'}
             </Button>
           )}
+          <input
+            ref={compareRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleCompare(f);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            variant="outline"
+            onClick={() => compareRef.current?.click()}
+            disabled={!!deductBusy}
+            title="엑셀(열어 저장본)과 서버 계산값을 대조해 차이 확인 (저장 안 함)"
+          >
+            <Upload className="h-4 w-4" />
+            {deductBusy === 'compare' ? '대조 중...' : '엑셀 대조'}
+          </Button>
         </div>
       </div>
 
