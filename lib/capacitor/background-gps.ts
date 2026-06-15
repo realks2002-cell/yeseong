@@ -6,10 +6,12 @@ import { Geolocation } from '@capacitor/geolocation';
 import type { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
 import { rememberPosition } from './geolocation';
 import { getLocationAuthStatus } from './background-permission';
+import { isWithinTrackWindow } from './track-window';
 
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
 
 let started = false;
+let watcherId: string | null = null;
 
 export type GpsCallback = (lat: number, lng: number) => void;
 
@@ -46,7 +48,7 @@ export async function startBackgroundTracking(onLocation: GpsCallback) {
 
   started = true;
 
-  const watcher = await BackgroundGeolocation.addWatcher(
+  watcherId = await BackgroundGeolocation.addWatcher(
     {
       backgroundTitle: '예성건축 출역 추적 중',
       backgroundMessage: '현장 위치를 확인하고 있습니다',
@@ -56,6 +58,11 @@ export async function startBackgroundTracking(onLocation: GpsCallback) {
     },
     (location, error) => {
       if (error) return;
+      // 추적 시간대를 벗어나면 (앱이 백그라운드여도) 워처를 스스로 종료 → 상시 알림 사라짐
+      if (!isWithinTrackWindow()) {
+        void stopBackgroundTracking();
+        return;
+      }
       if (location) {
         rememberPosition(location.latitude, location.longitude); // 제출 폴백 캐시 갱신
         onLocation(location.latitude, location.longitude);
@@ -63,7 +70,7 @@ export async function startBackgroundTracking(onLocation: GpsCallback) {
     },
   );
 
-  return watcher;
+  return watcherId;
 }
 
 /**
@@ -77,11 +84,13 @@ export async function openLocationSettings() {
 /**
  * 백그라운드 GPS 추적 중지
  */
-export async function stopBackgroundTracking(watcherId?: string) {
+export async function stopBackgroundTracking(id?: string) {
   if (!Capacitor.isNativePlatform()) return;
 
-  if (watcherId) {
-    await BackgroundGeolocation.removeWatcher({ id: watcherId });
+  const target = id ?? watcherId;
+  if (target) {
+    await BackgroundGeolocation.removeWatcher({ id: target });
+    if (target === watcherId) watcherId = null;
   }
   started = false;
 }

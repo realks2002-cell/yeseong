@@ -312,7 +312,8 @@ export default function ManagerSignupPage() {
 
         {mode === 'login_pin' && (
           <PinStep
-            title={<>PIN을 입력해주세요</>}
+            title={<>비밀번호 입력</>}
+            subtitle="앱 비밀번호를 입력하세요"
             value={loginPin}
             onChange={setLoginPin}
             errorMessage={loginError}
@@ -331,16 +332,8 @@ export default function ManagerSignupPage() {
 
         {mode === 'signup_pin1' && (
           <PinStep
-            title={
-              matchedName ? (
-                <>
-                  {matchedName}님 환영합니다<br />
-                  <span className="text-[24px] text-zinc-500">사용할 PIN 4자리를 만들어주세요</span>
-                </>
-              ) : (
-                <>사용할 PIN<br />4자리를 만들어주세요</>
-              )
-            }
+            title={<>비밀번호 설정</>}
+            subtitle={matchedName ? `${matchedName}님 · 앱에서 사용할 간편암호를 입력하세요` : '앱에서 사용할 간편암호를 입력하세요'}
             value={pin1} onChange={setPin1}
             onNext={goNext}
             disabledNext={pin1.length !== 4}
@@ -349,11 +342,12 @@ export default function ManagerSignupPage() {
 
         {mode === 'signup_pin2' && (
           <PinStep
-            title={<>한 번 더<br />입력해주세요</>}
+            title={<>비밀번호 확인</>}
+            subtitle="한 번 더 입력하세요"
             value={pin2} onChange={setPin2}
             onNext={goNextOrSubmit}
             disabledNext={pin2.length !== 4 || pin1 !== pin2 || signupBusy}
-            errorMessage={signupError ?? (pin2.length === 4 && pin1 !== pin2 ? 'PIN이 일치하지 않습니다.' : undefined)}
+            errorMessage={signupError ?? (pin2.length === 4 && pin1 !== pin2 ? '비밀번호가 일치하지 않습니다.' : undefined)}
             nextLabel={
               flow.indexOf('signup_pin2') === flow.length - 1
                 ? (signupBusy ? '가입 중...' : '가입 완료')
@@ -745,9 +739,10 @@ function PhoneStep({
 }
 
 function PinStep({
-  title, value, onChange, onNext, disabledNext, errorMessage, nextLabel,
+  title, subtitle, value, onChange, onNext, disabledNext, errorMessage, nextLabel,
 }: {
   title: React.ReactNode;
+  subtitle?: React.ReactNode;
   value: string;
   onChange: (v: string) => void;
   onNext?: () => void;
@@ -757,14 +752,19 @@ function PinStep({
 }) {
   return (
     <>
-      <h1 className="mt-8 text-[36px] font-bold leading-tight text-zinc-900">{title}</h1>
-      {/* 입력 input은 투명하게 점 위에 겹침 — 점만 채워지며 입력 표시 */}
-      <div className="relative mt-16 py-3">
-        <div className="flex items-center justify-center gap-5">
+      {/* 가운데 정렬: 타이틀 → 4칸 점 → 안내문구. input은 영역 위에 투명하게 겹쳐 OS 숫자 키보드 호출 */}
+      <div className="relative flex flex-col items-center pt-24">
+        <h1 className="text-2xl font-bold text-zinc-900 text-center">{title}</h1>
+        <div className="mt-7 flex items-center justify-center gap-5">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className={'h-5 w-5 rounded-full transition ' + (i < value.length ? 'bg-navy scale-110' : 'bg-zinc-200')} />
+            <div key={i} className={'h-4 w-4 rounded-full transition ' + (i < value.length ? 'bg-navy scale-110' : 'bg-zinc-200')} />
           ))}
         </div>
+        {errorMessage ? (
+          <p className="mt-5 text-center text-base font-semibold text-red-700">{errorMessage}</p>
+        ) : subtitle ? (
+          <p className="mt-5 text-center text-base text-zinc-400">{subtitle}</p>
+        ) : null}
         <input
           type="password"
           inputMode="numeric"
@@ -772,13 +772,10 @@ function PinStep({
           maxLength={4}
           onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
           autoFocus
-          aria-label="PIN 입력"
+          aria-label="비밀번호 입력"
           className="absolute inset-0 h-full w-full opacity-0 outline-none"
         />
       </div>
-      {errorMessage && (
-        <p className="mt-6 text-center text-lg font-semibold text-red-800">{errorMessage}</p>
-      )}
       {onNext && <NextButton valid={!disabledNext} onNext={onNext} label={nextLabel ?? '다음'} />}
     </>
   );

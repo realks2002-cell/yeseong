@@ -3,6 +3,7 @@
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
@@ -15,7 +16,7 @@ export const DialogOverlay = React.forwardRef<
 >(({ className = '', ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={`fixed inset-0 z-50 bg-black/40 ${className}`}
+    className={cn('fixed inset-0 z-50 bg-black/40', className)}
     {...props}
   />
 ));
@@ -23,13 +24,13 @@ DialogOverlay.displayName = 'DialogOverlay';
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { showClose?: boolean }
->(({ className = '', children, showClose = true, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { showClose?: boolean; overlayClassName?: string }
+>(({ className = '', children, showClose = true, overlayClassName, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
-      className={`fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-[5px] border border-[#D7D7D7] bg-white shadow-lg outline-none ${className}`}
+      className={cn('fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-[5px] border border-[#D7D7D7] bg-white shadow-lg outline-none', className)}
       {...props}
     >
       {children}

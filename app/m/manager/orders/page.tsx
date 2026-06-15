@@ -230,11 +230,11 @@ export default function ManagerOrdersPage() {
                           type="number"
                           inputMode="decimal"
                           min={0}
-                          placeholder="0"
+                          placeholder="수량"
                           value={v}
                           disabled={readOnly}
                           onChange={(e) => setQtyMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
-                          className={`h-10 w-[72px] rounded-[6px] border text-center text-base font-bold tabular-nums ${
+                          className={`h-10 w-[72px] rounded-[6px] border text-center text-base font-bold tabular-nums focus:placeholder:text-transparent ${
                             active ? 'border-blue-400 bg-white text-navy' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
                           }`}
                         />

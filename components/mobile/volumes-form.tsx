@@ -398,12 +398,12 @@ function WorksiteSectionForm({
                     type="number"
                     value={r.quantity || ''}
                     onChange={(e) => update(i, { quantity: e.target.value === '' ? 0 : Number(e.target.value) })}
-                    placeholder="0"
+                    placeholder="수량"
                     min={0}
                     step={p?.unit === '㎡' ? '0.01' : '1'}
                     disabled={busy}
                     inputMode="decimal"
-                    className="min-w-0 flex-1 h-12 rounded-[8px] border border-zinc-300 bg-white px-3 text-right text-lg font-semibold tabular-nums"
+                    className="min-w-0 flex-1 h-12 rounded-[8px] border border-zinc-300 bg-white px-3 text-right text-lg font-semibold tabular-nums focus:placeholder:text-transparent"
                   />
                   <span className="w-10 shrink-0 text-center text-sm text-zinc-500">{p?.unit ?? ''}</span>
                   <span className="w-24 shrink-0 text-right text-sm tabular-nums text-zinc-700">

@@ -320,12 +320,12 @@ function GroupCard({
                       type="number"
                       value={r.quantity || ''}
                       onChange={(e) => setRows((prev) => prev.map((x, idx) => (idx === i ? { ...x, quantity: e.target.value === '' ? 0 : Number(e.target.value) } : x)))}
-                      placeholder="0"
+                      placeholder="수량"
                       min={0}
                       step={p?.unit === '㎡' ? '0.01' : '1'}
                       disabled={saveBusy}
                       inputMode="decimal"
-                      className="min-w-0 flex-1 h-11 rounded-[8px] border border-zinc-300 bg-white px-3 text-right text-base font-semibold tabular-nums"
+                      className="min-w-0 flex-1 h-11 rounded-[8px] border border-zinc-300 bg-white px-3 text-right text-base font-semibold tabular-nums focus:placeholder:text-transparent"
                     />
                     <span className="w-8 shrink-0 text-center text-sm text-zinc-500">{p?.unit ?? ''}</span>
                     <span className="w-20 shrink-0 text-right text-sm tabular-nums text-zinc-700">

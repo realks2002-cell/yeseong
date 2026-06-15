@@ -4,6 +4,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { History, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import {
   TABLE_LABELS,
@@ -37,10 +38,10 @@ type ApiResponse = {
 };
 
 const ACTIONS = ['INSERT', 'UPDATE', 'DELETE'] as const;
-const ACTION_BADGE: Record<string, string> = {
-  INSERT: 'bg-emerald-50 text-emerald-700',
-  UPDATE: 'bg-amber-50 text-amber-700',
-  DELETE: 'bg-red-50 text-red-700',
+const ACTION_VARIANT: Record<string, 'success' | 'warning' | 'destructive'> = {
+  INSERT: 'success',
+  UPDATE: 'warning',
+  DELETE: 'destructive',
 };
 const ACTION_LABEL: Record<string, string> = {
   INSERT: '추가',
@@ -198,9 +199,9 @@ export default function AuditLogPage() {
                           {recordName ?? <span className="text-[#9CA3AF] font-mono text-[10px]">{r.record_id?.slice(0, 8) ?? '-'}</span>}
                         </td>
                         <td className="px-3 py-2">
-                          <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${ACTION_BADGE[r.action] ?? ''}`}>
+                          <Badge variant={ACTION_VARIANT[r.action] ?? 'secondary'} appearance="light" size="sm">
                             {ACTION_LABEL[r.action]}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-3 py-2 text-[#4B5563]">
                           {summarizeChange(r.table_name, r.action, r.changed_fields, r.before_data, r.after_data)}

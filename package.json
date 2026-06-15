@@ -24,6 +24,7 @@
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/push-notifications": "^8.1.1",
     "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-slot": "1.2.3",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@vercel/blob": "^2.3.3",

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Smartphone, Eye } from 'lucide-react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatPhone } from '@/lib/auth/phone-email';
 
 type Manager = { id: string; name: string; phone: string | null; is_active?: boolean };
@@ -31,9 +32,9 @@ export default function ManagerViewPage() {
           <div>
             <h1 className="text-xl font-bold tracking-tight text-[#091413]">팀장 화면 보기</h1>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
-            <Eye className="h-3.5 w-3.5" /> 보기 전용 · 승인/저장은 동작하지 않습니다
-          </span>
+          <Badge variant="warning" appearance="light" size="lg" className="font-semibold">
+            <Eye /> 보기 전용 · 승인/저장은 동작하지 않습니다
+          </Badge>
         </header>
 
         <Card className="p-4">

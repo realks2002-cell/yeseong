@@ -9,8 +9,7 @@ import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
 import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
-import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
-import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
+import { startTrackingScheduler, stopTrackingScheduler, requestSync } from '@/lib/capacitor/tracking';
 import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt';
 
 type PendingItem = {
@@ -131,12 +130,15 @@ export default function ManagerHomePage() {
   useEffect(() => {
     load();
     registerPush('manager');
-    // 위치 폴링 — 앱 실행·재오픈 즉시 + 5분마다 (팀장도 작업자와 동일하게 기록)
-    startForegroundPolling(reportGps);
+    // 추적 스케줄러 — 근무 시간대(08:00~17:00)에만 가동 (미러/보기전용 모드 제외)
+    if (!getMirrorId()) {
+      startTrackingScheduler(reportGps);
+      return () => stopTrackingScheduler();
+    }
   }, [load, reportGps]);
 
-  // "항상 허용" 부여 시 백그라운드 워처 시작 (권한 요청 없음 — 상태 확인만)
-  const onAlways = useCallback(() => { startBackgroundTracking(reportGps); }, [reportGps]);
+  // "항상 허용" 부여 직후 즉시 재평가 (시간대 내이면 백그라운드 워처 시작)
+  const onAlways = useCallback(() => { requestSync(); }, []);
 
   // 내 출역 제출 (0.5 / 1일) — 본인 출역도 아래 검토 리스트에 포함된다
   const submitMyAttendance = async (h: 0.5 | 1) => {

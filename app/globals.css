@@ -1,3 +1,4 @@
+@import "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css";
 @import "tailwindcss";
 
 :root {
@@ -7,11 +8,14 @@
   --card-border: #D7D7D7;
   --primary: #447D9B;
   --primary-foreground: #ffffff;
+  --secondary: #EDF1F4;
+  --secondary-foreground: #273F4F;
   --muted: #F5F5F5;
   --muted-foreground: #6B7280;
   --accent: #FE7743;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
   --ring: #447D9B;
   --dark: #273F4F;
   --border: #D7D7D7;
@@ -29,12 +33,16 @@
   --color-card-border: var(--card-border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-ring: var(--ring);
+  --color-border: var(--border);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-dark: var(--brand-dark);

@@ -27,7 +27,8 @@ export function PhotoViewer({ photo, onClose }: { photo: Photo | null; onClose: 
       {photo && (
         <DialogContent
           showClose={false}
-          className="w-[92vw] max-w-5xl overflow-hidden bg-[#0a0a0a] p-0 text-white border-[#0a0a0a]"
+          overlayClassName="z-[60]"
+          className="z-[60] w-[92vw] max-w-5xl overflow-hidden bg-[#0a0a0a] p-0 text-white border-[#0a0a0a]"
         >
           <DialogTitle className="sr-only">{photo.label}</DialogTitle>
           <DialogDescription className="sr-only">확대된 사진</DialogDescription>

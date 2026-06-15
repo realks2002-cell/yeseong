@@ -4,15 +4,18 @@ import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import type { VariantProps } from 'class-variance-authority';
 import { Camera, Package, Image as ImageIcon, Receipt, Filter, Download, Trash2, RefreshCw } from 'lucide-react';
 
 type Category = 'tbm' | 'materials' | 'general' | 'expense';
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
-const CATEGORY_META: Record<Category, { label: string; icon: typeof Camera; chip: string }> = {
-  tbm: { label: 'TBM', icon: Camera, chip: 'bg-emerald-50 text-emerald-700' },
-  materials: { label: '자재·송장', icon: Package, chip: 'bg-amber-50 text-amber-700' },
-  general: { label: '일반', icon: ImageIcon, chip: 'bg-blue-50 text-blue-700' },
-  expense: { label: '비용·영수증', icon: Receipt, chip: 'bg-rose-50 text-rose-700' },
+const CATEGORY_META: Record<Category, { label: string; icon: typeof Camera; variant: BadgeVariant }> = {
+  tbm: { label: 'TBM', icon: Camera, variant: 'success' },
+  materials: { label: '자재·송장', icon: Package, variant: 'warning' },
+  general: { label: '일반', icon: ImageIcon, variant: 'primary' },
+  expense: { label: '비용·영수증', icon: Receipt, variant: 'destructive' },
 };
 // expense(비용·영수증)는 /expenses 전용 — 이 화면 그룹에는 나타나지 않음
 const CATEGORY_ORDER: Category[] = ['tbm', 'materials', 'general'];
@@ -54,9 +57,9 @@ function shortTime(iso: string): string {
 
 export default function SitePhotosPage() {
   const today = todayIso();
-  const yesterday = shiftIso(today, -1);
+  const weekAgo = shiftIso(today, -6);
 
-  const [fromDate, setFromDate] = useState(yesterday);
+  const [fromDate, setFromDate] = useState(weekAgo);
   const [toDate, setToDate] = useState(today);
   const [siteId, setSiteId] = useState<string>('');
   const [category, setCategory] = useState<Category | ''>('');
@@ -188,7 +191,7 @@ export default function SitePhotosPage() {
   }
 
   function resetFilters() {
-    setFromDate(yesterday);
+    setFromDate(weekAgo);
     setToDate(today);
     setSiteId('');
     setCategory('');
@@ -278,20 +281,18 @@ export default function SitePhotosPage() {
                 <Card key={`${g.date}-${g.siteId}-${g.category}`} className="overflow-hidden">
                   <div className="flex items-center justify-between gap-3 border-b border-[#D7D7D7] bg-[#F5F5F5] px-4 py-2.5">
                     <div className="flex items-center gap-2.5 text-[13px]">
+                      <Badge variant={meta.variant} appearance="default" size="lg" className="font-semibold">
+                        <Icon />
+                        {meta.label}
+                      </Badge>
                       <span className="font-mono font-semibold text-[#091413]">{g.date}</span>
                       <span className="text-[#9CA3AF]">·</span>
                       <span className="font-semibold text-[#091413]">{g.siteName}</span>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${meta.chip}`}
-                      >
-                        <Icon className="h-3 w-3" />
-                        {meta.label}
-                      </span>
                     </div>
                     <span className="text-[11px] text-[#6B7280]">{g.photos.length}장</span>
                   </div>
                   <div className="p-3">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
                       {g.photos.map((p) => (
                         <PhotoCard key={p.id} photo={p} onOpen={() => openViewer(p)} onDelete={() => handleDelete(p)} />
                       ))}

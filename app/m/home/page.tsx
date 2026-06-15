@@ -8,8 +8,7 @@ import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
-import { startForegroundPolling } from '@/lib/capacitor/foreground-gps';
-import { startBackgroundTracking } from '@/lib/capacitor/background-gps';
+import { startTrackingScheduler, stopTrackingScheduler, requestSync } from '@/lib/capacitor/tracking';
 import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
@@ -80,13 +79,13 @@ export default function HomePage() {
   useEffect(() => {
     load();
     registerPush('worker');
-    // 포그라운드 폴링 (앱 사용 중 허용만으로 작동 — 실행·재오픈 즉시 + 5분마다)
-    // 백그라운드 워처는 "항상 허용" 확인 후 AlwaysLocationPrompt onAlways에서 시작
-    startForegroundPolling(reportGps);
+    // 추적 스케줄러 — 근무 시간대(08:00~17:00)에만 추적/알림 가동
+    startTrackingScheduler(reportGps);
+    return () => stopTrackingScheduler();
   }, [load, reportGps]);
 
-  // "항상 허용" 부여 시 백그라운드 워처 시작 (권한 요청 없음 — 상태 확인만)
-  const onAlways = useCallback(() => { startBackgroundTracking(reportGps); }, [reportGps]);
+  // "항상 허용" 부여 직후 즉시 재평가 (시간대 내이면 백그라운드 워처 시작)
+  const onAlways = useCallback(() => { requestSync(); }, []);
 
   const todayRecord = me?.recent.find((r) => r.work_date === TODAY_ISO) ?? null;
   const isRejected = todayRecord?.approval_status === 'rejected';
