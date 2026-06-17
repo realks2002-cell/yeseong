@@ -40,6 +40,7 @@ export type FillMasonryWorker = {
   accountHolder: string | null;
   phone: string | null;
   dailyWage: number;
+  etcDeduction: number;          // 기타 공제 (엑셀 BT)
   attendance: Array<{ day: number; hours: number }>;  // day=1..31
   volumes: MasonryVolume[];
 };
@@ -128,6 +129,9 @@ function fillWorker(sheet: ExcelJS.Worksheet, w: FillMasonryWorker): void {
   if (w.bankName !== null) sheet.getCell(`${WORKER_COLS.BANK_NAME}${headRow}`).value = w.bankName;
   if (w.accountNumber !== null) sheet.getCell(`${WORKER_COLS.ACCOUNT}${headRow}`).value = w.accountNumber;
   if (w.accountHolder !== null) sheet.getCell(`${WORKER_COLS.HOLDER}${headRow}`).value = w.accountHolder;
+
+  // 기타 공제 (공제내역 '기타' = BT). 병합 BT{head}:BT{head+1} → head row에 기록. 공제계 BU=SUM(BR:BT)에 합산.
+  if (w.etcDeduction > 0) sheet.getCell(`${MASONRY_COLS.ETC}${headRow}`).value = w.etcDeduction;
 
   // 출역 — 공수(0.5/1 등) 그대로. 좌측 보수총액(AA=H×Y)은 신고용.
   for (const a of w.attendance) {

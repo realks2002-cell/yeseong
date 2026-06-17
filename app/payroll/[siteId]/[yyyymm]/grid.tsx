@@ -33,6 +33,7 @@ type Slot = {
   trade: string | null;
   worker: Worker;
   subcontractor: Subcontractor | null;
+  etc_deduction: number;
 };
 
 type AttendanceRow = {
@@ -171,13 +172,14 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
     }
   }
 
-  async function patchSlot(slotId: string, patch: { subcontractor_id?: string | null }) {
+  async function patchSlot(slotId: string, patch: { subcontractor_id?: string | null; etc_deduction?: number }) {
     setSlots((prev) => prev.map((s) => (s.id === slotId
       ? {
           ...s,
           subcontractor: patch.subcontractor_id !== undefined
             ? (patch.subcontractor_id ? { id: patch.subcontractor_id, name: subMap.get(patch.subcontractor_id) ?? '' } : null)
             : s.subcontractor,
+          etc_deduction: patch.etc_deduction !== undefined ? patch.etc_deduction : s.etc_deduction,
         }
       : s)));
 
@@ -301,7 +303,11 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
   const visibleSlots = slots.filter((s) =>
     showPerf ? s.worker.wage_type === '월급/일급' : s.worker.wage_type !== '월급/일급',
   );
-  const colCount = (showPerf ? 10 : 8) + totalDays;
+  // 일자 열을 2줄로 분할: 상단 1–15 / 하단 16–말일. 정렬 위해 16칸 고정(상단 15칸+빈칸, 하단 최대 16칸)
+  const DAY_COLS = 16;
+  const topDays = Array.from({ length: DAY_COLS }, (_, j) => (j < 15 ? j + 1 : null));
+  const bottomDays = Array.from({ length: DAY_COLS }, (_, j) => (16 + j <= totalDays ? 16 + j : null));
+  const colCount = 5 + DAY_COLS + 2 + (showPerf ? 3 : 0) + 1;
 
   function dayTotalHours(day: number): number {
     return visibleSlots.reduce((sum, s) => sum + (cellMap.get(`${s.id}:${day}`) ?? 0), 0);
@@ -393,144 +399,168 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
         <table className="border-collapse text-[12px]">
           <thead>
             <tr className="whitespace-nowrap text-[11px] text-[#6B7280]">
-              <th className="sticky left-0 top-0 z-30 w-10 border-b border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2.5 font-medium">#</th>
-              <th className="sticky left-10 top-0 z-30 w-[112px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성명</th>
-              <th className="sticky left-[152px] top-0 z-30 w-[150px] border-b border-l border-r border-b-[#D7D7D7] border-l-[#EAEAEA] border-r-[#D7D7D7] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">전문건설사</th>
-              <th className="sticky top-0 z-20 min-w-[80px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공종</th>
-              <th className="sticky top-0 z-20 min-w-[100px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">일당</th>
-              {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                <th key={d} className={`sticky top-0 z-20 w-10 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-1.5 py-2.5 text-center font-medium tabular-nums ${dayHeadColor(d)}`}>{d}</th>
+              <th rowSpan={2} className="sticky left-0 top-0 z-30 w-10 border-b border-[#D7D7D7] bg-[#F5F5F5] px-3 py-2.5 font-medium">#</th>
+              <th rowSpan={2} className="sticky left-10 top-0 z-30 w-[112px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성명</th>
+              <th rowSpan={2} className="sticky left-[152px] top-0 z-30 w-[150px] border-b border-l border-r border-b-[#D7D7D7] border-l-[#EAEAEA] border-r-[#D7D7D7] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">전문건설사</th>
+              <th rowSpan={2} className="sticky top-0 z-20 min-w-[80px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공종</th>
+              <th rowSpan={2} className="sticky top-0 z-20 min-w-[100px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">일당</th>
+              {topDays.map((d, j) => (
+                <th key={j} className={`sticky top-0 z-20 w-10 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-1.5 py-2.5 text-center font-medium tabular-nums ${d ? dayHeadColor(d) : ''}`}>{d ?? ''}</th>
               ))}
-              <th className="sticky top-0 z-20 w-14 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공수</th>
-              <th className="sticky top-0 z-20 w-14 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">일수</th>
+              <th rowSpan={2} className="sticky top-0 z-20 w-14 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공수</th>
+              <th rowSpan={2} className="sticky top-0 z-20 w-14 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">일수</th>
               {showPerf && (
                 <>
-                  <th className="sticky top-0 z-20 min-w-[190px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성과 내역</th>
-                  <th className="sticky top-0 z-20 w-28 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성과(원)</th>
+                  <th rowSpan={2} className="sticky top-0 z-20 w-20 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">공제</th>
+                  <th rowSpan={2} className="sticky top-0 z-20 min-w-[190px] border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성과 내역</th>
+                  <th rowSpan={2} className="sticky top-0 z-20 w-28 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-3 py-2.5 text-center font-medium">성과(원)</th>
                 </>
               )}
-              <th className="sticky top-0 z-20 w-16 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] py-2.5 pl-2 pr-5 font-medium"></th>
+              <th rowSpan={2} className="sticky top-0 z-20 w-16 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] py-2.5 pl-2 pr-5 font-medium"></th>
+            </tr>
+            <tr className="whitespace-nowrap text-[11px] text-[#6B7280]">
+              {bottomDays.map((d, j) => (
+                <th key={j} className={`sticky top-9 z-20 w-10 border-b border-l border-b-[#D7D7D7] border-l-[#EAEAEA] bg-[#F5F5F5] px-1.5 py-2.5 text-center font-medium tabular-nums ${d ? dayHeadColor(d) : ''}`}>{d ?? ''}</th>
+              ))}
             </tr>
           </thead>
-          <tbody>
-            {!loaded ? (
-              <tr><td colSpan={colCount} className="py-12 text-center text-[#091413]">불러오는 중...</td></tr>
-            ) : slots.length === 0 ? (
-              <tr>
-                <td colSpan={colCount} className="py-12 text-center text-[#091413]">
-                  아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
-                </td>
-              </tr>
-            ) : visibleSlots.length === 0 ? (
-              <tr>
-                <td colSpan={colCount} className="py-12 text-center text-[#9CA3AF]">
-                  {showPerf ? '매사 작업자가 없습니다.' : '일반(일급·월급) 작업자가 없습니다.'}
-                </td>
-              </tr>
-            ) : (
-              visibleSlots.map((s, idx) => {
+          {!loaded ? (
+            <tbody><tr><td colSpan={colCount} className="py-12 text-center text-[#091413]">불러오는 중...</td></tr></tbody>
+          ) : slots.length === 0 ? (
+            <tbody><tr>
+              <td colSpan={colCount} className="py-12 text-center text-[#091413]">
+                아직 작업자가 추가되지 않았습니다. 아래 + 버튼으로 추가하세요.
+              </td>
+            </tr></tbody>
+          ) : visibleSlots.length === 0 ? (
+            <tbody><tr>
+              <td colSpan={colCount} className="py-12 text-center text-[#9CA3AF]">
+                {showPerf ? '매사 작업자가 없습니다.' : '일반(일급·월급) 작업자가 없습니다.'}
+              </td>
+            </tr></tbody>
+          ) : (
+            <>
+              {visibleSlots.map((s, idx) => {
                 const sum = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0);
                 const days = Array.from({ length: totalDays }, (_, i) => cellMap.get(`${s.id}:${i + 1}`)).filter((v) => v != null && v > 0).length;
                 const stickyBg = 'bg-white group-hover:bg-[#F5F5F5]';
                 const volumeAmount = volumeSumMap.get(s.id) ?? 0;
-                return (
-                  <tr key={s.id} className="group border-b border-[#D7D7D7] hover:bg-[#F5F5F5]">
-                    <td className={`sticky left-0 z-10 ${stickyBg} px-3 py-2 text-[#091413] tabular-nums`}>{idx + 1}</td>
-                    <td className={`sticky left-10 z-10 w-[112px] border-l border-[#EAEAEA] ${stickyBg} px-3 py-2 font-medium text-center`}>{s.worker.name}</td>
-                    <td className={`sticky left-[152px] z-10 w-[150px] border-l border-r border-l-[#EAEAEA] border-r-[#D7D7D7] ${stickyBg} px-1.5 py-1 text-center`}>
-                      <SubcontractorSelect
-                        value={s.subcontractor?.id ?? ''}
-                        options={subcontractors}
-                        onChange={(id) => patchSlot(s.id, { subcontractor_id: id || null })}
-                      />
-                    </td>
-                    <td className="border-l border-[#EAEAEA] px-3 py-2 text-center text-[#091413]">
-                      {s.worker.default_trade ?? <span className="text-[#9CA3AF]">-</span>}
-                    </td>
-                    <td className="border-l border-[#EAEAEA] px-3 py-2 text-right tabular-nums text-[#091413]">
-                      {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#9CA3AF]">-</span>}
-                    </td>
-                    {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => {
-                      const v = cellMap.get(`${s.id}:${d}`);
-                      return (
-                        <td key={d} className="border-l border-[#EAEAEA] p-0 text-center tabular-nums">
-                          <CellInput
-                            value={v ?? null}
-                            onChange={(n) => setCell(s.id, d, n)}
-                          />
-                        </td>
-                      );
-                    })}
-                    <td className="border-l border-[#EAEAEA] bg-white px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
-                    <td className="border-l border-[#EAEAEA] bg-white px-2 py-2 text-center tabular-nums text-[#091413]">{days || ''}</td>
-                    {showPerf && (
-                      <>
-                        <td className="border-l border-[#EAEAEA] bg-white px-3 py-2 text-left align-top text-[11px]">
-                          {(volumesByWorker.get(s.id) ?? []).length > 0 ? (
-                            <div className="flex flex-col gap-0.5">
-                              {(volumesByWorker.get(s.id) ?? []).map((v) => (
-                                <div key={v.id} className="whitespace-nowrap tabular-nums">
-                                  <span className="text-[#091413]">{volumeItemLabel(v)}</span>
-                                  <span className="text-[#091413]">
-                                    {' '}
-                                    {v.quantity.toLocaleString()}
-                                    {volumeUnitLabel(v)} × {v.unit_price.toLocaleString()}원
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[#9CA3AF]">입력 전</span>
-                          )}
-                        </td>
-                        <td className="border-l border-[#EAEAEA] bg-white px-2 py-2 text-center text-[12px]">
-                          <button
-                            onClick={() => setVolumeSlot(s)}
-                            className="tabular-nums text-[12px] font-medium text-[#091413] hover:text-[#447D9B] hover:underline"
-                          >
-                            {volumeAmount > 0 ? volumeAmount.toLocaleString() : <span className="font-normal text-[#9CA3AF]">입력</span>}
-                          </button>
-                        </td>
-                      </>
-                    )}
-                    <td className="border-l border-[#EAEAEA] py-2 pl-1 pr-5 text-center">
-                      <button
-                        className="rounded p-1 text-[#9CA3AF] hover:bg-red-50 hover:text-red-600"
-                        onClick={() => removeSlot(s.id, s.worker.name)}
-                        aria-label="작업자 제거"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+                // 작업자당 2행: 상단 1–15 / 하단 16–말일. 좌·우 고정열은 rowSpan=2로 한 번만.
+                const dayCell = (d: number | null, j: number, bottom: boolean) => (
+                  <td key={j} className={`border-l border-l-[#EAEAEA] ${bottom ? 'border-b border-b-[#D7D7D7]' : 'border-b border-b-[#EAEAEA]'} p-0 text-center tabular-nums`}>
+                    {d ? <CellInput value={cellMap.get(`${s.id}:${d}`) ?? null} onChange={(n) => setCell(s.id, d, n)} /> : null}
+                  </td>
                 );
-              })
-            )}
-            {visibleSlots.length > 0 && (
-              <tr className="border-t-2 border-[#D7D7D7] bg-[#F5F5F5] font-semibold text-[#091413]">
-                <td colSpan={5} className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2">일자별 합계</td>
-                {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-                  <td key={d} className="border-l border-[#EAEAEA] px-1.5 py-2 text-center tabular-nums">{dayTotalHours(d) || ''}</td>
-                ))}
-                <td className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums">
-                  {visibleSlots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
-                </td>
-                <td className="border-l border-[#EAEAEA] bg-[#F5F5F5]"></td>
-                {showPerf && (
-                  <>
-                    <td className="border-l border-[#EAEAEA] bg-[#F5F5F5]"></td>
-                    <td className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[12px]">
-                      {(() => {
-                        const total = visibleSlots.reduce((sum, sl) => sum + (volumeSumMap.get(sl.id) ?? 0), 0);
-                        return total > 0 ? total.toLocaleString() : '';
-                      })()}
-                    </td>
-                  </>
-                )}
-                <td className="border-l border-[#EAEAEA] pr-5"></td>
-              </tr>
-            )}
-          </tbody>
+                return (
+                  <tbody key={s.id} className="group">
+                    <tr className="group-hover:bg-[#F5F5F5]">
+                      <td rowSpan={2} className={`sticky left-0 z-10 ${stickyBg} border-b border-b-[#D7D7D7] px-3 py-2 text-[#091413] tabular-nums`}>{idx + 1}</td>
+                      <td rowSpan={2} className={`sticky left-10 z-10 w-[112px] border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] ${stickyBg} px-3 py-2 font-medium text-center`}>{s.worker.name}</td>
+                      <td rowSpan={2} className={`sticky left-[152px] z-10 w-[150px] border-l border-r border-b border-l-[#EAEAEA] border-r-[#D7D7D7] border-b-[#D7D7D7] ${stickyBg} px-1.5 py-1 text-center`}>
+                        <SubcontractorSelect
+                          value={s.subcontractor?.id ?? ''}
+                          options={subcontractors}
+                          onChange={(id) => patchSlot(s.id, { subcontractor_id: id || null })}
+                        />
+                      </td>
+                      <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] px-3 py-2 text-center text-[#091413]">
+                        {s.worker.default_trade ?? <span className="text-[#9CA3AF]">-</span>}
+                      </td>
+                      <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] px-3 py-2 text-right tabular-nums text-[#091413]">
+                        {s.worker.default_wage > 0 ? s.worker.default_wage.toLocaleString() : <span className="text-[#9CA3AF]">-</span>}
+                      </td>
+                      {topDays.map((d, j) => dayCell(d, j, false))}
+                      <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] bg-white px-2 py-2 text-center font-semibold tabular-nums">{sum || ''}</td>
+                      <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] bg-white px-2 py-2 text-center tabular-nums text-[#091413]">{days || ''}</td>
+                      {showPerf && (
+                        <>
+                          <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] bg-white p-0 text-center tabular-nums">
+                            <DeductionInput
+                              value={s.etc_deduction ?? 0}
+                              onChange={(n) => patchSlot(s.id, { etc_deduction: n })}
+                            />
+                          </td>
+                          <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] bg-white px-3 py-2 text-left align-top text-[11px]">
+                            {(volumesByWorker.get(s.id) ?? []).length > 0 ? (
+                              <div className="flex flex-col gap-0.5">
+                                {(volumesByWorker.get(s.id) ?? []).map((v) => (
+                                  <div key={v.id} className="whitespace-nowrap tabular-nums">
+                                    <span className="text-[#091413]">{volumeItemLabel(v)}</span>
+                                    <span className="text-[#091413]">
+                                      {' '}
+                                      {v.quantity.toLocaleString()}
+                                      {volumeUnitLabel(v)} × {v.unit_price.toLocaleString()}원
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[#9CA3AF]">입력 전</span>
+                            )}
+                          </td>
+                          <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] bg-white px-2 py-2 text-center text-[12px]">
+                            <button
+                              onClick={() => setVolumeSlot(s)}
+                              className="tabular-nums text-[12px] font-medium text-[#091413] hover:text-[#447D9B] hover:underline"
+                            >
+                              {volumeAmount > 0 ? volumeAmount.toLocaleString() : <span className="font-normal text-[#9CA3AF]">입력</span>}
+                            </button>
+                          </td>
+                        </>
+                      )}
+                      <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] py-2 pl-1 pr-5 text-center">
+                        <button
+                          className="rounded p-1 text-[#9CA3AF] hover:bg-red-50 hover:text-red-600"
+                          onClick={() => removeSlot(s.id, s.worker.name)}
+                          aria-label="작업자 제거"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="group-hover:bg-[#F5F5F5]">
+                      {bottomDays.map((d, j) => dayCell(d, j, true))}
+                    </tr>
+                  </tbody>
+                );
+              })}
+              <tbody>
+                <tr className="border-t-2 border-[#D7D7D7] bg-[#F5F5F5] font-semibold text-[#091413]">
+                  <td colSpan={5} rowSpan={2} className="sticky left-0 z-10 bg-[#F5F5F5] px-3 py-2">일자별 합계</td>
+                  {topDays.map((d, j) => (
+                    <td key={j} className="border-l border-[#EAEAEA] px-1.5 py-2 text-center tabular-nums">{d ? (dayTotalHours(d) || '') : ''}</td>
+                  ))}
+                  <td rowSpan={2} className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums">
+                    {visibleSlots.reduce((s, sl) => s + Array.from({ length: totalDays }, (_, i) => cellMap.get(`${sl.id}:${i + 1}`) ?? 0).reduce((a, b) => a + b, 0), 0)}
+                  </td>
+                  <td rowSpan={2} className="border-l border-[#EAEAEA] bg-[#F5F5F5]"></td>
+                  {showPerf && (
+                    <>
+                      <td rowSpan={2} className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[12px]">
+                        {(() => {
+                          const total = visibleSlots.reduce((sum, sl) => sum + (sl.etc_deduction ?? 0), 0);
+                          return total > 0 ? total.toLocaleString() : '';
+                        })()}
+                      </td>
+                      <td rowSpan={2} className="border-l border-[#EAEAEA] bg-[#F5F5F5]"></td>
+                      <td rowSpan={2} className="border-l border-[#EAEAEA] bg-[#F5F5F5] px-2 py-2 text-center tabular-nums text-[12px]">
+                        {(() => {
+                          const total = visibleSlots.reduce((sum, sl) => sum + (volumeSumMap.get(sl.id) ?? 0), 0);
+                          return total > 0 ? total.toLocaleString() : '';
+                        })()}
+                      </td>
+                    </>
+                  )}
+                  <td rowSpan={2} className="border-l border-[#EAEAEA] pr-5"></td>
+                </tr>
+                <tr className="bg-[#F5F5F5] font-semibold text-[#091413]">
+                  {bottomDays.map((d, j) => (
+                    <td key={j} className="border-l border-[#EAEAEA] px-1.5 py-2 text-center tabular-nums">{d ? (dayTotalHours(d) || '') : ''}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </>
+          )}
         </table>
       </div>
 
@@ -589,6 +619,35 @@ function CellInput({ value, onChange }: { value: number | null; onChange: (n: nu
         if (e.key === 'Escape') { setText(value?.toString() ?? ''); (e.target as HTMLInputElement).blur(); }
       }}
       inputMode="decimal"
+    />
+  );
+}
+
+// 기타 공제 입력 — 정수(원) 0 이상. blur/Enter 시 저장. (엑셀 BT '기타')
+function DeductionInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [text, setText] = useState(value ? value.toString() : '');
+  useEffect(() => setText(value ? value.toString() : ''), [value]);
+
+  const commit = () => {
+    const t = text.trim().replace(/,/g, '');
+    const n = t === '' ? 0 : Number(t);
+    if (!Number.isFinite(n) || n < 0) { setText(value ? value.toString() : ''); return; }
+    const v = Math.floor(n);
+    if (v !== value) onChange(v);
+  };
+
+  return (
+    <input
+      className="h-full w-full bg-transparent px-2 py-2 text-right text-[12px] tabular-nums text-[#091413] outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        if (e.key === 'Escape') { setText(value ? value.toString() : ''); (e.target as HTMLInputElement).blur(); }
+      }}
+      placeholder="0"
+      inputMode="numeric"
     />
   );
 }

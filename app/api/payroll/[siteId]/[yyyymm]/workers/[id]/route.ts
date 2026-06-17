@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
 
-// PATCH: 슬롯의 subcontractor 변경 (trade·daily_wage는 작업자 마스터에서만 관리)
+// PATCH: 슬롯의 subcontractor·기타공제 변경 (trade·daily_wage는 작업자 마스터에서만 관리)
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ siteId: string; yyyymm: string; id: string }> },
@@ -17,6 +17,13 @@ export async function PATCH(
   const patch: Record<string, unknown> = {};
   if (typeof body?.subcontractor_id === 'string') patch.subcontractor_id = body.subcontractor_id;
   else if (body?.subcontractor_id === null) patch.subcontractor_id = null;
+  if (body?.etc_deduction !== undefined) {
+    const n = Number(body.etc_deduction);
+    if (!Number.isFinite(n) || n < 0) {
+      return NextResponse.json({ error: '기타 공제는 0 이상 숫자여야 합니다' }, { status: 400 });
+    }
+    patch.etc_deduction = Math.floor(n);
+  }
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: '변경할 필드가 없습니다' }, { status: 400 });
@@ -26,7 +33,7 @@ export async function PATCH(
     .from('yeseong_payroll_workers')
     .update(patch)
     .eq('id', id)
-    .select('id, subcontractor_id')
+    .select('id, subcontractor_id, etc_deduction')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

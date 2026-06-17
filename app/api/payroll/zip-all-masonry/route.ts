@@ -17,6 +17,7 @@ type Slot = {
   daily_wage: number;
   trade: string | null;
   subcontractor_name: string | null;
+  etc_deduction: number;
   worker: {
     id: string;
     name: string;
@@ -111,6 +112,7 @@ export async function GET(req: Request) {
       accountHolder: s.worker.account_holder,
       phone: s.worker.phone,
       dailyWage: s.worker.default_wage,
+      etcDeduction: s.etc_deduction ?? 0,
       attendance: s.attendance.map((a) => ({
         day: parseInt(a.work_date.split('-')[2], 10),
         hours: a.hours,

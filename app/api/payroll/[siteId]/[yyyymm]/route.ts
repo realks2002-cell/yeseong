@@ -43,7 +43,7 @@ export async function GET(
   const { data: slots, error: slotErr } = await sb
     .from('yeseong_payroll_workers')
     .select(`
-      id, slot_number, daily_wage, trade,
+      id, slot_number, daily_wage, trade, etc_deduction,
       worker:yeseong_workers (
         id, employee_code, name, name_english,
         default_trade, skill_grade, default_wage, wage_type,

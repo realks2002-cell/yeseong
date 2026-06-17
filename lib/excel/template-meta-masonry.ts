@@ -46,6 +46,7 @@ export const MASONRY_COLS = {
   WORK_PART: 'BJ',    // 작업부위
   QTY1: 'BK', PRICE1: 'BL',   // 외주1 수량·단가
   QTY2: 'BN', PRICE2: 'BO',   // 외주2 수량·단가
+  ETC: 'BT',          // 공제내역 '기타' (BT8:BT9 병합 → 공제계 BU=SUM(BR:BT)에 합산)
   NOTE: 'BW',         // 비고
 } as const;
 
