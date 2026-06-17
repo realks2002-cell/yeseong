@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     if ((count ?? 0) >= MAX_CERT) {
       await admin.storage.from(BUCKET).remove([storagePath]);
       return NextResponse.json(
-        { error: `자격증은 최대 ${MAX_CERT}장까지 등록 가능합니다.` },
+        { error: `이수증은 최대 ${MAX_CERT}장까지 등록 가능합니다.` },
         { status: 409 },
       );
     }

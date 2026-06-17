@@ -98,7 +98,7 @@ export function DocumentsSection({ readOnly = false }: { readOnly?: boolean }) {
           />
           <MultiSlot
             docType="certificate"
-            title="자격증"
+            title="이수증"
             maxCount={5}
             current={byType('certificate')}
             readOnly={readOnly}
@@ -194,7 +194,7 @@ function MultiSlot({
           ))}
         </div>
       ) : (
-        <Empty label="등록된 자격증이 없어요" />
+        <Empty label="등록된 이수증이 없어요" />
       )}
       {!readOnly && canAdd && (
         <UploadButton label="추가" icon={Plus} docType={docType} existingId={null} onUploaded={onUploaded} />

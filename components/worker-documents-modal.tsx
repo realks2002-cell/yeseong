@@ -45,7 +45,7 @@ function groupDocs(rows: ApiDoc[]): DocSet {
   return {
     id_card: idCard ? toDoc(idCard, '신분증') : null,
     bankbook: bankbook ? toDoc(bankbook, '통장사본') : null,
-    certificates: certs.map((r, i) => toDoc(r, `자격증 ${i + 1}`)),
+    certificates: certs.map((r, i) => toDoc(r, `이수증 ${i + 1}`)),
   };
 }
 
@@ -132,7 +132,7 @@ export function WorkerDocumentsModal({
             <DialogHeader>
               <DialogTitle>{subject.name} 서류</DialogTitle>
               <DialogDescription>
-                업로드된 신분증·통장사본·자격증 사본입니다. 사진을 클릭하면 크게 볼 수 있습니다.
+                업로드된 신분증·통장사본·이수증 사본입니다. 사진을 클릭하면 크게 볼 수 있습니다.
               </DialogDescription>
             </DialogHeader>
             <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
@@ -216,7 +216,7 @@ function DocsContent({
         )}
       </Section>
 
-      <Section icon={Award} title="자격증" count={docs.certificates.length} max={5}>
+      <Section icon={Award} title="이수증" count={docs.certificates.length} max={5}>
         {docs.certificates.length > 0 ? (
           <div className="grid grid-cols-[repeat(auto-fill,200px)] gap-2">
             {docs.certificates.map((c) => (
@@ -233,7 +233,7 @@ function DocsContent({
             ))}
           </div>
         ) : (
-          <EmptyPlaceholder label="등록된 자격증이 없습니다" />
+          <EmptyPlaceholder label="등록된 이수증이 없습니다" />
         )}
       </Section>
     </>
