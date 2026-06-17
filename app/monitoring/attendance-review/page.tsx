@@ -18,6 +18,7 @@ type Row = {
   worker_id: string;
   worker_name: string;
   worker_phone: string | null;
+  is_dispatch?: boolean;
   worksite_id: string;
   worksite_name: string;
   subcontractor_name: string | null;
@@ -312,7 +313,12 @@ export default function AttendanceReviewPage() {
                         {r.worker_name}
                         {r.worker_phone && <span className="ml-1 text-[10px] text-[#9CA3AF] font-mono">{formatPhone(r.worker_phone)}</span>}
                       </td>
-                      <td className="px-3 py-2 text-[#4B5563]">{r.worksite_name}</td>
+                      <td className="px-3 py-2 text-[#4B5563]">
+                        {r.worksite_name}
+                        {r.is_dispatch && (
+                          <span className="ml-1.5 rounded-[5px] bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">파견</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-[#4B5563]">{r.subcontractor_name ?? <span className="text-[#D7D7D7]">-</span>}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{r.hours}</td>
                       <td className="px-3 py-2 text-center">

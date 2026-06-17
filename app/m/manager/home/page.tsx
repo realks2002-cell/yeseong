@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
-import { Check, CheckCheck, ClipboardCheck, X } from 'lucide-react';
+import { Check, CheckCheck, ClipboardCheck, X, MapPin } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
@@ -11,6 +11,7 @@ import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
 import { startTrackingScheduler, stopTrackingScheduler, requestSync } from '@/lib/capacitor/tracking';
 import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt';
+import { DispatchDialog } from '@/components/mobile/dispatch-dialog';
 
 type PendingItem = {
   attendance_id: string;
@@ -21,6 +22,7 @@ type PendingItem = {
   worker_phone: string | null;
   worker_trade: string | null;
   is_self?: boolean;
+  is_dispatch?: boolean;
   worksite_id: string;
   worksite_name: string;
   subcontractor_name: string | null;
@@ -67,6 +69,18 @@ export default function ManagerHomePage() {
   const [readOnly, setReadOnly] = useState(false);
   const [myAtt, setMyAtt] = useState<MyAttendance>(null);
   const [myAttBusy, setMyAttBusy] = useState(false);
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [worksites, setWorksites] = useState<{ id: string; name: string }[] | null>(null);
+
+  const openDispatch = useCallback(async () => {
+    if (readOnly) return;
+    setError(undefined);
+    setDispatchOpen(true);
+    if (worksites === null) {
+      const { data } = await sb.rpc('yeseong_mobile_list_worksites');
+      setWorksites((data as { id: string; name: string }[] | null) ?? []);
+    }
+  }, [sb, worksites, readOnly]);
   const [confirmMyHours, setConfirmMyHours] = useState<0.5 | 1 | null>(null);
 
   const load = useCallback(async () => {
@@ -141,7 +155,7 @@ export default function ManagerHomePage() {
   const onAlways = useCallback(() => { requestSync(); }, []);
 
   // 내 출역 제출 (0.5 / 1일) — 본인 출역도 아래 검토 리스트에 포함된다
-  const submitMyAttendance = async (h: 0.5 | 1) => {
+  const submitMyAttendance = async (h: 0.5 | 1, dispatchWorksiteId?: string) => {
     if (readOnly || myAttBusy) return;
     setMyAttBusy(true);
     setError(undefined);
@@ -151,9 +165,11 @@ export default function ManagerHomePage() {
       p_hours: h,
       p_latitude: pos?.latitude ?? null,
       p_longitude: pos?.longitude ?? null,
+      ...(dispatchWorksiteId ? { p_worksite_id: dispatchWorksiteId, p_dispatch: true } : {}),
     });
     setMyAttBusy(false);
     setConfirmMyHours(null);
+    setDispatchOpen(false);
     if (rpcErr) {
       setError(rpcErr.message.includes('already approved')
         ? '이미 승인 완료된 출역입니다.'
@@ -295,6 +311,14 @@ export default function ManagerHomePage() {
                     <span className="text-xs font-medium text-blue-200">정상</span>
                   </button>
                 </div>
+                <button
+                  onClick={openDispatch}
+                  disabled={myAttBusy}
+                  className="mt-3 flex h-[56px] w-full items-center justify-center gap-2 rounded-[5px] bg-white text-zinc-700 ring-2 ring-zinc-200 active:scale-[0.99] disabled:opacity-50"
+                >
+                  <MapPin className="h-5 w-5" />
+                  <span className="text-base font-bold">다른 현장 파견 등록</span>
+                </button>
               </>
             )}
           </div>
@@ -378,6 +402,15 @@ export default function ManagerHomePage() {
         </div>
       )}
 
+      {dispatchOpen && (
+        <DispatchDialog
+          worksites={worksites}
+          busy={myAttBusy}
+          onCancel={() => setDispatchOpen(false)}
+          onSubmit={(h, siteId) => submitMyAttendance(h, siteId)}
+        />
+      )}
+
       {confirmApproveAll && items && items.length > 0 && (
         <ApproveAllDialog
           count={items.length}
@@ -419,6 +452,11 @@ function PendingCard({
           )}
           {item.worker_trade && <span className="ml-1.5 text-[11px] font-medium text-zinc-400">({item.worker_trade})</span>}
         </p>
+        {item.is_dispatch && (
+          <p className="mt-0.5 inline-flex items-center gap-1 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700">
+            <MapPin className="h-3 w-3" /> 파견 · {item.worksite_name}
+          </p>
+        )}
         <p className="text-[10px] text-zinc-400 tabular-nums">{formatTime(item.created_at)}</p>
       </div>
       <p className="shrink-0 text-base font-bold tabular-nums text-navy">{item.hours}일</p>

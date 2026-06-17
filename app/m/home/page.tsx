@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, MapPin } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { AnnouncementPopup } from '@/components/mobile/announcement-popup';
 import { getBrowserSupabase } from '@/lib/supabase/client';
@@ -10,6 +10,7 @@ import { registerPush } from '@/lib/capacitor/push';
 import { getPositionWithRetry } from '@/lib/capacitor/geolocation';
 import { startTrackingScheduler, stopTrackingScheduler, requestSync } from '@/lib/capacitor/tracking';
 import { AlwaysLocationPrompt } from '@/components/mobile/always-location-prompt';
+import { DispatchDialog } from '@/components/mobile/dispatch-dialog';
 
 type Hours = 0.5 | 1 | 1.5 | 2;
 
@@ -48,6 +49,17 @@ export default function HomePage() {
   const [confirm, setConfirm] = useState<Hours | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [worksites, setWorksites] = useState<{ id: string; name: string }[] | null>(null);
+
+  const openDispatch = useCallback(async () => {
+    setError(undefined);
+    setDispatchOpen(true);
+    if (worksites === null) {
+      const { data } = await sb.rpc('yeseong_mobile_list_worksites');
+      setWorksites((data as { id: string; name: string }[] | null) ?? []);
+    }
+  }, [sb, worksites]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,7 +103,7 @@ export default function HomePage() {
   const isRejected = todayRecord?.approval_status === 'rejected';
   const showRegister = todayRecord === null || isRejected;
 
-  const submit = async (h: Hours) => {
+  const submit = async (h: Hours, dispatchWorksiteId?: string) => {
     if (busy) return;
     setBusy(true);
     setError(undefined);
@@ -104,9 +116,11 @@ export default function HomePage() {
       p_hours: h,
       p_latitude: pos?.latitude ?? null,
       p_longitude: pos?.longitude ?? null,
+      ...(dispatchWorksiteId ? { p_worksite_id: dispatchWorksiteId, p_dispatch: true } : {}),
     });
     setBusy(false);
     setConfirm(null);
+    setDispatchOpen(false);
     if (rpcErr) {
       if (rpcErr.message.includes('already approved')) {
         setError('이미 승인 완료된 출역입니다. 새로고침 후 다시 확인해 주십시오.');
@@ -161,7 +175,7 @@ export default function HomePage() {
         <RejectedNotice hours={todayRecord.hours} reason={todayRecord.rejection_reason} />
       )}
       {showRegister ? (
-        <RegisterView onPick={setConfirm} />
+        <RegisterView onPick={setConfirm} onDispatch={openDispatch} />
       ) : todayRecord ? (
         <LockedView hours={todayRecord.hours} />
       ) : null}
@@ -179,12 +193,21 @@ export default function HomePage() {
         />
       )}
 
+      {dispatchOpen && (
+        <DispatchDialog
+          worksites={worksites}
+          busy={busy}
+          onCancel={() => setDispatchOpen(false)}
+          onSubmit={(h, siteId) => submit(h, siteId)}
+        />
+      )}
+
       <AnnouncementPopup />
     </MobileShell>
   );
 }
 
-function RegisterView({ onPick }: { onPick: (h: Hours) => void }) {
+function RegisterView({ onPick, onDispatch }: { onPick: (h: Hours) => void; onDispatch: () => void }) {
   return (
     <section className="mt-4 px-7">
       <h2 className="text-2xl font-bold text-zinc-900">오늘 근무를 등록해주세요</h2>
@@ -204,6 +227,13 @@ function RegisterView({ onPick }: { onPick: (h: Hours) => void }) {
           </li>
         ))}
       </ul>
+      <button
+        onClick={onDispatch}
+        className="mt-3 flex h-[64px] w-full items-center justify-center gap-2 rounded-[5px] bg-white text-zinc-700 ring-2 ring-zinc-200 transition active:scale-[0.99]"
+      >
+        <MapPin className="h-5 w-5" />
+        <span className="text-lg font-bold">다른 현장 파견 등록</span>
+      </button>
     </section>
   );
 }
