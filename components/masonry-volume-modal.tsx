@@ -43,6 +43,9 @@ type Props = {
   prices: MasonryPriceOption[];
   onClose: () => void;
   onSaved: () => void;
+  // 저장 동작 오버라이드 (미지정 시 기본: 노임대장 volumes API로 PUT)
+  submit?: (items: { masonry_price_id: string; quantity: number; note: string | null }[]) => Promise<void>;
+  title?: string;
 };
 
 // optgroup(분류) 안에서의 항목 라벨 — 종류·규격·단가/단위
@@ -74,6 +77,8 @@ export function MasonryVolumeModal({
   prices,
   onClose,
   onSaved,
+  submit,
+  title,
 }: Props) {
   // 기존 데이터를 row로 변환 (매칭 안 되는 단가는 무시 — 단가가 비활성화되었거나 변경된 경우)
   const initialRows: VolumeRow[] = useMemo(() => {
@@ -128,21 +133,23 @@ export function MasonryVolumeModal({
     setErr(null);
     setSaving(true);
     try {
-      const r = await fetch(`/api/payroll/${siteId}/${yearMonth}/volumes`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payroll_worker_id: payrollWorkerId,
-          items: rows.map((row) => ({
-            masonry_price_id: row.masonry_price_id,
-            quantity: row.quantity,
-            note: row.note,
-          })),
-        }),
-      });
-      if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        throw new Error(j.error ?? '저장 실패');
+      const items = rows.map((row) => ({
+        masonry_price_id: row.masonry_price_id,
+        quantity: row.quantity,
+        note: row.note,
+      }));
+      if (submit) {
+        await submit(items);
+      } else {
+        const r = await fetch(`/api/payroll/${siteId}/${yearMonth}/volumes`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payroll_worker_id: payrollWorkerId, items }),
+        });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          throw new Error(j.error ?? '저장 실패');
+        }
       }
       onSaved();
     } catch (e) {
@@ -157,7 +164,7 @@ export function MasonryVolumeModal({
       <div className="w-full max-w-2xl rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-[#D7D7D7] px-5 py-3">
           <div>
-            <h2 className="text-base font-semibold">{workerName} — 월말 성과 입력</h2>
+            <h2 className="text-base font-semibold">{workerName} — {title ?? '월말 성과 입력'}</h2>
             <p className="text-xs text-[#6B7280] mt-0.5">조적·미장·방수·타일·석공사 — 현장 단가표 기준 종류·수량 입력.</p>
           </div>
           <button onClick={onClose} className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5]" aria-label="닫기">

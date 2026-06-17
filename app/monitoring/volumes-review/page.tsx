@@ -3,12 +3,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, X, RefreshCw, Search } from 'lucide-react';
+import { Check, X, RefreshCw, Search, Pencil, Plus } from 'lucide-react';
 import { formatPhone } from '@/lib/auth/phone-email';
 import { categoryTypes } from '@/lib/constants/masonry';
+import {
+  MasonryVolumeModal,
+  type MasonryPriceOption,
+  type ExistingVolume,
+} from '@/components/masonry-volume-modal';
 
 type Row = {
   id: string;
+  payroll_worker_id: string;
   category: string;
   type_name: string | null;
   size_spec: string | null;
@@ -61,6 +67,14 @@ export default function VolumesReviewPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [reasonModal, setReasonModal] = useState<{ ids: string[] } | null>(null);
+  const [editLoadingId, setEditLoadingId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<
+    { row: Row; prices: MasonryPriceOption[]; existing: ExistingVolume[] } | null
+  >(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addTarget, setAddTarget] = useState<
+    { worker: { id: string; name: string }; siteId: string; yearMonth: string; prices: MasonryPriceOption[] } | null
+  >(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -132,8 +146,38 @@ export default function VolumesReviewPage() {
   const approveOne = (id: string) => bulk(true, [id]);
   const rejectOne = (id: string) => setReasonModal({ ids: [id] });
 
+  async function openEdit(row: Row) {
+    if (editLoadingId) return;
+    setEditLoadingId(row.id);
+    setError(null);
+    try {
+      const [pr, vr] = await Promise.all([
+        fetch(`/api/masonry-prices?worksiteId=${row.worksite_id}`, { cache: 'no-store' }),
+        fetch(`/api/payroll/${row.worksite_id}/${row.year_month}/volumes`, { cache: 'no-store' }),
+      ]);
+      if (!pr.ok || !vr.ok) throw new Error('단가/성과를 불러오지 못했습니다');
+      const prices: MasonryPriceOption[] = await pr.json();
+      const allVolumes: ExistingVolume[] = await vr.json();
+      const existing = allVolumes.filter((v) => v.payroll_worker_id === row.payroll_worker_id);
+      setEditTarget({ row, prices, existing });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '불러오기 실패');
+    } finally {
+      setEditLoadingId(null);
+    }
+  }
+
+  // 추가 picker 확정 → 현장 단가 로드 후 입력 모달 열기
+  async function startAdd(worker: { id: string; name: string }, siteId: string, yearMonth: string) {
+    const pr = await fetch(`/api/masonry-prices?worksiteId=${siteId}`, { cache: 'no-store' });
+    if (!pr.ok) { setError('단가를 불러오지 못했습니다'); return; }
+    const prices: MasonryPriceOption[] = await pr.json();
+    setAddOpen(false);
+    setAddTarget({ worker, siteId, yearMonth, prices });
+  }
+
   const isPending = statusFilter === 'pending_admin';
-  const colCount = isPending ? 10 : 8;
+  const colCount = (isPending ? 1 : 0) + 7 + 1;
 
   return (
     <AdminShell>
@@ -142,10 +186,16 @@ export default function VolumesReviewPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">매사 성과 검토</h1>
           </div>
-          <Button variant="outline" onClick={load} disabled={busy}>
-            <RefreshCw className="h-4 w-4" />
-            새로고침
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setAddOpen(true)} disabled={busy}>
+              <Plus className="h-4 w-4" />
+              성과 추가
+            </Button>
+            <Button variant="outline" onClick={load} disabled={busy}>
+              <RefreshCw className="h-4 w-4" />
+              새로고침
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -215,7 +265,7 @@ export default function VolumesReviewPage() {
                   <th className="px-3 py-2 font-medium text-center">수량</th>
                   <th className="px-3 py-2 font-medium text-center">금액</th>
                   <th className="px-3 py-2 font-medium text-center">상태</th>
-                  {isPending && <th className="px-3 py-2 font-medium text-center w-32">처리</th>}
+                  <th className="px-3 py-2 font-medium text-center w-32">처리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
@@ -255,30 +305,41 @@ export default function VolumesReviewPage() {
                           <span className="ml-1 text-[10px] text-[#9CA3AF]">{r.rejection_reason}</span>
                         )}
                       </td>
-                      {isPending && (
-                        <td className="px-3 py-2">
-                          <div className="flex justify-end gap-1">
-                            <button
-                              onClick={() => approveOne(r.id)}
-                              disabled={busy}
-                              className="rounded p-1 text-emerald-600 hover:bg-emerald-50 disabled:opacity-40"
-                              aria-label="승인"
-                              title="승인"
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => rejectOne(r.id)}
-                              disabled={busy}
-                              className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-40"
-                              aria-label="반려"
-                              title="반려"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(r)}
+                            disabled={busy || editLoadingId !== null}
+                            className="rounded p-1 text-[#447D9B] hover:bg-[#447D9B]/10 disabled:opacity-40"
+                            aria-label="수정"
+                            title="수정"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {isPending && (
+                            <>
+                              <button
+                                onClick={() => approveOne(r.id)}
+                                disabled={busy}
+                                className="rounded p-1 text-emerald-600 hover:bg-emerald-50 disabled:opacity-40"
+                                aria-label="승인"
+                                title="승인"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => rejectOne(r.id)}
+                                disabled={busy}
+                                className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-40"
+                                aria-label="반려"
+                                title="반려"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -296,6 +357,68 @@ export default function VolumesReviewPage() {
             const ids = reasonModal.ids;
             setReasonModal(null);
             await bulk(false, ids, reason);
+          }}
+        />
+      )}
+
+      {editTarget && (
+        <MasonryVolumeModal
+          workerName={editTarget.row.worker_name}
+          payrollWorkerId={editTarget.row.payroll_worker_id}
+          siteId={editTarget.row.worksite_id}
+          yearMonth={editTarget.row.year_month}
+          existing={editTarget.existing}
+          prices={editTarget.prices}
+          title={`성과 수정 (${STATUS_LABEL[editTarget.row.approval_status]})`}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => { setEditTarget(null); load(); }}
+          submit={async (items) => {
+            const r = await fetch('/api/admin/volumes-review', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ payroll_worker_id: editTarget.row.payroll_worker_id, items }),
+            });
+            if (!r.ok) {
+              const j = await r.json().catch(() => ({}));
+              throw new Error(j.error ?? '저장 실패');
+            }
+          }}
+        />
+      )}
+
+      {addOpen && (
+        <AddVolumePicker
+          onCancel={() => setAddOpen(false)}
+          onConfirm={startAdd}
+        />
+      )}
+
+      {addTarget && (
+        <MasonryVolumeModal
+          workerName={addTarget.worker.name}
+          payrollWorkerId=""
+          siteId={addTarget.siteId}
+          yearMonth={addTarget.yearMonth}
+          existing={[]}
+          prices={addTarget.prices}
+          title={`성과 추가 입력 · ${addTarget.yearMonth} (즉시 승인)`}
+          onClose={() => setAddTarget(null)}
+          onSaved={() => { setAddTarget(null); load(); }}
+          submit={async (items) => {
+            const r = await fetch('/api/admin/volumes-review', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                worker_id: addTarget.worker.id,
+                worksite_id: addTarget.siteId,
+                year_month: addTarget.yearMonth,
+                items,
+              }),
+            });
+            if (!r.ok) {
+              const j = await r.json().catch(() => ({}));
+              throw new Error(j.error ?? '저장 실패');
+            }
           }}
         />
       )}
@@ -341,6 +464,129 @@ function ReasonModal({ count, onCancel, onSubmit }: { count: number; onCancel: (
           <Button variant="outline" onClick={onCancel} disabled={submitting}>취소</Button>
           <Button onClick={() => { setSubmitting(true); onSubmit(reason); }} disabled={submitting}>
             반려 처리
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type PickWorker = { id: string; name: string; phone: string | null; wage_type: string | null };
+type PickSite = { id: string; name: string };
+
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// 성과 추가 picker — 월급/일급 작업자 · 현장 · 월 선택 후 입력 모달로
+function AddVolumePicker({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: (worker: { id: string; name: string }, siteId: string, yearMonth: string) => void | Promise<void>;
+}) {
+  const [workers, setWorkers] = useState<PickWorker[] | null>(null);
+  const [sites, setSites] = useState<PickSite[] | null>(null);
+  const [workerId, setWorkerId] = useState('');
+  const [siteId, setSiteId] = useState('');
+  const [yearMonth, setYearMonth] = useState(currentMonth());
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [wr, sr] = await Promise.all([
+        fetch('/api/workers', { cache: 'no-store' }),
+        fetch('/api/worksites', { cache: 'no-store' }),
+      ]);
+      const allWorkers: PickWorker[] = wr.ok ? await wr.json() : [];
+      const allSites: PickSite[] = sr.ok ? await sr.json() : [];
+      // 매사 성과 대상 = 월급/일급 작업자만
+      setWorkers(allWorkers.filter((w) => w.wage_type === '월급/일급'));
+      setSites(allSites);
+    })();
+  }, []);
+
+  const ready = workerId && siteId && /^\d{4}-\d{2}$/.test(yearMonth);
+
+  async function next() {
+    if (!ready || busy) return;
+    const w = workers?.find((x) => x.id === workerId);
+    if (!w) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await onConfirm({ id: w.id, name: w.name }, siteId, yearMonth);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '오류');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
+      <div className="w-full max-w-md rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-[#D7D7D7] px-6 py-4">
+          <h2 className="text-lg font-semibold">성과 추가 입력</h2>
+          <button onClick={onCancel} className="rounded p-1 text-[#9CA3AF] hover:bg-[#F5F5F5]" aria-label="닫기">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="space-y-4 p-6">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#4B5563]">작업자 (월급/일급)</span>
+            <select
+              value={workerId}
+              onChange={(e) => setWorkerId(e.target.value)}
+              disabled={!workers || busy}
+              className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
+            >
+              <option value="">{workers ? '작업자 선택' : '불러오는 중...'}</option>
+              {(workers ?? []).map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}{w.phone ? ` (${formatPhone(w.phone)})` : ''}
+                </option>
+              ))}
+            </select>
+            {workers && workers.length === 0 && (
+              <span className="mt-1 block text-xs text-amber-700">월급/일급 작업자가 없습니다.</span>
+            )}
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#4B5563]">현장</span>
+            <select
+              value={siteId}
+              onChange={(e) => setSiteId(e.target.value)}
+              disabled={!sites || busy}
+              className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
+            >
+              <option value="">{sites ? '현장 선택' : '불러오는 중...'}</option>
+              {(sites ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#4B5563]">월</span>
+            <input
+              type="month"
+              value={yearMonth}
+              onChange={(e) => setYearMonth(e.target.value)}
+              disabled={busy}
+              className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
+            />
+          </label>
+
+          {err && <p className="rounded-[5px] bg-red-50 p-2.5 text-sm text-red-600">{err}</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-[#D7D7D7] px-6 py-4">
+          <Button variant="outline" onClick={onCancel} disabled={busy}>취소</Button>
+          <Button onClick={next} disabled={!ready || busy}>
+            {busy ? '여는 중...' : '항목 입력'}
           </Button>
         </div>
       </div>
