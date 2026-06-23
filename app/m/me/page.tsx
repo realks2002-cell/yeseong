@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
-import { Check } from 'lucide-react';
+import { Check, ChevronRight, FileSignature } from 'lucide-react';
+import Link from 'next/link';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { DocumentsSection } from '@/components/mobile/document-uploader';
 import { getBrowserSupabase } from '@/lib/supabase/client';
@@ -151,6 +152,20 @@ export default function MePage() {
         <ReadField label="계좌번호" value={w.account_number} mono />
         <ReadField label="예금주" value={w.account_holder} />
         <ReadField label="주소" value={w.address} />
+      </section>
+
+      <section className="px-7 pb-8">
+        <h2 className="mb-4 text-lg font-bold text-zinc-900">근로계약서</h2>
+        <Link
+          href="/m/contract"
+          className="flex items-center gap-3 rounded-[5px] bg-zinc-50 px-5 py-4 ring-1 ring-zinc-200 active:bg-zinc-100"
+        >
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white">
+            <FileSignature className="h-5 w-5" />
+          </span>
+          <span className="flex-1 text-lg font-bold text-zinc-900">근로계약서 확인·서명</span>
+          <ChevronRight className="h-5 w-5 text-zinc-400" />
+        </Link>
       </section>
 
       <DocumentsSection />

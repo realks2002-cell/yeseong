@@ -23,6 +23,8 @@ import {
   Bell,
   BellOff,
   ClipboardCheck,
+  FileSignature,
+  FileText,
   History,
   Smartphone,
   LogOut as LogOutIcon,
@@ -65,6 +67,13 @@ const groups: Group[] = [
       { label: '비용처리', href: '/expenses', icon: Receipt },
       { label: '장비 렌탈', href: '/equipment', icon: Wrench },
       { label: '현장증빙', href: '/admin/site-photos', icon: Images },
+    ],
+  },
+  {
+    label: '근로계약',
+    items: [
+      { label: '계약 현황', href: '/contracts', icon: FileSignature },
+      { label: '계약서 양식', href: '/contract-templates', icon: FileText },
     ],
   },
   {
