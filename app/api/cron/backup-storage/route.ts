@@ -76,6 +76,10 @@ export async function GET(req: Request) {
   let failed = 0;
   let bytes = 0;
   const perBucket: Array<{ bucket: string; total: number; uploaded: number; skipped: number; failed: number }> = [];
+  const errors: string[] = [];
+  const noteErr = (m: string) => {
+    if (errors.length < 8) errors.push(m);
+  };
 
   for (const b of buckets) {
     const objects = await listAll(sb, b.id);
@@ -100,21 +104,33 @@ export async function GET(req: Request) {
       if (dErr || !blob) {
         f++;
         failed++;
+        noteErr(`download ${key}: ${dErr?.message ?? 'no blob'}`);
         continue;
       }
-      const buf = Buffer.from(await blob.arrayBuffer());
-      const put = await client.fetch(r2Url(key), {
-        method: 'PUT',
-        body: buf,
-        headers: { 'Content-Type': blob.type || 'application/octet-stream' },
-      });
-      if (put.ok) {
-        u++;
-        uploaded++;
-        bytes += buf.length;
-      } else {
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      try {
+        // R2는 Content-Length 필수 — Node fetch가 chunked로 보내지 않도록 명시
+        const put = await client.fetch(r2Url(key), {
+          method: 'PUT',
+          body: buf,
+          headers: {
+            'Content-Type': blob.type || 'application/octet-stream',
+            'Content-Length': String(buf.byteLength),
+          },
+        });
+        if (put.ok) {
+          u++;
+          uploaded++;
+          bytes += buf.length;
+        } else {
+          f++;
+          failed++;
+          noteErr(`put ${key} [${put.status}]: ${(await put.text()).slice(0, 200)}`);
+        }
+      } catch (e) {
         f++;
         failed++;
+        noteErr(`put ${key} threw: ${(e as Error).message}`);
       }
     }
     perBucket.push({ bucket: b.id, total: objects.length, uploaded: u, skipped: s, failed: f });
@@ -127,5 +143,6 @@ export async function GET(req: Request) {
     failed,
     mb: +(bytes / 1024 / 1024).toFixed(2),
     buckets: perBucket,
+    errors,
   });
 }
