@@ -28,18 +28,12 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (!ws) return NextResponse.json({ error: '현장을 찾을 수 없습니다' }, { status: 404 });
 
-  // 현장에 배정된 양식들
-  const { data: links } = await admin
-    .from('yeseong_worksite_contract_templates')
-    .select('yeseong_contract_templates(id, title, body, wage_type, is_active)')
-    .eq('worksite_id', worksiteId);
-  const tpls = (links ?? [])
-    .map((l) => {
-      const rel = (l as unknown as { yeseong_contract_templates: TemplateLite | TemplateLite[] | null })
-        .yeseong_contract_templates;
-      return Array.isArray(rel) ? (rel[0] ?? null) : rel;
-    })
-    .filter((t): t is TemplateLite => !!t);
+  // 양식은 작업자 급여형태로만 매칭 — 전체 활성 양식 사용 (현장 지정 불필요)
+  const { data: tplRows } = await admin
+    .from('yeseong_contract_templates')
+    .select('id, title, body, wage_type, is_active')
+    .eq('is_active', true);
+  const tpls = (tplRows ?? []) as TemplateLite[];
 
   const { data: rpcWorkers, error } = await admin.rpc('yeseong_workers_at_worksite', {
     p_worksite_id: worksiteId,

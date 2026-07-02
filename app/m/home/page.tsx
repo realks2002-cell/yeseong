@@ -380,7 +380,7 @@ function ConfirmDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white px-7 pt-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:pb-7">
         <p className="text-center text-xl text-zinc-500">오늘 근무를</p>
         <p className="mt-2 text-center text-[44px] font-bold text-zinc-900">{hours}일로 등록할까요?</p>
         <p className="mt-3 text-center text-base text-zinc-500">등록 후 수정은 팀장님만 가능해요</p>

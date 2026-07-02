@@ -112,24 +112,28 @@ export default function SubcontractorsPage() {
                 <tr className="text-center text-[11px]">
                   <th className="px-3 py-2 font-medium w-10">#</th>
                   <th className="px-3 py-2 font-medium">전문건설사명</th>
+                  <th className="px-3 py-2 font-medium">대표자</th>
                   <th className="px-3 py-2 font-medium">사업자등록번호</th>
                   <th className="px-3 py-2 font-medium">연락처</th>
+                  <th className="px-3 py-2 font-medium">소재지</th>
                   <th className="px-3 py-2 font-medium w-20">상태</th>
                   <th className="px-3 py-2 font-medium w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D7D7D7]">
                 {list === null ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
+                  <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-[#9CA3AF]">등록된 전문건설사가 없습니다.</td></tr>
+                  <tr><td colSpan={8} className="py-10 text-center text-[#9CA3AF]">등록된 전문건설사가 없습니다.</td></tr>
                 ) : (
                   list.map((s, i) => (
                     <tr key={s.id} className={`hover:bg-[#F5F5F5] ${!s.is_active ? 'text-[#9CA3AF]' : ''}`}>
                       <td className="px-3 py-2 text-[#6B7280] tabular-nums">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">{s.name}</td>
+                      <td className="px-3 py-2 text-[#4B5563]">{s.representative ?? '-'}</td>
                       <td className="px-3 py-2 font-mono text-[#4B5563]">{s.business_number ?? '-'}</td>
                       <td className="px-3 py-2 font-mono text-[#4B5563]">{s.contact_phone ?? '-'}</td>
+                      <td className="px-3 py-2 text-[#4B5563] max-w-[220px] truncate" title={s.address ?? ''}>{s.address ?? '-'}</td>
                       <td className="px-3 py-2">
                         {s.is_active ? (
                           <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">활성</span>

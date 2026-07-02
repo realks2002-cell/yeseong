@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 
 const BUCKET = 'site-photos';
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'] as const;
-const ALLOWED_CATEGORIES = ['tbm', 'materials', 'general', 'expense'] as const;
+const ALLOWED_CATEGORIES = ['tbm', 'materials', 'expense'] as const;
 
 export async function POST(req: Request) {
   const sb = await getServerSupabase();

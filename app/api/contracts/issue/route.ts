@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
-import { resolveContractContext, snapshotToFrozenVars } from '@/lib/contract/context';
+import { resolveContractContext, snapshotToFrozenVars, subcontractorToCompany, type ContractCompany } from '@/lib/contract/context';
 import { freezeConditions } from '@/lib/contract/variables';
 import { pushContractIssued } from '@/lib/push/contract';
 
@@ -20,6 +20,9 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   // worksite_id 있으면(현장 모드) 그 현장으로 강제, 없으면(전화 모드) 작업자별 자기 현장 사용
   const worksiteId: string | null = body?.worksite_id ?? null;
+  const employerSubId: string | null =
+    typeof body?.employer_subcontractor_id === 'string' && body.employer_subcontractor_id
+      ? body.employer_subcontractor_id : null;
   const contractDate: string = body?.contract_date ?? '';
   const contractEndDate: string | null =
     typeof body?.contract_end_date === 'string' && body.contract_end_date ? body.contract_end_date : null;
@@ -41,11 +44,26 @@ export async function POST(req: Request) {
   }
 
   const admin = getServiceSupabase();
+
+  // 갑(전문건설사) — 배포 배치당 1회만 조회해 모든 계약서에 동결. 미선택 시 예성 상수 폴백.
+  let employerCompany: ContractCompany | undefined;
+  if (employerSubId) {
+    const { data: sub } = await admin
+      .from('yeseong_subcontractors')
+      .select('name, representative, business_number, contact_phone, address')
+      .eq('id', employerSubId)
+      .maybeSingle();
+    if (!sub) {
+      return NextResponse.json({ error: '선택한 전문건설사(갑)를 찾을 수 없습니다' }, { status: 400 });
+    }
+    employerCompany = subcontractorToCompany(sub);
+  }
+
   const issuedWorkerIds: string[] = [];
   const skipped: { worker_id: string; reason: string }[] = [];
 
   for (const workerId of workerIds) {
-    const ctx = await resolveContractContext(admin, workerId);
+    const ctx = await resolveContractContext(admin, workerId, employerCompany);
     if (!ctx || !ctx.worksite_id) {
       skipped.push({ worker_id: workerId, reason: '배정된 현장 없음' });
       continue;

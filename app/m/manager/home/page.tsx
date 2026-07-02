@@ -374,7 +374,7 @@ export default function ManagerHomePage() {
 
       {confirmMyHours !== null && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
-          <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
+          <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white px-7 pt-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:pb-7">
             <p className="text-center text-base text-zinc-500">{TODAY_LABEL} 내 출역</p>
             <p className="mt-2 text-center text-[28px] font-bold text-zinc-900">
               {confirmMyHours}일 제출할까요?
@@ -492,7 +492,7 @@ function ApproveAllDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white px-7 pt-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:pb-7">
         <p className="text-center text-base text-zinc-500">검토 대기 출역</p>
         <p className="mt-2 text-center text-[28px] font-bold text-zinc-900">
           {count}건 모두 승인할까요?
@@ -532,7 +532,7 @@ function RejectDialog({
   const [reason, setReason] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white px-7 pt-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:pb-7">
         <p className="text-center text-base text-zinc-500">반려 사유</p>
         <p className="mt-2 text-center text-[24px] font-bold text-zinc-900">
           {item.worker_name} · {item.hours}일

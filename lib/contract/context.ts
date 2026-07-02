@@ -17,6 +17,23 @@ export type ContractCompany = {
   address: string;
 };
 
+// 전문건설사 마스터 행 → 계약서 갑(사용자) 회사정보. 빈 항목은 빈 문자열.
+export function subcontractorToCompany(s: {
+  name: string;
+  representative: string | null;
+  business_number: string | null;
+  contact_phone: string | null;
+  address: string | null;
+}): ContractCompany {
+  return {
+    name: s.name ?? '',
+    ceo: s.representative ?? '',
+    bizNumber: s.business_number ?? '',
+    phone: s.contact_phone ?? '',
+    address: s.address ?? '',
+  };
+}
+
 export type ContractSnapshot = {
   company: ContractCompany;
   worker_name: string;
@@ -52,6 +69,8 @@ function displayRrn(plain: string | null, prefix: string | null, gender: string 
 export async function resolveContractContext(
   admin: SupabaseClient,
   workerId: string,
+  // 배포 시 관리자가 고른 갑(전문건설사) 회사정보. 없으면 예성 상수 폴백.
+  employerCompany?: ContractCompany,
 ): Promise<ContractContext | null> {
   const { data: w } = await admin
     .from('yeseong_workers')
@@ -74,24 +93,18 @@ export async function resolveContractContext(
   const subcontractor_id = ctx?.subcontractor_id ?? null;
   const subcontractor_name = ctx?.subcontractor_name ?? null;
 
+  // 양식은 작업자 급여형태(wage_type)로만 매칭 — 전체 활성 양식에서 선택 (현장 지정 불필요).
+  //   매사(월급/일급)는 pickTemplate에서 일급 양식으로 폴백.
   let template_id: string | null = null;
   let template_body: string | null = null;
   let template_title = '';
   let template_wage: string | null = null;
-  if (worksite_id) {
-    // 현장에 배정된 양식들 중 작업자 급여형태(wage_type)에 맞는 것 자동 선택 (공통 폴백)
-    const { data: links } = await admin
-      .from('yeseong_worksite_contract_templates')
-      .select('yeseong_contract_templates(id, title, body, wage_type, is_active)')
-      .eq('worksite_id', worksite_id);
-    const tpls = (links ?? [])
-      .map((l) => {
-        const rel = (l as unknown as { yeseong_contract_templates: TemplateLite | TemplateLite[] | null })
-          .yeseong_contract_templates;
-        return Array.isArray(rel) ? (rel[0] ?? null) : rel;
-      })
-      .filter((t): t is TemplateLite => !!t);
-    const picked = pickTemplate(w.wage_type ?? null, tpls);
+  {
+    const { data: tplRows } = await admin
+      .from('yeseong_contract_templates')
+      .select('id, title, body, wage_type, is_active')
+      .eq('is_active', true);
+    const picked = pickTemplate(w.wage_type ?? null, (tplRows ?? []) as TemplateLite[]);
     if (picked) {
       template_id = picked.id;
       template_body = picked.body;
@@ -101,7 +114,7 @@ export async function resolveContractContext(
   }
 
   const snapshot: ContractSnapshot = {
-    company: { ...CONTRACT_COMPANY },
+    company: employerCompany ? { ...employerCompany } : { ...CONTRACT_COMPANY },
     worker_name: w.name ?? '',
     rrn: displayRrn(w.rrn_plain, w.rrn_prefix, w.rrn_gender_digit),
     phone: w.phone ?? '',

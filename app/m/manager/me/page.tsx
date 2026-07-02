@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, ChevronDown, ChevronUp, MapPin, Users } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, MapPin, Users, FileSignature } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { DocumentsSection } from '@/components/mobile/document-uploader';
 import { getBrowserSupabase } from '@/lib/supabase/client';
@@ -199,6 +199,22 @@ export default function ManagerMePage() {
           <ChevronRight className="h-5 w-5 text-emerald-400" />
         </Link>
       </section>
+
+      {me.worker && !readOnly && (
+        <section className="px-7 pb-10">
+          <h2 className="mb-4 text-lg font-bold text-zinc-900">근로계약서</h2>
+          <Link
+            href="/m/contract"
+            className="flex items-center gap-3 rounded-[5px] bg-zinc-50 px-5 py-4 ring-1 ring-zinc-200 active:bg-zinc-100"
+          >
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white">
+              <FileSignature className="h-5 w-5" />
+            </span>
+            <span className="flex-1 text-lg font-bold text-zinc-900">근로계약서 확인·서명</span>
+            <ChevronRight className="h-5 w-5 text-zinc-400" />
+          </Link>
+        </section>
+      )}
 
       {me.worker && <DocumentsSection readOnly={readOnly} />}
     </MobileShell>

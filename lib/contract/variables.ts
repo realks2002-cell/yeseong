@@ -103,6 +103,7 @@ export function samplePreviewDoc(body: string, wageType: string | null = null): 
   snapshot: ContractSnapshot;
   contractDate: string;
   contractEndDate: string;
+  signDate: string;
   renderedBody: string;
 } {
   const snapshot: ContractSnapshot = {
@@ -134,6 +135,7 @@ export function samplePreviewDoc(body: string, wageType: string | null = null): 
     snapshot,
     contractDate: SAMPLE_CONTRACT_DATE,
     contractEndDate: SAMPLE_CONTRACT_END_DATE,
+    signDate: SAMPLE_CONTRACT_DATE,
     renderedBody,
   };
 }

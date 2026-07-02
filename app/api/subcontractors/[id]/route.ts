@@ -26,6 +26,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       typeof body.contact_phone === 'string' && body.contact_phone.trim()
         ? body.contact_phone.trim() : null;
   }
+  if ('representative' in (body ?? {})) {
+    patch.representative =
+      typeof body.representative === 'string' && body.representative.trim()
+        ? body.representative.trim() : null;
+  }
+  if ('address' in (body ?? {})) {
+    patch.address =
+      typeof body.address === 'string' && body.address.trim()
+        ? body.address.trim() : null;
+  }
   if (typeof body?.is_active === 'boolean') {
     patch.is_active = body.is_active;
   }
@@ -37,7 +47,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from('yeseong_subcontractors')
     .update(patch)
     .eq('id', id)
-    .select('id, name, business_number, contact_phone, is_active, created_at')
+    .select('id, name, business_number, contact_phone, representative, address, is_active, created_at')
     .single();
 
   if (error) {

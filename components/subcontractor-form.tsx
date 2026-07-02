@@ -9,6 +9,8 @@ export type Subcontractor = {
   name: string;
   business_number: string | null;
   contact_phone: string | null;
+  representative: string | null;
+  address: string | null;
   is_active: boolean;
   created_at: string;
 };
@@ -17,6 +19,8 @@ export type SubcontractorInput = {
   name: string;
   business_number: string;
   contact_phone: string;
+  representative: string;
+  address: string;
   is_active: boolean;
 };
 
@@ -31,6 +35,8 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
   const [name, setName] = useState(initial?.name ?? '');
   const [businessNumber, setBusinessNumber] = useState(initial?.business_number ?? '');
   const [contactPhone, setContactPhone] = useState(initial?.contact_phone ?? '');
+  const [representative, setRepresentative] = useState(initial?.representative ?? '');
+  const [address, setAddress] = useState(initial?.address ?? '');
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,6 +45,8 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
     setName(initial?.name ?? '');
     setBusinessNumber(initial?.business_number ?? '');
     setContactPhone(initial?.contact_phone ?? '');
+    setRepresentative(initial?.representative ?? '');
+    setAddress(initial?.address ?? '');
     setIsActive(initial?.is_active ?? true);
   }, [initial]);
 
@@ -52,6 +60,8 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
         name: name.trim(),
         business_number: businessNumber.trim(),
         contact_phone: contactPhone.trim(),
+        representative: representative.trim(),
+        address: address.trim(),
         is_active: isActive,
       });
     } catch (e) {
@@ -95,6 +105,29 @@ export function SubcontractorForm({ initial, onSubmit, onCancel, title }: Props)
               disabled={loading}
             />
           </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sc-rep">대표자</label>
+            <Input
+              id="sc-rep"
+              value={representative}
+              onChange={(e) => setRepresentative(e.target.value)}
+              placeholder="(선택) 계약서 갑 대표자명"
+              disabled={loading}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sc-addr">소재지</label>
+            <Input
+              id="sc-addr"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="(선택) 계약서 갑 소재지"
+              disabled={loading}
+            />
+          </div>
+          <p className="text-xs text-[#6B7280]">
+            대표자·소재지·사업자번호·연락처는 계약서 배포 시 이 회사를 <b>갑(사용자)</b>으로 고를 때 그대로 들어갑니다.
+          </p>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

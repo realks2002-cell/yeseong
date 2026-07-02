@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 
 const BUCKET = 'site-photos';
 const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED_CATEGORIES = ['tbm', 'materials', 'general', 'expense'] as const;
+const ALLOWED_CATEGORIES = ['tbm', 'materials', 'expense'] as const;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const MAX_MEMO_LEN = 500;
 

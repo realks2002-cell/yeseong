@@ -6,13 +6,12 @@ import { isAdminEmail } from '@/lib/auth/admin-guard';
 export const runtime = 'nodejs';
 
 const BUCKET = 'site-photos';
-const ALLOWED_CATEGORIES = ['tbm', 'materials', 'general', 'expense'] as const;
+const ALLOWED_CATEGORIES = ['tbm', 'materials', 'expense'] as const;
 const MAX_PHOTOS = 300;
 
 const CATEGORY_LABEL: Record<string, string> = {
-  tbm: 'TBM',
+  tbm: '안전및공사사진',
   materials: '자재송장',
-  general: '일반',
   expense: '비용영수증',
 };
 

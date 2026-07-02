@@ -44,7 +44,7 @@ export function AboutSection() {
 
             <div className="mt-5 flex justify-center">
               <a
-                href="/(주)예성건축지명원_26.01.27.pdf"
+                href="/예성건축지명원_26.01.27.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-[0.4rem] rounded-full bg-blue-800 px-[1.2rem] py-[0.6rem] text-xs font-bold text-white transition-all hover:bg-blue-900"

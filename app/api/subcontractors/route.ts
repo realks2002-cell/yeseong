@@ -12,7 +12,7 @@ export async function GET(req: Request) {
 
   let query = sb
     .from('yeseong_subcontractors')
-    .select('id, name, business_number, contact_phone, is_active, created_at')
+    .select('id, name, business_number, contact_phone, representative, address, is_active, created_at')
     .order('name');
   if (!includeArchived) query = query.eq('is_active', true);
 
@@ -35,11 +35,15 @@ export async function POST(req: Request) {
     ? body.business_number.trim() : null;
   const contact_phone = typeof body?.contact_phone === 'string' && body.contact_phone.trim()
     ? body.contact_phone.trim() : null;
+  const representative = typeof body?.representative === 'string' && body.representative.trim()
+    ? body.representative.trim() : null;
+  const address = typeof body?.address === 'string' && body.address.trim()
+    ? body.address.trim() : null;
 
   const { data, error } = await sb
     .from('yeseong_subcontractors')
-    .insert({ name, business_number, contact_phone })
-    .select('id, name, business_number, contact_phone, is_active, created_at')
+    .insert({ name, business_number, contact_phone, representative, address })
+    .select('id, name, business_number, contact_phone, representative, address, is_active, created_at')
     .single();
 
   if (error) {

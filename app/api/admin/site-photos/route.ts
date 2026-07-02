@@ -6,14 +6,14 @@ export const runtime = 'nodejs';
 
 const BUCKET = 'site-photos';
 const SIGNED_TTL_SEC = 600;
-const ALLOWED_CATEGORIES = ['tbm', 'materials', 'general', 'expense'] as const;
+const ALLOWED_CATEGORIES = ['tbm', 'materials', 'expense'] as const;
 
 type Row = {
   id: string;
   worker_id: string;
   worksite_id: string;
   photo_date: string;
-  category: 'tbm' | 'materials' | 'general' | 'expense';
+  category: 'tbm' | 'materials' | 'expense';
   storage_path: string;
   mime_type: string;
   file_size: number;
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
   const categoryRaw = url.searchParams.get('category');
   const category =
     categoryRaw && (ALLOWED_CATEGORIES as readonly string[]).includes(categoryRaw)
-      ? (categoryRaw as 'tbm' | 'materials' | 'general' | 'expense')
+      ? (categoryRaw as 'tbm' | 'materials' | 'expense')
       : null;
 
   const admin = getServiceSupabase();

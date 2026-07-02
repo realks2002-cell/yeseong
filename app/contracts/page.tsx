@@ -28,6 +28,7 @@ type Detail = {
   rendered_body: string;
   contract_date: string;
   contract_end_date: string | null;
+  sign_date: string | null;
   signed_at: string | null;
   issued_at: string;
   signature_data_url: string | null;
@@ -92,7 +93,7 @@ export default function AdminContractsPage() {
 
   return (
     <AdminShell>
-      <div className="mx-auto max-w-6xl p-6 space-y-5">
+      <div className="max-w-6xl p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-[#091413]">계약 현황</h1>
@@ -205,6 +206,8 @@ function IssueModal({
   onIssued: () => void;
 }) {
   const [mode, setMode] = useState<'worksite' | 'phone'>('worksite');
+  const [employers, setEmployers] = useState<{ id: string; name: string }[]>([]);
+  const [employerId, setEmployerId] = useState('');
   const [contractDate, setContractDate] = useState(kstToday());
   const [contractEndDate, setContractEndDate] = useState('');
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -221,6 +224,15 @@ function IssueModal({
   const [phoneText, setPhoneText] = useState('');
   const [phoneRows, setPhoneRows] = useState<PhoneRow[] | null>(null);
   const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/subcontractors', { cache: 'no-store' }).then(async (r) => {
+      if (r.ok) {
+        const d: { id: string; name: string }[] = await r.json();
+        setEmployers(d.map((s) => ({ id: s.id, name: s.name })));
+      }
+    });
+  }, []);
 
   function switchMode(m: 'worksite' | 'phone') {
     setMode(m);
@@ -296,6 +308,7 @@ function IssueModal({
     const payload: Record<string, unknown> = {
       worker_ids: Array.from(checked),
       contract_date: contractDate,
+      employer_subcontractor_id: employerId,
     };
     if (contractEndDate) payload.contract_end_date = contractEndDate;
     if (mode === 'worksite') payload.worksite_id = worksiteId;
@@ -316,7 +329,7 @@ function IssueModal({
   }
 
   const canIssue =
-    !busy && checked.size > 0 && (mode === 'phone' || (!!worksiteId && hasTemplate));
+    !busy && !!employerId && checked.size > 0 && (mode === 'phone' || (!!worksiteId && hasTemplate));
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -343,6 +356,25 @@ function IssueModal({
 
           {err && <p className="rounded-[5px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{err}</p>}
           {result && <p className="rounded-[5px] bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{result}</p>}
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[#091413]">
+              사용자 (갑) · 전문건설사 <span className="text-red-600">*</span>
+            </label>
+            <select
+              value={employerId}
+              onChange={(e) => setEmployerId(e.target.value)}
+              className="h-10 w-full rounded-[5px] border border-[#D7D7D7] bg-white px-3 text-sm text-[#091413] focus:outline-none focus:ring-2 focus:ring-[#447D9B]"
+            >
+              <option value="">전문건설사 선택…</option>
+              {employers.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-[#6B7280]">
+              계약서 ‘갑(사용자)’으로 들어갈 전문건설사입니다. 대표자·소재지 등은 <b>전문건설사 마스터</b> 값이 그대로 동결됩니다.
+            </p>
+          </div>
 
           <div className="flex flex-wrap items-end gap-3">
             <div>
@@ -498,8 +530,10 @@ function ContractDetailModal({
   const docRef = useRef<HTMLDivElement>(null);
   const [dateInput, setDateInput] = useState(detail.contract_date);
   const [endInput, setEndInput] = useState(detail.contract_end_date ?? '');
+  const [signInput, setSignInput] = useState(detail.sign_date ?? '');
   const [bodyInput, setBodyInput] = useState(detail.rendered_body);
   const [savingDate, setSavingDate] = useState(false);
+  const [savingSign, setSavingSign] = useState(false);
   const [savingBody, setSavingBody] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const issued = detail.status === 'issued';
@@ -525,6 +559,17 @@ function ContractDetailModal({
     setSavingDate(false);
     if (ok) {
       onLocal({ contract_date: dateInput, contract_end_date: endInput || null });
+      onChanged();
+    }
+  }
+  const signDirty = signInput !== (detail.sign_date ?? '');
+  async function saveSign() {
+    if (!signDirty) return;
+    setSavingSign(true);
+    const ok = await patch({ sign_date: signInput || null });
+    setSavingSign(false);
+    if (ok) {
+      onLocal({ sign_date: signInput || null });
       onChanged();
     }
   }
@@ -571,13 +616,22 @@ function ContractDetailModal({
           {/* 컨트롤 */}
           <div className="flex flex-wrap items-end gap-3 rounded-[5px] bg-[#F5F5F5] p-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-[#6B7280]">계약기간 (수정 가능 · 종료일 비우면 ‘공종 종료일’)</label>
+              <label className="mb-1 block text-xs font-medium text-[#6B7280]">계약기간</label>
               <div className="flex items-center gap-2">
                 <Input type="date" value={dateInput} onChange={(e) => setDateInput(e.target.value)} className="h-9 w-[150px]" />
                 <span className="text-[#6B7280]">~</span>
                 <Input type="date" value={endInput} min={dateInput} onChange={(e) => setEndInput(e.target.value)} className="h-9 w-[150px]" />
                 <Button size="sm" onClick={saveDate} disabled={savingDate || !periodDirty}>
                   {savingDate ? '저장…' : '기간 저장'}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[#6B7280]">서명일 (계약일 · 서명란 날짜)</label>
+              <div className="flex items-center gap-2">
+                <Input type="date" value={signInput} onChange={(e) => setSignInput(e.target.value)} className="h-9 w-[150px]" />
+                <Button size="sm" onClick={saveSign} disabled={savingSign || !signDirty}>
+                  {savingSign ? '저장…' : '서명일 저장'}
                 </Button>
               </div>
             </div>
@@ -624,6 +678,7 @@ function ContractDetailModal({
               snapshot={detail.snapshot}
               contractDate={dateInput}
               contractEndDate={endInput || null}
+              signDate={signInput || null}
               renderedBody={issued ? bodyInput : detail.rendered_body}
               signatureUrl={detail.signature_data_url}
             />

@@ -175,15 +175,15 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="sticky top-0 h-svh w-[168px] shrink-0 border-r border-[#D7D7D7] bg-white flex flex-col">
+    <aside className="sticky top-0 h-svh w-[180px] shrink-0 border-r border-[#D7D7D7] bg-white flex flex-col">
       <Link
         href="/dashboard"
-        className="flex items-center gap-2 px-5 h-14 border-b border-[#D7D7D7] text-[#091413] font-semibold"
+        className="flex items-center gap-2 px-5 h-14 border-b border-[#D7D7D7] text-[#091413] font-bold"
       >
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-[#273F4F] text-white">
-          <Hammer className="h-4 w-4" />
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-[5px] bg-[#273F4F] text-white">
+          <Hammer className="h-5 w-5" />
         </span>
-        <span className="text-[12px]">(주)예성건축</span>
+        <span className="text-[14px] font-bold">(주)예성건축</span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
@@ -195,13 +195,13 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={() => toggleGroup(group.label)}
-                className="mb-1.5 flex w-full items-center justify-between rounded-[5px] bg-[#273F4F] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white"
+                className="mb-1.5 flex w-full items-center justify-between rounded-[5px] bg-[#273F4F] px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
               >
                 {group.label}
                 <ChevronDown className={cn('h-3 w-3 transition-transform', isCollapsed && '-rotate-90')} />
               </button>
             ) : (
-              <p className="mb-1.5 rounded-[5px] bg-[#273F4F] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
+              <p className="mb-1.5 rounded-[5px] bg-[#273F4F] px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
                 {group.label}
               </p>
             )}
@@ -222,7 +222,7 @@ export function Sidebar() {
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1">{item.label}</span>
+                      <span className="flex-1 whitespace-nowrap">{item.label}</span>
                       {item.href === '/orders' && orderCount > 0 && (
                         <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
                           {orderCount}

@@ -14,28 +14,25 @@ import { pickPhoto } from '@/lib/capacitor/photo-picker';
 import { compressImage } from '@/lib/image/compress';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 
-export type Category = 'tbm' | 'materials' | 'general' | 'expense';
+export type Category = 'tbm' | 'materials' | 'expense';
 
 const BUCKET = 'site-photos';
 
 export const CATEGORY_LABEL: Record<Category, string> = {
-  tbm: 'TBM',
+  tbm: '안전 및 공사사진',
   materials: '자재·송장',
-  general: '일반',
   expense: '비용·영수증',
 };
 
 const CATEGORY_DESC: Record<Category, string> = {
-  tbm: '작업 전 안전점검 사진',
+  tbm: '안전점검·공사 현장 사진',
   materials: '자재 입고·송장 사진',
-  general: '현장 상황·이슈 사진',
   expense: '식대·부자재·운영 영수증',
 };
 
 const CATEGORY_PLACEHOLDER: Record<Category, string> = {
   tbm: '예) 오늘 안전점검 5명 참석, 추락방지대 점검 완료',
   materials: '예) 시멘트 50포대 입고, 자재 송장 #20260530-014',
-  general: '예) 지하 1층 누수 발견',
   expense: '예) 점심 식대 5인분, 신한카드',
 };
 

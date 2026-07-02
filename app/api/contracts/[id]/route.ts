@@ -21,7 +21,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { data, error } = await admin
     .from('yeseong_worker_contracts')
-    .select('id, status, snapshot, rendered_body, contract_date, contract_end_date, signed_at, issued_at, signature_path')
+    .select('id, status, snapshot, rendered_body, contract_date, contract_end_date, sign_date, signed_at, issued_at, signature_path')
     .eq('id', id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -35,6 +35,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     rendered_body: data.rendered_body,
     contract_date: data.contract_date,
     contract_end_date: data.contract_end_date,
+    sign_date: data.sign_date,
     signed_at: data.signed_at,
     issued_at: data.issued_at,
     signature_data_url: signatureUrl,
@@ -69,6 +70,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
+  // 서명일(서명란 날짜) — 서명 후에도 관리자가 수정 가능 (계약기간과 별개)
+  if (body?.sign_date !== undefined) {
+    const d = body.sign_date;
+    if (d === null || d === '') {
+      patch.sign_date = null;
+    } else if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      patch.sign_date = d;
+    } else {
+      return NextResponse.json({ error: '서명일 형식이 올바르지 않습니다 (YYYY-MM-DD)' }, { status: 400 });
+    }
+  }
+
   if (body?.rendered_body !== undefined) {
     if (typeof body.rendered_body !== 'string') {
       return NextResponse.json({ error: '본문 형식이 올바르지 않습니다' }, { status: 400 });
@@ -94,7 +107,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     .from('yeseong_worker_contracts')
     .update(patch)
     .eq('id', id)
-    .select('id, contract_date, contract_end_date, rendered_body, status')
+    .select('id, contract_date, contract_end_date, sign_date, rendered_body, status')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);

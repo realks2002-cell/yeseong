@@ -6,19 +6,18 @@ import { Button } from '@/components/ui/button';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
-import { Camera, Package, Image as ImageIcon, Receipt, Filter, Download, Trash2, RefreshCw } from 'lucide-react';
+import { Camera, Package, Receipt, Filter, Download, Trash2, RefreshCw } from 'lucide-react';
 
-type Category = 'tbm' | 'materials' | 'general' | 'expense';
+type Category = 'tbm' | 'materials' | 'expense';
 type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
 const CATEGORY_META: Record<Category, { label: string; icon: typeof Camera; variant: BadgeVariant }> = {
-  tbm: { label: 'TBM', icon: Camera, variant: 'success' },
+  tbm: { label: '안전 및 공사사진', icon: Camera, variant: 'success' },
   materials: { label: '자재·송장', icon: Package, variant: 'warning' },
-  general: { label: '일반', icon: ImageIcon, variant: 'primary' },
   expense: { label: '비용·영수증', icon: Receipt, variant: 'destructive' },
 };
 // expense(비용·영수증)는 /expenses 전용 — 이 화면 그룹에는 나타나지 않음
-const CATEGORY_ORDER: Category[] = ['tbm', 'materials', 'general'];
+const CATEGORY_ORDER: Category[] = ['tbm', 'materials'];
 
 type ApiPhoto = {
   id: string;
@@ -230,9 +229,8 @@ export default function SitePhotosPage() {
               options={[
                 // 비용·영수증은 별도 [영수증] 메뉴(/expenses)에서 — 여기서는 제외
                 { value: '', label: '전체' },
-                { value: 'tbm', label: 'TBM' },
+                { value: 'tbm', label: '안전 및 공사사진' },
                 { value: 'materials', label: '자재·송장' },
-                { value: 'general', label: '일반' },
               ]}
             />
             <div className="flex items-end gap-2">

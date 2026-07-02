@@ -22,6 +22,42 @@ const LABEL_BG = '#F2F4F6';
 const LABEL_INK = '#4B5563';
 const LINE = '#D7D7D7';
 
+// 계약조건 본문 렌더 — {{signature}} 토큰 자리에 을 서명 이미지를 인라인 삽입.
+//   서명 전엔 밑줄(빈 서명란)로 표시. 나머지는 pre-wrap 텍스트 그대로.
+function renderConditions(text: string, signatureUrl?: string | null): React.ReactNode {
+  const trimmed = text.trim();
+  if (!trimmed) return '계약 조건 본문이 아직 등록되지 않았습니다. 관리자에게 문의하세요.';
+  const token = /\{\{\s*signature\s*\}\}/g;
+  if (!token.test(trimmed)) return trimmed;
+  const parts = trimmed.split(token);
+  return parts.map((part, i) => (
+    <span key={i}>
+      {part}
+      {/* 서명은 레이아웃 폭 0으로 두고 절대위치로 덮어 얹음 → 뒤 텍스트((인)) 안 밀림.
+          서명 전(미리보기 등)엔 아무것도 그리지 않음. */}
+      {i < parts.length - 1 && signatureUrl && (
+        <span style={{ position: 'relative', display: 'inline-block', width: 0, verticalAlign: 'middle' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={signatureUrl}
+            alt="서명"
+            crossOrigin="anonymous"
+            style={{
+              // left:0 → 서명이 토큰 지점에서 오른쪽((인) 쪽)으로 뻗어 그 위에 덮임(원래 날인 자리).
+              position: 'absolute',
+              left: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              height: 44,
+              maxWidth: 120,
+            }}
+          />
+        </span>
+      )}
+    </span>
+  ));
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ background: NAVY, color: '#ffffff', padding: '8px 12px', fontSize: 13, fontWeight: 600 }}>
@@ -70,14 +106,15 @@ function Row({
 
 export type ContractDocumentData = {
   snapshot: ContractSnapshot;
-  contractDate: string; // ISO YYYY-MM-DD (live, 계약시작일)
+  contractDate: string; // ISO YYYY-MM-DD (live, 계약기간 시작일)
   contractEndDate?: string | null; // ISO YYYY-MM-DD (live, 계약종료일·없으면 공종 종료일)
+  signDate?: string | null; // ISO YYYY-MM-DD (서명란 날짜=계약일·서명일. 계약기간과 별개. 서명 전 null)
   renderedBody: string; // freeze된 계약조건 (날짜 토큰만 남아있음)
   signatureUrl?: string | null;
 };
 
 export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentData>(
-  function ContractDocument({ snapshot, contractDate, contractEndDate, renderedBody, signatureUrl }, ref) {
+  function ContractDocument({ snapshot, contractDate, contractEndDate, signDate, renderedBody, signatureUrl }, ref) {
     const s = snapshot;
     // 회사정보: 서명본은 동결된 스냅샷 값, 미서명/구버전은 현재 상수 폴백
     const company = s.company ?? CONTRACT_COMPANY;
@@ -98,6 +135,9 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentData>
           fontFamily: '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif',
           fontSize: 13,
           lineHeight: 1.6,
+          // 좁은 모바일 폭에서 라벨/값 4칸 테이블이 글자 단위로 찌그러지는 것 방지.
+          // 부모의 overflow-x-auto와 함께 가로 스크롤로 처리(웹 넓은 화면엔 영향 없음).
+          minWidth: 560,
         }}
       >
         {/* 타이틀 */}
@@ -135,14 +175,16 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentData>
           <div style={{ border: `1px solid ${LINE}`, borderRadius: 5, overflow: 'hidden' }}>
             <SectionHeader>계약 조건</SectionHeader>
             <div style={{ padding: 16, whiteSpace: 'pre-wrap', color: '#374151', fontSize: 13, lineHeight: 1.7 }}>
-              {conditions.trim() || '계약 조건 본문이 아직 등록되지 않았습니다. 관리자에게 문의하세요.'}
+              {renderConditions(conditions, signatureUrl)}
             </div>
           </div>
 
-          {/* 서명란 (엑셀 하단부) — 계약일 + 사용자(갑) + 근로자(을) */}
-          <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 500, margin: '8px 0 4px' }}>
-            {formatKoreanDate(contractDate)}
-          </p>
+          {/* 서명란 (엑셀 하단부) — 계약일(서명일) + 사용자(갑) + 근로자(을). 서명 전엔 날짜 없음 */}
+          {signDate && (
+            <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 500, margin: '8px 0 4px' }}>
+              {formatKoreanDate(signDate)}
+            </p>
+          )}
 
           {/* 사용자 (갑) */}
           <div style={{ border: `1px solid ${LINE}`, borderRadius: 5, overflow: 'hidden' }}>

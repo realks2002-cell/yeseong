@@ -41,12 +41,18 @@ export async function POST(req: Request) {
   const uploaded = await uploadSignature(admin, workerId, dataUrl);
   if ('error' in uploaded) return NextResponse.json({ error: uploaded.error }, { status: 500 });
 
+  const now = new Date();
+  // 서명일(서명란 날짜)을 서명하는 순간의 날짜(KST)로 초기 저장. 이후 관리자가 수정 가능.
+  //   계약기간(contract_date~contract_end_date)과는 별개 컬럼.
+  const signDateKst = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
   const { error: updErr } = await admin
     .from('yeseong_worker_contracts')
     .update({
       status: 'signed',
       signature_path: uploaded.path,
-      signed_at: new Date().toISOString(),
+      signed_at: now.toISOString(),
+      sign_date: signDateKst,
     })
     .eq('id', contractId)
     .eq('status', 'issued'); // 동시 서명 방지

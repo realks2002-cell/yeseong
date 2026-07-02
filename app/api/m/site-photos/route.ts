@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 
 const BUCKET = 'site-photos';
 const SIGNED_TTL_SEC = 300;
-const ALLOWED_CATEGORIES = ['tbm', 'materials', 'general', 'expense'] as const;
+const ALLOWED_CATEGORIES = ['tbm', 'materials', 'expense'] as const;
 
 // 팀장 미러(보기 전용): 관리자가 선택한 팀장의 worker 사진 조회.
 //   팀장=작업자([[yeseong_manager_is_worker]]) — 팀장 phone과 동일한 worker 행 사용.
@@ -31,7 +31,7 @@ type Row = {
   id: string;
   worksite_id: string;
   photo_date: string;
-  category: 'tbm' | 'materials' | 'general' | 'expense';
+  category: 'tbm' | 'materials' | 'expense';
   storage_path: string;
   mime_type: string;
   file_size: number;
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
   const categoryRaw = url.searchParams.get('category');
   const category =
     categoryRaw && (ALLOWED_CATEGORIES as readonly string[]).includes(categoryRaw)
-      ? (categoryRaw as 'tbm' | 'materials' | 'general' | 'expense')
+      ? (categoryRaw as 'tbm' | 'materials' | 'expense')
       : null;
 
   let query = admin

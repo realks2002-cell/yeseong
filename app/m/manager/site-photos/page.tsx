@@ -41,7 +41,7 @@ export default function ManagerSitePhotosPage() {
 
       {ready ? (
         <SitePhotosSection
-          categories={['tbm', 'materials', 'general', 'expense']}
+          categories={['tbm', 'materials', 'expense']}
           readOnly={readOnly}
           mirrorId={mirrorId}
         />

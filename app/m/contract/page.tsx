@@ -1,6 +1,5 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Download, FileSignature, Loader2 } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -15,6 +14,7 @@ type Doc = {
   snapshot: ContractSnapshot;
   contract_date: string;
   contract_end_date: string | null;
+  sign_date: string | null;
   rendered_body: string;
   signature_data_url: string | null;
   signed_at?: string;
@@ -91,13 +91,13 @@ export default function WorkerContractPage() {
   return (
     <MobileShell>
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-zinc-100 bg-white/90 px-4 py-3 backdrop-blur">
-        <Link href="/m/me" aria-label="뒤로" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 active:bg-zinc-100">
+        <button type="button" onClick={() => router.back()} aria-label="뒤로" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 active:bg-zinc-100">
           <ChevronLeft className="h-6 w-6" />
-        </Link>
+        </button>
         <h1 className="text-lg font-bold text-zinc-900">근로계약서</h1>
       </div>
 
-      <div className="px-4 py-4">
+      <div className="px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         {error && (
           <p className="mb-3 rounded-[8px] bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>
         )}
@@ -137,6 +137,7 @@ export default function WorkerContractPage() {
                 snapshot={resp.doc.snapshot}
                 contractDate={resp.doc.contract_date}
                 contractEndDate={resp.doc.contract_end_date}
+                signDate={resp.doc.sign_date}
                 renderedBody={resp.doc.rendered_body}
                 signatureUrl={resp.doc.signature_data_url}
               />

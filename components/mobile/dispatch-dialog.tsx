@@ -26,7 +26,7 @@ export function DispatchDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center">
-      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white p-7">
+      <div className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white px-7 pt-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:pb-7">
         <p className="text-center text-xl font-bold text-zinc-900">파견 근무 등록</p>
         <p className="mt-1 text-center text-sm text-zinc-500">오늘 일한 다른 현장을 선택하세요</p>
 
