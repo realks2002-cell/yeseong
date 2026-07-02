@@ -3,10 +3,10 @@
 // 모바일 본인 서류 업로드/조회/삭제 통합 컴포넌트.
 //   - 3개 doc_type을 한 컴포넌트가 다 다룸: docType prop으로 분기
 //   - 사진 클릭 → 큰 사진 모달 (PhotoViewer 재사용)
-//   - 호버 없는 모바일이라 삭제 X 아이콘은 항상 표시
+//   - 증빙 보존 정책: 등록한 문서는 삭제 불가 (신분증·통장은 교체만, 이수증은 추가만)
 
 import { useCallback, useEffect, useState } from 'react';
-import { Camera, Image as ImageIcon, Plus, RefreshCw, Loader2, X, ImageOff } from 'lucide-react';
+import { Camera, Image as ImageIcon, Plus, RefreshCw, Loader2, ImageOff } from 'lucide-react';
 import { ActionSheet } from '@/components/mobile/action-sheet';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
 import { pickPhoto } from '@/lib/capacitor/photo-picker';
@@ -103,7 +103,6 @@ export function DocumentsSection({ readOnly = false }: { readOnly?: boolean }) {
             current={byType('certificate')}
             readOnly={readOnly}
             onUploaded={load}
-            onDeleted={load}
             onView={setViewing}
           />
         </div>
@@ -166,7 +165,6 @@ function MultiSlot({
   current,
   readOnly,
   onUploaded,
-  onDeleted,
   onView,
 }: {
   docType: 'certificate';
@@ -175,7 +173,6 @@ function MultiSlot({
   current: ApiDoc[];
   readOnly: boolean;
   onUploaded: () => void;
-  onDeleted: () => void;
   onView: (p: Photo) => void;
 }) {
   const canAdd = current.length < maxCount;
@@ -188,7 +185,6 @@ function MultiSlot({
               key={c.id}
               doc={toView(c, `${title} ${i + 1}`)}
               onView={onView}
-              onDelete={readOnly ? undefined : () => deleteDoc(c.id, onDeleted)}
               aspect="aspect-[4/3]"
             />
           ))}
@@ -308,17 +304,6 @@ function UploadButton({
   );
 }
 
-async function deleteDoc(docId: string, onDeleted: () => void) {
-  if (!confirm('이 사진을 삭제하시겠습니까?')) return;
-  const res = await fetch(`/api/m/documents/${docId}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    alert(j.error || '삭제 실패');
-    return;
-  }
-  onDeleted();
-}
-
 function toView(d: ApiDoc, label: string): ViewDoc {
   return { id: d.id, url: d.signed_url ?? '', label, uploadedAt: d.created_at };
 }
@@ -350,13 +335,11 @@ function Card({
 function Thumb({
   doc,
   onView,
-  onDelete,
   aspect,
   maxWidth = '',
 }: {
   doc: ViewDoc;
   onView: (p: Photo) => void;
-  onDelete?: () => void;
   aspect: string;
   maxWidth?: string;
 }) {
@@ -371,16 +354,6 @@ function Thumb({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={doc.url} alt={doc.label} className="h-full w-full object-cover" loading="lazy" />
       </button>
-      {onDelete && (
-        <button
-          type="button"
-          onClick={onDelete}
-          className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white active:bg-black/80"
-          title="삭제"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
     </div>
   );
 }

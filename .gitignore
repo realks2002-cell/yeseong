@@ -52,3 +52,6 @@ supabase/.temp/
 /test-results/
 /playwright-report/
 keystore/
+
+# Storage 백업 (개인정보 포함 — 커밋 금지)
+/storage-backups/
