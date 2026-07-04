@@ -100,7 +100,7 @@ export function AlwaysLocationPrompt({
             <li>• <strong className="text-zinc-800">수집 목적</strong>: 현장 출역 확인 및 현장 도착 여부 검증</li>
             <li>• <strong className="text-zinc-800">수집 항목</strong>: GPS 좌표 (위도·경도)</li>
             <li>• <strong className="text-zinc-800">사용 시점</strong>: 근무시간 중 주기적 수집</li>
-            <li>• <strong className="text-zinc-800">보관 기간</strong>: 30일 후 자동 삭제, 제3자 제공 없음</li>
+            <li>• <strong className="text-zinc-800">보관 기간</strong>: 5일 후 자동 삭제, 제3자 제공 없음</li>
           </ul>
 
           <div className="mt-6 rounded-[10px] bg-blue-50 p-4">

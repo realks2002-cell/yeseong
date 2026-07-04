@@ -52,7 +52,7 @@ export default function PrivacyPage() {
 
       <Section title="4. 보유 및 이용 기간">
         <ul className="mt-2 list-disc space-y-1.5 pl-5">
-          <li><b>위치 정보</b>: 수집일로부터 30일 후 자동 삭제</li>
+          <li><b>위치 정보</b>: 수집일로부터 5일 후 자동 삭제</li>
           <li><b>급여·정산 및 신원 정보</b>: 「소득세법」 등 관계 법령에서 정한 기간 동안 보관 후 파기(예: 임금대장 등 관련 법정 보존기간)</li>
           <li>그 외 정보는 수집·이용 목적 달성 시 지체 없이 파기합니다.</li>
         </ul>

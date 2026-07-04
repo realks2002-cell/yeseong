@@ -5,6 +5,10 @@
     {
       "path": "/api/cron/backup-storage",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-gps",
+      "schedule": "0 19 * * *"
     }
   ]
 }

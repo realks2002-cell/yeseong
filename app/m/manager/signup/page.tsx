@@ -49,7 +49,9 @@ type CheckResult = {
   prefilled: Prefilled | null;
 };
 
-const CONSENT_VERSION = '1.0';
+const CONSENT_VERSION = '1.1';
+// 동의 표시는 "이 설치(기기)"에 묶는다 — 재설치하면 플래그가 사라져 다시 뜬다.
+const CONSENT_ACK_KEY = `consent-ack-${CONSENT_VERSION}`;
 
 const FIELD_TO_MODE: Record<string, Mode> = {
   identity: 'signup_identity',
@@ -110,6 +112,7 @@ export default function ManagerSignupPage() {
   // 동의 (PIPA)
   const [consentPersonal, setConsentPersonal] = useState(false);
   const [consentRrn, setConsentRrn] = useState(false);
+  const [consentLocation, setConsentLocation] = useState(false);
   const [consentForeignId, setConsentForeignId] = useState(false);
   const [consentThirdParty, setConsentThirdParty] = useState(false);
 
@@ -120,6 +123,8 @@ export default function ManagerSignupPage() {
     'identity', 'rrn', 'address', 'account', 'work',
   ]);
   const [prefilled, setPrefilled] = useState<Prefilled | null>(null);
+  // 로그인 경로(기존 가입 팀장)를 동의 화면 뒤에 이어붙일 때 true
+  const [loginAfterConsent, setLoginAfterConsent] = useState(false);
 
   const phoneValid = normalizePhone(phone).length >= 10;
   const rrnValid = normalizePhone(rrn).length === 13;
@@ -151,6 +156,8 @@ export default function ManagerSignupPage() {
         }
         return;
       }
+      // 로그인 성공 — 동의 화면을 거쳤으면 재동의를 서버에 기록 (best-effort)
+      try { await sb.rpc('yeseong_ack_consent', { p_version: CONSENT_VERSION }); } catch { /* 무시 */ }
       router.replace('/m/manager/home');
     })();
   }, [mode, loginPin, phone, sb, router, loginBusy]);
@@ -167,7 +174,15 @@ export default function ManagerSignupPage() {
       }
       const r = data as unknown as CheckResult;
       if (r.has_manager) {
-        setMode('login_pin');
+        // 이미 가입된 팀장도 이 설치에서 아직 동의 안 했으면 동의 화면부터 (재설치 시 다시 뜸)
+        let acked = false;
+        try { acked = localStorage.getItem(CONSENT_ACK_KEY) === '1'; } catch { /* 무시 */ }
+        if (acked) {
+          setMode('login_pin');
+        } else {
+          setLoginAfterConsent(true);
+          setMode('signup_consent');
+        }
         return;
       }
       // 팀장 마스터(/managers)에 등록된 전화번호만 진입 가능 — 자가 등록 차단
@@ -175,6 +190,7 @@ export default function ManagerSignupPage() {
         setPhoneError('로그인할 수 없습니다. 관리자에게 문의해 주십시오.');
         return;
       }
+      setLoginAfterConsent(false);
       if (r.has_worker) {
         setMatchedName(r.worker_name);
         const p = r.prefilled ?? null;
@@ -208,6 +224,13 @@ export default function ManagerSignupPage() {
   const goNext = () => {
     const idx = flow.indexOf(mode);
     if (idx >= 0 && idx < flow.length - 1) setMode(flow[idx + 1]);
+  };
+
+  // 동의 화면 통과 시: 이 설치에 "동의함" 표시 → 로그인 경로면 PIN, 신규/부분이면 다음 단계
+  const onConsentNext = () => {
+    try { localStorage.setItem(CONSENT_ACK_KEY, '1'); } catch { /* 무시 */ }
+    if (loginAfterConsent) setMode('login_pin');
+    else goNext();
   };
 
   const goNextOrSubmit = () => {
@@ -268,6 +291,7 @@ export default function ManagerSignupPage() {
         p_visa_status: visaStatus.trim() || null,
         p_consent_personal: consentPersonal,
         p_consent_rrn: consentRrn,
+        p_consent_location: consentLocation,
         p_consent_foreign_id: consentForeignId,
         p_consent_third_party: consentThirdParty,
         p_consent_version: CONSENT_VERSION,
@@ -276,6 +300,7 @@ export default function ManagerSignupPage() {
         const msg = rpcErr.message;
         if (msg.includes('consent_personal_required')) setSignupError('개인정보 수집 동의가 필요합니다.');
         else if (msg.includes('consent_rrn_required')) setSignupError('주민등록번호 수집 동의가 필요합니다.');
+        else if (msg.includes('consent_location_required')) setSignupError('위치정보 수집 동의가 필요합니다.');
         else if (msg.includes('consent_foreign_id_required')) setSignupError('외국인등록번호 수집 동의가 필요합니다.');
         else setSignupError('프로필 저장 실패: ' + msg);
         return;
@@ -324,9 +349,10 @@ export default function ManagerSignupPage() {
           <ConsentStep
             consentPersonal={consentPersonal} setConsentPersonal={setConsentPersonal}
             consentRrn={consentRrn} setConsentRrn={setConsentRrn}
+            consentLocation={consentLocation} setConsentLocation={setConsentLocation}
             consentForeignId={consentForeignId} setConsentForeignId={setConsentForeignId}
             consentThirdParty={consentThirdParty} setConsentThirdParty={setConsentThirdParty}
-            onNext={goNext}
+            onNext={onConsentNext}
           />
         )}
 
@@ -492,6 +518,7 @@ export default function ManagerSignupPage() {
 function ConsentStep({
   consentPersonal, setConsentPersonal,
   consentRrn, setConsentRrn,
+  consentLocation, setConsentLocation,
   consentForeignId, setConsentForeignId,
   consentThirdParty, setConsentThirdParty,
   onNext,
@@ -500,6 +527,8 @@ function ConsentStep({
   setConsentPersonal: (v: boolean) => void;
   consentRrn: boolean;
   setConsentRrn: (v: boolean) => void;
+  consentLocation: boolean;
+  setConsentLocation: (v: boolean) => void;
   consentForeignId: boolean;
   setConsentForeignId: (v: boolean) => void;
   consentThirdParty: boolean;
@@ -507,13 +536,14 @@ function ConsentStep({
   onNext: () => void;
 }) {
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const allRequired = consentPersonal && consentRrn && consentForeignId;
+  const allRequired = consentPersonal && consentRrn && consentLocation && consentForeignId;
   const allChecked = allRequired && consentThirdParty;
-  const valid = consentPersonal && consentRrn; // 외국인 동의는 가입 마지막에 RPC가 강제
+  const valid = consentPersonal && consentRrn && consentLocation; // 외국인 동의는 가입 마지막에 RPC가 강제
 
   const setAll = (v: boolean) => {
     setConsentPersonal(v);
     setConsentRrn(v);
+    setConsentLocation(v);
     setConsentForeignId(v);
     setConsentThirdParty(v);
   };
@@ -559,6 +589,21 @@ function ConsentStep({
               <p><b>이용 목적:</b> 노임대장 작성, 원천세 신고</p>
               <p><b>보유 기간:</b> 퇴직 후 5년</p>
               <p className="text-zinc-500">개인정보보호법 제24조의2에 따라 별도 동의를 받습니다.</p>
+            </>
+          }
+        />
+
+        <ConsentItem
+          openKey="location" openCurrent={openKey} setOpen={setOpenKey}
+          label="(필수) 위치정보 수집·이용 동의"
+          checked={consentLocation} onToggle={() => setConsentLocation(!consentLocation)}
+          body={
+            <>
+              <p><b>수집 항목:</b> GPS 좌표(위도·경도)</p>
+              <p><b>이용 목적:</b> 현장 출역(도착) 자동 확인, 현장 이탈 여부 검증</p>
+              <p><b>수집 시점:</b> 근무시간 중 주기적 수집 (앱 백그라운드·종료 시 포함)</p>
+              <p><b>보유 기간:</b> 수집 후 5일 뒤 자동 삭제, 제3자 제공 없음</p>
+              <p className="text-zinc-500">동의를 거부해도 출역 등록은 가능하나, 위치 자동 확인이 제한됩니다.</p>
             </>
           }
         />
