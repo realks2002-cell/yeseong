@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { scoreAdultVenue } from './adult-venue';
 
 // 영수증 OCR — Storage의 영수증 이미지를 Gemini 비전으로 분석해
 //   상호명/사업자번호/금액/날짜/품목을 추출하고 yeseong_site_photos 행에 저장한다.
@@ -16,7 +17,10 @@ const PROMPT = `이 사진은 한국의 결제 영수증입니다. 필드를 정
 - amount: 최종 결제금액(합계/총액/결제대상금액/승인금액). 숫자만.
 - date: 결제일([매출일]/거래일시/구매 등). "26/07/03"처럼 두 자리 연도는 20XX로 해석. 결제 연도이므로 미래나 2000년대 초 같은 비현실적 값이 되지 않게 하세요.
 - items: 상품명 표의 각 품목(품명·단가·수량·금액). 품목 표가 없으면 빈 배열.
-- 확실히 못 읽는 값은 null(items는 빈 배열). 영수증이 아니면 모든 값 null.`;
+- has_excise_tax: 영수증에 "개별소비세" 항목/글자가 있으면 true, 없으면 false.
+- business_category: 업태/업종/종목 표기(예: 유흥주점, 일반음식점, 종합소매업). 없으면 null.
+- payment_time: 결제 시각을 "HH:MM"(24시간)으로. 거래일시 등에서 시각만. 없으면 null.
+- 확실히 못 읽는 값은 null(items는 빈 배열, has_excise_tax는 false). 영수증이 아니면 모든 값 null.`;
 
 const ReceiptSchema = z.object({
   store: z.string().nullable().describe('가게 상호명. 주소·대표자·카드사명 제외. 못 읽으면 null'),
@@ -33,6 +37,9 @@ const ReceiptSchema = z.object({
       }),
     )
     .describe('품목 표의 각 항목. 없으면 빈 배열'),
+  has_excise_tax: z.boolean().describe('"개별소비세" 항목이 있으면 true'),
+  business_category: z.string().nullable().describe('업태/업종/종목. 없으면 null'),
+  payment_time: z.string().nullable().describe('결제 시각 HH:MM(24시간). 없으면 null'),
 });
 
 type OcrItem = {
@@ -149,6 +156,15 @@ export async function analyzeReceiptPhoto(admin: SupabaseClient<any>, photoId: s
       return fail('영수증 내용을 인식하지 못했습니다');
     }
 
+    // 유흥업소 의심 스코어링(규칙 기반) — 교정된 상호 기준
+    const adult = scoreAdultVenue({
+      store: parsed.store,
+      businessCategory: result.object.business_category ?? null,
+      hasExciseTax: result.object.has_excise_tax === true,
+      items: parsed.items,
+      paymentTime: result.object.payment_time ?? null,
+    });
+
     const { error: uErr } = await admin
       .from('yeseong_site_photos')
       .update({
@@ -156,8 +172,17 @@ export async function analyzeReceiptPhoto(admin: SupabaseClient<any>, photoId: s
         receipt_amount: parsed.amount,
         receipt_date: parsed.date,
         receipt_items: parsed.items.length > 0 ? parsed.items : null,
+        adult_score: adult.score,
+        adult_signals: adult.signals.length > 0 ? adult.signals : null,
         ocr_status: 'done',
-        ocr_raw: { model: MODEL, business_no: parsed.business_no, parsed: result.object },
+        ocr_raw: {
+          model: MODEL,
+          business_no: parsed.business_no,
+          has_excise_tax: result.object.has_excise_tax === true,
+          business_category: result.object.business_category ?? null,
+          payment_time: result.object.payment_time ?? null,
+          parsed: result.object,
+        },
       })
       .eq('id', photoId);
     if (uErr) return { ok: false, error: uErr.message };

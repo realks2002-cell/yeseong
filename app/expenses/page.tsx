@@ -5,9 +5,10 @@ import { Card } from '@/components/ui/card';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
 import {
   Receipt, ChevronLeft, ChevronRight, Download, Loader2,
-  List, LayoutGrid, ScanLine, Pencil, X,
+  List, LayoutGrid, ScanLine, Pencil, X, AlertTriangle,
 } from 'lucide-react';
 import { downloadFile } from '@/lib/utils/download';
+import { levelFromScore, LEVEL_LABEL } from '@/lib/adult-venue';
 
 // 비용처리 — 팀장앱 증빙의 '비용·영수증'(expense) 사진을 AI(OCR)로 분석해
 //   날짜(요일)/상점/금액/현장/팀장 리스트로 보여준다. 업로드는 팀장앱 전용.
@@ -26,10 +27,13 @@ type ApiPhoto = {
   receipt_amount: number | null;
   receipt_date: string | null;
   receipt_items: ReceiptItem[] | null;
+  adult_score: number;
+  adult_signals: AdultSignal[] | null;
   ocr_status: 'pending' | 'done' | 'failed' | null;
 };
 
 type ReceiptItem = { name: string; unit_price: number | null; qty: number | null; amount: number | null };
+type AdultSignal = { label: string; weight: number };
 
 type Option = { id: string; name: string };
 
@@ -113,6 +117,12 @@ export default function ExpensesPage() {
 
   const unanalyzed = useMemo(
     () => (photos ?? []).filter((p) => p.ocr_status !== 'done'),
+    [photos],
+  );
+
+  // 유흥 의심(신뢰도 중 이상, score>=40)
+  const flaggedCount = useMemo(
+    () => (photos ?? []).filter((p) => (p.adult_score ?? 0) >= 40).length,
     [photos],
   );
 
@@ -321,6 +331,15 @@ export default function ExpensesPage() {
         {error && <p className="rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
         {ocrMsg && <p className="rounded-[5px] bg-blue-50 p-3 text-sm font-semibold text-blue-800">{ocrMsg}</p>}
 
+        {flaggedCount > 0 && (
+          <div className="flex items-center gap-2 rounded-[5px] border border-red-200 bg-red-50 px-4 py-3 text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
+            <span className="text-[#091413]">
+              <b className="font-bold text-red-700">유흥업소 의심 증빙 {flaggedCount}건</b> — 접대비 손금불산입·세무조사 리스크. 라인을 열어 근거를 확인하세요.
+            </span>
+          </div>
+        )}
+
         {photos === null ? (
           <p className="py-10 text-center text-sm text-[#9CA3AF]">불러오는 중...</p>
         ) : photos.length === 0 ? (
@@ -350,12 +369,16 @@ export default function ExpensesPage() {
                     {rows.map((p, i) => {
                       const items = p.receipt_items ?? [];
                       const hasItems = items.length > 0;
+                      const signals = p.adult_signals ?? [];
+                      const level = levelFromScore(p.adult_score ?? 0);
+                      const flagged = level === 'mid' || level === 'high';
+                      const expandable = hasItems || flagged;
                       const open = expandedId === p.id;
                       return (
                       <Fragment key={p.id}>
                       <tr
-                        className={`hover:bg-[#F9FAFB] ${hasItems ? 'cursor-pointer' : ''} ${open ? 'bg-[#F9FAFB]' : ''}`}
-                        onClick={hasItems ? () => setExpandedId(open ? null : p.id) : undefined}
+                        className={`hover:bg-[#F9FAFB] ${expandable ? 'cursor-pointer' : ''} ${flagged ? 'bg-[#FFF8F8]' : ''} ${open ? 'bg-[#F9FAFB]' : ''}`}
+                        onClick={expandable ? () => setExpandedId(open ? null : p.id) : undefined}
                       >
                         <td className="px-3 py-2 text-center text-[#9CA3AF] tabular-nums">{i + 1}</td>
                         <td className="px-3 py-2 text-center tabular-nums">
@@ -366,10 +389,15 @@ export default function ExpensesPage() {
                         </td>
                         <td className="px-3 py-2 font-medium">
                           <span className="inline-flex items-center gap-1">
-                            {hasItems && (
+                            {expandable && (
                               <ChevronRight className={`h-3 w-3 text-[#9CA3AF] transition-transform ${open ? 'rotate-90' : ''}`} />
                             )}
                             {p.receipt_store ?? <span className="text-[#9CA3AF]">-</span>}
+                            {flagged && (
+                              <span className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white">
+                                <AlertTriangle className="h-2.5 w-2.5" /> 유흥 의심
+                              </span>
+                            )}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right font-bold tabular-nums">
@@ -436,18 +464,41 @@ export default function ExpensesPage() {
                           </div>
                         </td>
                       </tr>
-                      {open && hasItems && (
+                      {open && expandable && (
                         <tr className="bg-[#FBFCFD]">
                           <td colSpan={9} className="px-3 py-2">
-                            <div className="mx-auto max-w-2xl divide-y divide-[#EAEAEA] rounded border border-[#EAEAEA] bg-white">
-                              {items.map((it, k) => (
-                                <div key={k} className="flex items-center justify-between gap-3 px-3 py-1.5 text-[11px]">
-                                  <span className="font-medium text-[#091413]">{it.name}</span>
-                                  <span className="tabular-nums text-[#4B5563]">
-                                    {fmtNum(it.unit_price)} × {fmtNum(it.qty)} = <span className="font-bold text-[#091413]">{fmtNum(it.amount)}</span>
-                                  </span>
+                            <div className="mx-auto max-w-2xl space-y-2">
+                              {flagged && (
+                                <div className="rounded-[5px] border border-red-200 bg-red-50 px-3 py-2 text-[11px]">
+                                  <p className="font-bold text-red-700">
+                                    ⚠ 유흥업소 의심 (신뢰도 {LEVEL_LABEL[level]}) — 접대비 처리 시 손금불산입 여부 확인 필요
+                                  </p>
+                                  {signals.length > 0 && (
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
+                                      {signals.map((s, k) => (
+                                        <span key={k} className="rounded border border-red-200 bg-white px-1.5 py-0.5 text-[10px] text-red-700">
+                                          {s.label}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                              ))}
+                              )}
+                              {hasItems && (
+                                <div className="divide-y divide-[#EAEAEA] rounded border border-[#EAEAEA] bg-white">
+                                  {items.map((it, k) => {
+                                    const excise = it.name.includes('개별소비세');
+                                    return (
+                                      <div key={k} className="flex items-center justify-between gap-3 px-3 py-1.5 text-[11px]">
+                                        <span className={`font-medium ${excise ? 'font-bold text-red-600' : 'text-[#091413]'}`}>{it.name}</span>
+                                        <span className={`tabular-nums ${excise ? 'text-red-600' : 'text-[#4B5563]'}`}>
+                                          {fmtNum(it.unit_price)} × {fmtNum(it.qty)} = <span className={`font-bold ${excise ? 'text-red-600' : 'text-[#091413]'}`}>{fmtNum(it.amount)}</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -481,6 +532,11 @@ export default function ExpensesPage() {
                 ))}
               </div>
             )}
+
+            <p className="text-[11px] leading-relaxed text-[#9CA3AF]">
+              ※ 유흥 판정은 상호·개별소비세·업종·결제시간·품목 신호를 규칙으로 판정한 <b className="font-semibold text-[#6B7280]">참고 알람</b>이며
+              (개별소비세는 유류·담배 등에도 붙어 단독으론 경보하지 않음), 최종 판단(접대비 처리)은 담당자·세무사가 확정합니다.
+            </p>
           </>
         ) : (
           /* 사진 보기 — 날짜별 그룹 */

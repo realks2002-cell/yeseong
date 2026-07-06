@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase, getServiceSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
 import { analyzeReceiptPhoto } from '@/lib/receipt-ocr';
+import { scoreAdultVenue } from '@/lib/adult-venue';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -124,19 +125,39 @@ export async function PATCH(req: Request) {
     .eq('category', 'expense');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // 상호를 사람이 확정한 경우 → 사업자번호 캐시에 학습(다음부터 자동 교정)
-  if (typeof update.receipt_store === 'string' && update.receipt_store) {
+  // 상호가 편집된 경우(교체·삭제 포함) → 사업자번호 캐시 학습 + 유흥 스코어 재계산.
+  //   삭제(null)도 재계산해야 옛 상호로 매긴 점수가 stale로 남지 않는다.
+  if ('receipt_store' in update) {
+    const storeVal = typeof update.receipt_store === 'string' ? update.receipt_store : null;
     const { data: r } = await admin
       .from('yeseong_site_photos')
-      .select('ocr_raw')
+      .select('ocr_raw, receipt_items')
       .eq('id', photoId)
       .single();
-    const businessNo = (r?.ocr_raw as { business_no?: unknown } | null)?.business_no;
-    if (typeof businessNo === 'string' && /\d{3}-\d{2}-\d{5}/.test(businessNo)) {
+    const raw = (r?.ocr_raw ?? {}) as {
+      business_no?: unknown;
+      has_excise_tax?: unknown;
+      business_category?: unknown;
+      payment_time?: unknown;
+    };
+    // 캐시 학습은 상호가 확정(비어있지 않음)됐을 때만
+    if (storeVal && typeof raw.business_no === 'string' && /\d{3}-\d{2}-\d{5}/.test(raw.business_no)) {
       await admin
         .from('yeseong_receipt_vendors')
-        .upsert({ business_no: businessNo, store: update.receipt_store, updated_at: new Date().toISOString() });
+        .upsert({ business_no: raw.business_no, store: storeVal, updated_at: new Date().toISOString() });
     }
+    const items = Array.isArray(r?.receipt_items) ? (r!.receipt_items as { name: string }[]) : [];
+    const adult = scoreAdultVenue({
+      store: storeVal,
+      businessCategory: typeof raw.business_category === 'string' ? raw.business_category : null,
+      hasExciseTax: raw.has_excise_tax === true,
+      items,
+      paymentTime: typeof raw.payment_time === 'string' ? raw.payment_time : null,
+    });
+    await admin
+      .from('yeseong_site_photos')
+      .update({ adult_score: adult.score, adult_signals: adult.signals.length > 0 ? adult.signals : null })
+      .eq('id', photoId);
   }
 
   return NextResponse.json({ ok: true });

@@ -23,6 +23,8 @@ type Row = {
   receipt_amount: number | null;
   receipt_date: string | null;
   receipt_items: Array<{ name: string; unit_price: number | null; qty: number | null; amount: number | null }> | null;
+  adult_score: number | null;
+  adult_signals: Array<{ label: string; weight: number }> | null;
   ocr_status: 'pending' | 'done' | 'failed' | null;
 };
 
@@ -51,7 +53,7 @@ export async function GET(req: Request) {
   let query = admin
     .from('yeseong_site_photos')
     .select(
-      'id, worker_id, worksite_id, photo_date, category, storage_path, mime_type, file_size, memo, uploaded_at, receipt_store, receipt_amount, receipt_date, receipt_items, ocr_status',
+      'id, worker_id, worksite_id, photo_date, category, storage_path, mime_type, file_size, memo, uploaded_at, receipt_store, receipt_amount, receipt_date, receipt_items, adult_score, adult_signals, ocr_status',
     )
     .order('photo_date', { ascending: false })
     .order('worksite_id', { ascending: true })
@@ -118,6 +120,8 @@ export async function GET(req: Request) {
     receipt_amount: r.receipt_amount === null ? null : Number(r.receipt_amount),
     receipt_date: r.receipt_date,
     receipt_items: r.receipt_items ?? null,
+    adult_score: r.adult_score ?? 0,
+    adult_signals: r.adult_signals ?? null,
     ocr_status: r.ocr_status,
   }));
 
