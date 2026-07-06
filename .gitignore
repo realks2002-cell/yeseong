@@ -55,3 +55,11 @@ keystore/
 
 # Storage 백업 (개인정보 포함 — 커밋 금지)
 /storage-backups/
+
+# 로컬 도구 설정
+.claude/
+.vscode/
+
+# 임시 템플릿 백업본 (커밋 금지)
+public/templates/*.backup-*.xlsx
+public/templates/*.pre-clean-*.xlsx

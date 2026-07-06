@@ -8,7 +8,7 @@ import { WorkerDocumentsModal, type DocSubject } from '@/components/worker-docum
 import { WAGE_TYPES } from '@/lib/constants/trades';
 import { formatRrnDisplay } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
-import { Search, UserPlus, Pencil, Trash2, X, Download } from 'lucide-react';
+import { Search, UserPlus, Pencil, Trash2, X, Download, RotateCcw } from 'lucide-react';
 
 export default function WorkersPage() {
   const [list, setList] = useState<Worker[] | null>(null);
@@ -19,6 +19,7 @@ export default function WorkersPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [wageTypeFilter, setWageTypeFilter] = useState<string>('');
+  const [showInactive, setShowInactive] = useState(false); // 삭제(비활성) 작업자 보기
   const [downloading, setDownloading] = useState(false);
   const [savingLeaderId, setSavingLeaderId] = useState<string | null>(null);
   const [docsWorker, setDocsWorker] = useState<DocSubject | null>(null);
@@ -53,7 +54,7 @@ export default function WorkersPage() {
   async function load() {
     setError(null);
     const [wr, mr, tr] = await Promise.all([
-      fetch('/api/workers', { cache: 'no-store' }),
+      fetch(`/api/workers${showInactive ? '?status=inactive' : ''}`, { cache: 'no-store' }),
       fetch('/api/managers', { cache: 'no-store' }),
       fetch('/api/trades', { cache: 'no-store' }),
     ]);
@@ -78,8 +79,10 @@ export default function WorkersPage() {
   }
 
   useEffect(() => {
+    setList(null);
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showInactive]);
 
   async function handleAdd(input: WorkerInput) {
     const r = await fetch('/api/workers', {
@@ -110,6 +113,21 @@ export default function WorkersPage() {
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
       alert(j.error ?? '삭제 실패');
+      return;
+    }
+    load();
+  }
+
+  async function handleReactivate(w: Worker) {
+    if (!confirm(`"${w.name}" 작업자를 다시 활성화하시겠습니까?`)) return;
+    const r = await fetch(`/api/workers/${w.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error ?? '활성화 실패');
       return;
     }
     load();
@@ -223,6 +241,19 @@ export default function WorkersPage() {
               해제
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setShowInactive((v) => !v)}
+            className={
+              'ml-auto inline-flex items-center gap-1.5 rounded-[5px] border px-2.5 py-1.5 text-xs font-medium transition ' +
+              (showInactive
+                ? 'border-[#447D9B] bg-[#447D9B] text-white'
+                : 'border-[#D7D7D7] bg-white text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]')
+            }
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {showInactive ? '활성 작업자 보기' : '삭제된 작업자 보기'}
+          </button>
         </div>
 
         {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
@@ -252,7 +283,7 @@ export default function WorkersPage() {
                   <tr><td colSpan={13} className="py-12 text-center text-[#9CA3AF]">불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={13} className="py-12 text-center text-[#9CA3AF]">
-                    {query ? '검색 결과가 없습니다.' : '등록된 작업자가 없습니다.'}
+                    {query ? '검색 결과가 없습니다.' : showInactive ? '삭제된 작업자가 없습니다.' : '등록된 작업자가 없습니다.'}
                   </td></tr>
                 ) : (
                   filtered.map((w, i) => (
@@ -357,13 +388,24 @@ export default function WorkersPage() {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            className="rounded-[5px] p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
-                            onClick={() => handleDelete(w)}
-                            aria-label="삭제"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {showInactive ? (
+                            <button
+                              className="rounded-[5px] p-1 text-[#6B7280] hover:bg-emerald-50 hover:text-emerald-700"
+                              onClick={() => handleReactivate(w)}
+                              aria-label="재활성화"
+                              title="다시 활성화"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              className="rounded-[5px] p-1 text-[#6B7280] hover:bg-red-50 hover:text-red-600"
+                              onClick={() => handleDelete(w)}
+                              aria-label="삭제"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

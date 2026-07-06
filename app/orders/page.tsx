@@ -50,7 +50,7 @@ function fmtDateTime(iso: string): string {
 
 export default function OrdersPage() {
   const [list, setList] = useState<OrderRow[] | null>(null);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('requested');
   const [worksiteFilter, setWorksiteFilter] = useState('');
   const [requesterFilter, setRequesterFilter] = useState('');
   const [error, setError] = useState<string | null>(null);

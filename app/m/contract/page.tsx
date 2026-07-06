@@ -6,7 +6,7 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { ContractDocument } from '@/components/contract/contract-document';
 import { SignaturePad } from '@/components/contract/signature-pad';
-import { downloadContractPdf } from '@/lib/contract/pdf';
+import { downloadContractPdf, contractPdfBlob, contractPdfFilename } from '@/lib/contract/pdf';
 import type { ContractSnapshot } from '@/lib/contract/context';
 
 type Doc = {
@@ -18,6 +18,7 @@ type Doc = {
   rendered_body: string;
   signature_data_url: string | null;
   signed_at?: string;
+  pdf_path?: string | null;
 };
 type Resp = { state: 'none' | 'issued' | 'signed'; doc: Doc | null };
 
@@ -54,6 +55,48 @@ export default function WorkerContractPage() {
     load();
   }, [load]);
 
+  // 서명 완료 계약서를 서버에 자동 보관 (안전·증빙, 계약당 1회)
+  const archivingRef = useRef(false);
+  useEffect(() => {
+    const doc = resp?.doc;
+    if (resp?.state !== 'signed' || !doc || doc.pdf_path || archivingRef.current) return;
+    archivingRef.current = true;
+    (async () => {
+      try {
+        // 서명 이미지까지 렌더 완료 대기 후 캡처
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const el = docRef.current;
+        if (!el) { archivingRef.current = false; return; }
+        await Promise.all(
+          Array.from(el.querySelectorAll('img')).map((img) =>
+            img.complete ? Promise.resolve() : img.decode().catch(() => {}),
+          ),
+        );
+        const blob = await contractPdfBlob(el);
+        const dataUrl: string = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result as string);
+          fr.onerror = rej;
+          fr.readAsDataURL(blob);
+        });
+        const r = await fetch('/api/m/contract/archive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contract_id: doc.id, pdf_base64: dataUrl }),
+        });
+        if (r.ok) {
+          setResp((prev) =>
+            prev?.doc ? { ...prev, doc: { ...prev.doc, pdf_path: 'archived' } } : prev,
+          );
+        } else {
+          archivingRef.current = false; // 실패 시 다음 진입에서 재시도
+        }
+      } catch {
+        archivingRef.current = false;
+      }
+    })();
+  }, [resp]);
+
   async function handleSign(dataUrl: string) {
     if (!resp?.doc) return;
     setSaving(true);
@@ -75,12 +118,19 @@ export default function WorkerContractPage() {
     }
   }
 
+  function pdfFilename(doc: Doc): string {
+    return contractPdfFilename(
+      doc.snapshot.phone,
+      doc.snapshot.worker_name,
+      doc.sign_date ?? doc.contract_date,
+    );
+  }
+
   async function handlePdf() {
-    if (!docRef.current) return;
+    if (!docRef.current || !resp?.doc) return;
     setPdfBusy(true);
     try {
-      const name = resp?.doc?.snapshot.worker_name ?? '근로계약서';
-      await downloadContractPdf(docRef.current, `근로계약서_${name}_${resp?.doc?.contract_date ?? ''}.pdf`);
+      await downloadContractPdf(docRef.current, pdfFilename(resp.doc));
     } catch {
       setError('PDF 생성에 실패했습니다');
     } finally {
@@ -118,6 +168,7 @@ export default function WorkerContractPage() {
               <div className="mb-3 flex items-center justify-between rounded-[8px] bg-emerald-50 px-4 py-3">
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
                   <FileSignature className="h-4 w-4" /> 서명 완료
+                  {resp.doc.pdf_path && <span className="text-[11px] font-medium text-emerald-600/80">· 서버 보관됨</span>}
                 </span>
                 <button
                   type="button"

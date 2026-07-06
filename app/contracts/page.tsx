@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FileSignature, Download, Trash2, Loader2, Check, Send } from 'lucide-react';
 import { ContractDocument } from '@/components/contract/contract-document';
-import { downloadContractPdf } from '@/lib/contract/pdf';
+import { downloadContractPdf, contractPdfBlob, contractPdfFilename } from '@/lib/contract/pdf';
 import type { ContractSnapshot } from '@/lib/contract/context';
 
 type Status = 'issued' | 'signed';
@@ -32,6 +32,7 @@ type Detail = {
   signed_at: string | null;
   issued_at: string;
   signature_data_url: string | null;
+  pdf_path: string | null;
 };
 type Worksite = { id: string; name: string };
 
@@ -536,6 +537,7 @@ function ContractDetailModal({
   const [savingSign, setSavingSign] = useState(false);
   const [savingBody, setSavingBody] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const issued = detail.status === 'issued';
 
   async function patch(payload: Record<string, unknown>) {
@@ -579,14 +581,49 @@ function ContractDetailModal({
     setSavingBody(false);
     if (ok) onLocal({ rendered_body: bodyInput });
   }
+  function pdfFilename() {
+    return contractPdfFilename(detail.snapshot.phone, detail.snapshot.worker_name, detail.sign_date ?? dateInput);
+  }
   async function handlePdf() {
     if (!docRef.current) return;
     setPdfBusy(true);
     try {
-      await downloadContractPdf(docRef.current, `근로계약서_${detail.snapshot.worker_name}_${dateInput}.pdf`);
+      await downloadContractPdf(docRef.current, pdfFilename());
     } finally {
       setPdfBusy(false);
     }
+  }
+  async function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result as string);
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
+    });
+  }
+  // 서버 보관 (서명 완료 계약서 — 구 계약서 백필/재보관)
+  async function handleArchive() {
+    if (!docRef.current) return;
+    setArchiving(true);
+    try {
+      const dataUrl = await blobToDataUrl(await contractPdfBlob(docRef.current));
+      const r = await fetch(`/api/contracts/${detail.id}/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_base64: dataUrl }),
+      });
+      if (!r.ok) { alert((await r.json().catch(() => ({}))).error ?? '보관 실패'); return; }
+      onLocal({ pdf_path: 'archived' });
+    } finally {
+      setArchiving(false);
+    }
+  }
+  // 보관본 PDF 열기 (서명 URL)
+  async function handleOpenArchived() {
+    const r = await fetch(`/api/contracts/${detail.id}/pdf`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.url) { alert(j.error ?? '보관본을 찾을 수 없습니다'); return; }
+    window.open(j.url, '_blank');
   }
   async function handleDelete() {
     if (!confirm(issued ? '배포를 취소(삭제)할까요?' : '이 계약서를 삭제할까요? 되돌릴 수 없습니다.')) return;
@@ -639,6 +676,16 @@ function ContractDetailModal({
               <Button variant="outline" size="sm" onClick={handlePdf} disabled={pdfBusy}>
                 {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PDF
               </Button>
+              {!issued && detail.pdf_path && (
+                <Button variant="outline" size="sm" onClick={handleOpenArchived}>
+                  <FileSignature className="h-3.5 w-3.5" /> 보관본
+                </Button>
+              )}
+              {!issued && !detail.pdf_path && (
+                <Button variant="outline" size="sm" onClick={handleArchive} disabled={archiving}>
+                  {archiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} 서버 보관
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="삭제">
                 <Trash2 className="h-3.5 w-3.5 text-red-600" />
               </Button>

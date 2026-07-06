@@ -21,7 +21,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { data, error } = await admin
     .from('yeseong_worker_contracts')
-    .select('id, status, snapshot, rendered_body, contract_date, contract_end_date, sign_date, signed_at, issued_at, signature_path')
+    .select('id, status, snapshot, rendered_body, contract_date, contract_end_date, sign_date, signed_at, issued_at, signature_path, pdf_path')
     .eq('id', id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -39,6 +39,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     signed_at: data.signed_at,
     issued_at: data.issued_at,
     signature_data_url: signatureUrl,
+    pdf_path: data.pdf_path,
   });
 }
 

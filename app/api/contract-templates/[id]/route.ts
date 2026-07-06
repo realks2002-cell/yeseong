@@ -56,19 +56,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const admin = getServiceSupabase();
 
-  // 이미 서명된 계약서가 있으면 삭제 금지 (계약서는 template_id on delete set null이지만, 양식 보존이 안전)
-  const { count } = await admin
-    .from('yeseong_worker_contracts')
-    .select('id', { count: 'exact', head: true })
-    .eq('template_id', id);
-  if ((count ?? 0) > 0) {
-    return NextResponse.json(
-      { error: '이미 이 양식으로 서명된 계약서가 있어 삭제할 수 없습니다. 비활성화하세요.' },
-      { status: 409 },
-    );
-  }
-
-  const { error } = await admin.from('yeseong_contract_templates').delete().eq('id', id);
+  // 마스터는 소프트 삭제 — 기록 보존. 서명된 계약서의 template_id 참조도 그대로 유지된다.
+  const { error } = await admin
+    .from('yeseong_contract_templates')
+    .update({ is_active: false })
+    .eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

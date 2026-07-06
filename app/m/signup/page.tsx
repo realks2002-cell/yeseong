@@ -7,7 +7,7 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatPhone, normalizePhone, phoneToEmail, pinToPassword } from '@/lib/auth/phone-email';
 import { KOREAN_BANKS } from '@/lib/constants/banks';
-import { TRADES, GRADES } from '@/lib/constants/trades';
+import { GRADES } from '@/lib/constants/trades';
 
 type Mode =
   | 'phone'
@@ -114,6 +114,7 @@ export default function SignupPage() {
   const [skillGrade, setSkillGrade] = useState('');
   const [defaultTrade, setDefaultTrade] = useState('');
   const [tradeCustom, setTradeCustom] = useState(false);
+  const [trades, setTrades] = useState<string[]>([]);
 
   // 팀장 (신규 가입 시 선택)
   const [teamLeaderId, setTeamLeaderId] = useState('');
@@ -132,6 +133,9 @@ export default function SignupPage() {
   useEffect(() => {
     sb.rpc('yeseong_list_team_leaders').then(({ data }) => {
       if (Array.isArray(data)) setTeamLeaders(data as { id: string; name: string }[]);
+    });
+    sb.rpc('yeseong_list_trades').then(({ data }) => {
+      if (Array.isArray(data)) setTrades((data as { name: string }[]).map((t) => t.name));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -552,6 +556,7 @@ export default function SignupPage() {
               skillGrade={skillGrade} setSkillGrade={setSkillGrade}
               defaultTrade={defaultTrade} setDefaultTrade={setDefaultTrade}
               tradeCustom={tradeCustom} setTradeCustom={setTradeCustom}
+              trades={trades}
               valid={wageValid && skillGrade.length > 0 && defaultTrade.trim().length > 0}
               onNext={goNextOrSubmit}
             />
@@ -1165,7 +1170,7 @@ function AccountStep({
 function WorkStep({
   defaultWage, setDefaultWage,
   skillGrade, setSkillGrade,
-  defaultTrade, setDefaultTrade, tradeCustom, setTradeCustom,
+  defaultTrade, setDefaultTrade, tradeCustom, setTradeCustom, trades,
   valid, onNext,
 }: {
   defaultWage: string;
@@ -1176,6 +1181,7 @@ function WorkStep({
   setDefaultTrade: (v: string) => void;
   tradeCustom: boolean;
   setTradeCustom: (v: boolean) => void;
+  trades: string[];
   valid: boolean;
   onNext: () => void;
 }) {
@@ -1238,7 +1244,7 @@ function WorkStep({
               className="mt-2 w-full rounded-[5px] bg-white px-5 py-4 text-lg font-bold text-zinc-900 ring-2 ring-zinc-200 focus:ring-navy outline-none"
             >
               <option value="">선택하세요</option>
-              {TRADES.map((t) => (
+              {trades.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
               <option value="__custom__">직접 입력...</option>

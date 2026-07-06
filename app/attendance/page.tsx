@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
+import { AttendanceMapModal, type MapWorker } from '@/components/attendance-map-modal';
 import {
   MapPin, AlertTriangle,
   RefreshCw, X, ClipboardList,
@@ -22,6 +23,9 @@ type LiveRow = {
   worksite_name: string;
   site_has_gps: boolean;
   geofence_radius: number;
+  worksite_lat: number | null;
+  worksite_lng: number | null;
+  today_ever_within: boolean;
   last_latitude: number | null;
   last_longitude: number | null;
   last_distance_m: number | null;
@@ -46,18 +50,33 @@ function fmtTime(iso: string | null): string {
 
 type DetailKey = 'present' | 'out';
 const DETAIL_LABEL: Record<DetailKey, string> = {
-  present: '실시간 출역',
+  present: 'GPS 실시간 출역',
   out: '현장 이탈 중',
 };
 
-// 실시간 판정: 마지막 위치가 최근 N분 이내일 때만 '현장 안/이탈'으로 집계
-const RECENT_MIN = 60;
-function isRecent(lastSeenAt: string | null): boolean {
-  if (!lastSeenAt) return false;
-  return Date.now() - new Date(lastSeenAt).getTime() <= RECENT_MIN * 60 * 1000;
+// 실시간 출역 판정 (sticky) — 조적·습식은 건물 안에서 GPS가 끊기므로,
+// '오늘 현장 안 핑이 한 번이라도 있으면(today_ever_within) 명확히 이탈 전까지 present'로 본다.
+const EXIT_MARGIN_M = 150; // 반경 + 여유(m)를 넘게 벗어나야 이탈로 인정 (실내 드리프트 오탐 방지)
+function isClearlyOut(r: LiveRow): boolean {
+  return (
+    r.today_ever_within === true &&
+    r.last_within === false &&
+    r.last_distance_m != null &&
+    r.last_distance_m > r.geofence_radius + EXIT_MARGIN_M
+  );
+}
+function isPresent(r: LiveRow): boolean {
+  return r.today_ever_within === true && !isClearlyOut(r);
 }
 
-type AssignedSite = { worksite_id: string; worksite_name: string; count: number };
+type AssignedSite = {
+  worksite_id: string;
+  worksite_name: string;
+  count: number;
+  latitude: number | null;
+  longitude: number | null;
+  geofence_radius: number;
+};
 
 export default function AttendanceLivePage() {
   const [items, setItems] = useState<LiveRow[] | null>(null);
@@ -66,6 +85,7 @@ export default function AttendanceLivePage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [siteFilter, setSiteFilter] = useState('');
   const [detailKey, setDetailKey] = useState<DetailKey | null>(null);
+  const [mapSiteId, setMapSiteId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -108,12 +128,12 @@ export default function AttendanceLivePage() {
   // 현장별: 배정 인원(마스터) + 실시간 출역/이탈(최근 위치) 병합 — 배정된 현장 전체 표시
   const bySite = useMemo(() => {
     const live = new Map<string, { present: number; out: number }>();
-    const monitoring = isWithinTrackWindow(); // 근무시간(08~17) 밖이면 출역/이탈 0
+    const monitoring = isWithinTrackWindow(); // 근무시간(07~17) 밖이면 출역/이탈 0
     for (const r of monitoring ? (items ?? []) : []) {
-      if (!isRecent(r.last_seen_at)) continue; // 실시간: 최근 위치만
+      if (!isPresent(r) && !isClearlyOut(r)) continue;
       const l = live.get(r.worksite_id) ?? { present: 0, out: 0 };
-      if (r.last_within === true) l.present += 1;
-      else if (r.last_within === false) l.out += 1;
+      if (isPresent(r)) l.present += 1;
+      else l.out += 1;
       live.set(r.worksite_id, l);
     }
     return (assigned ?? [])
@@ -129,12 +149,10 @@ export default function AttendanceLivePage() {
 
   const summary = useMemo(() => {
     const s = { present: 0, out: 0 };
-    if (!isWithinTrackWindow()) return s; // 근무시간(08~17) 밖이면 실시간 집계 중단
+    if (!isWithinTrackWindow()) return s; // 근무시간(07~17) 밖이면 실시간 집계 중단
     for (const r of filtered) {
-      if (isRecent(r.last_seen_at)) {
-        if (r.last_within === true) s.present += 1;
-        else if (r.last_within === false) s.out += 1;
-      }
+      if (isPresent(r)) s.present += 1;
+      else if (isClearlyOut(r)) s.out += 1;
     }
     return s;
   }, [filtered]);
@@ -143,9 +161,7 @@ export default function AttendanceLivePage() {
   const detailGroups = useMemo(() => {
     if (!detailKey) return [];
     const match = (r: LiveRow) =>
-      detailKey === 'present'
-        ? (isRecent(r.last_seen_at) && r.last_within === true)
-        : (isRecent(r.last_seen_at) && r.last_within === false);
+      detailKey === 'present' ? isPresent(r) : isClearlyOut(r);
     const m = new Map<string, LiveRow[]>();
     for (const r of filtered) {
       if (!match(r)) continue;
@@ -157,6 +173,32 @@ export default function AttendanceLivePage() {
       .map(([site, rows]) => ({ site, rows: rows.sort((a, b) => a.worker_name.localeCompare(b.worker_name, 'ko')) }))
       .sort((a, b) => b.rows.length - a.rows.length || a.site.localeCompare(b.site, 'ko'));
   }, [detailKey, filtered]);
+
+  // 지도 모달용 데이터 — 배정 현장(좌표) 기준. 오늘 활동 없는 현장도 열림.
+  const mapData = useMemo(() => {
+    if (!mapSiteId) return null;
+    const site = (assigned ?? []).find((a) => a.worksite_id === mapSiteId);
+    if (!site) return null;
+    const workers: MapWorker[] = (items ?? [])
+      .filter((r) => r.worksite_id === mapSiteId && r.last_latitude != null && r.last_longitude != null)
+      .map((r) => ({
+        id: r.worker_id,
+        name: r.worker_name,
+        lat: r.last_latitude as number,
+        lng: r.last_longitude as number,
+        status: isPresent(r) ? 'present' : isClearlyOut(r) ? 'out' : 'unknown',
+        distanceM: r.last_distance_m,
+        lastSeen: r.last_seen_at,
+      }));
+    return {
+      id: mapSiteId,
+      name: site.worksite_name,
+      lat: site.latitude,
+      lng: site.longitude,
+      radius: site.geofence_radius,
+      workers,
+    };
+  }, [mapSiteId, assigned, items]);
 
   return (
     <AdminShell>
@@ -199,7 +241,7 @@ export default function AttendanceLivePage() {
             </div>
           </Card>
           {([
-            { key: 'present' as const, icon: MapPin, label: '실시간 출역', value: summary.present, color: 'text-[#447D9B]', num: 'text-[#447D9B]' },
+            { key: 'present' as const, icon: MapPin, label: 'GPS 실시간 출역', value: summary.present, color: 'text-[#447D9B]', num: 'text-[#447D9B]' },
             { key: 'out' as const, icon: AlertTriangle, label: '현장 이탈 중', value: summary.out, color: 'text-orange-500', num: 'text-orange-600' },
           ]).map(({ key, icon: Icon, label, value, color, num }) => (
             <Card
@@ -229,28 +271,26 @@ export default function AttendanceLivePage() {
         {bySite.length > 0 && (
           <Card className="p-4">
             <p className="text-sm font-semibold text-[#091413] mb-2.5">
-              현장별 실시간 출역
-              <span className="ml-1.5 text-[11px] font-normal text-[#9CA3AF]">최근 {RECENT_MIN}분 위치 기준</span>
+              GPS 현장별 실시간 출역
+              <span className="ml-1.5 text-[11px] font-normal text-[#9CA3AF]">GPS 현장 진입 기준 (이탈 전까지 유지)</span>
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {bySite.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => setSiteFilter(siteFilter === s.id ? '' : s.id)}
-                  className={`flex items-center justify-between rounded-[5px] border px-3 py-2.5 text-left transition-colors ${
-                    siteFilter === s.id
-                      ? 'border-[#273F4F] bg-[#273F4F] text-white'
-                      : 'border-[#D7D7D7] bg-white hover:bg-[#F5F5F5]'
-                  }`}
+                  onClick={() => setMapSiteId(s.id)}
+                  title="지도에서 작업자 위치 보기"
+                  className="flex items-center justify-between rounded-[5px] border border-[#D7D7D7] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#447D9B] hover:bg-[#F5F5F5]"
                 >
-                  <span className="min-w-0 truncate text-xs font-semibold">{s.name}</span>
+                  <span className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold">
+                    <MapPin className="h-3 w-3 shrink-0 text-[#447D9B]" />
+                    <span className="truncate">{s.name}</span>
+                  </span>
                   <span className="ml-2 shrink-0 text-right">
                     <span className="text-base font-bold tabular-nums">{s.present}</span>
-                    <span className={`text-[11px] font-medium ${siteFilter === s.id ? 'text-white/70' : 'text-[#9CA3AF]'}`}> / 배정 {s.assigned}</span>
+                    <span className="text-[11px] font-medium text-[#9CA3AF]"> / 배정 {s.assigned}</span>
                     {s.out > 0 && (
-                      <span className={`ml-1.5 text-[10px] ${siteFilter === s.id ? 'text-orange-200' : 'text-orange-500'}`}>
-                        이탈 {s.out}
-                      </span>
+                      <span className="ml-1.5 text-[10px] text-orange-500">이탈 {s.out}</span>
                     )}
                   </span>
                 </button>
@@ -299,20 +339,20 @@ export default function AttendanceLivePage() {
                 ) : (
                   filtered.map((r) => {
                     const badge = STATUS_BADGE[r.approval_status ?? 'none'];
-                    const recent = isRecent(r.last_seen_at);
-                    const isOut = recent && r.last_within === false;
-                    const isPresent = recent && r.last_within === true;
+                    const monitoring = isWithinTrackWindow();
+                    const present = monitoring && isPresent(r);
+                    const out = monitoring && isClearlyOut(r);
                     return (
                       <tr key={r.id} className="hover:bg-[#F5F5F5]">
                         <td className="px-3 py-2 font-medium">
                           <span className="inline-flex items-center gap-1.5">
                             {r.worker_name}
-                            {isPresent && (
+                            {present && (
                               <span className="rounded px-1 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700">
                                 현장
                               </span>
                             )}
-                            {isOut && (
+                            {out && (
                               <span className="rounded px-1 py-0.5 text-[10px] font-semibold bg-orange-50 text-orange-600">
                                 이탈 {r.last_distance_m != null ? `${Math.round(r.last_distance_m)}m` : ''}
                               </span>
@@ -388,6 +428,18 @@ export default function AttendanceLivePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {mapData && (
+        <AttendanceMapModal
+          worksiteId={mapData.id}
+          worksiteName={mapData.name}
+          siteLat={mapData.lat}
+          siteLng={mapData.lng}
+          radius={mapData.radius}
+          workers={mapData.workers}
+          onClose={() => setMapSiteId(null)}
+        />
       )}
     </AdminShell>
   );

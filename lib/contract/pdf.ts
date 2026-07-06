@@ -4,7 +4,7 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
-export async function downloadContractPdf(el: HTMLElement, filename: string) {
+async function renderToPdf(el: HTMLElement): Promise<jsPDF> {
   const canvas = await html2canvas(el, {
     scale: 2,
     backgroundColor: '#ffffff',
@@ -29,5 +29,24 @@ export async function downloadContractPdf(el: HTMLElement, filename: string) {
     pdf.addImage(imgData, 'PNG', 0, position, imgW, imgH);
     heightLeft -= pageH;
   }
+  return pdf;
+}
+
+export async function downloadContractPdf(el: HTMLElement, filename: string) {
+  const pdf = await renderToPdf(el);
   pdf.save(filename);
+}
+
+// 서버 보관용 — PDF Blob 반환
+export async function contractPdfBlob(el: HTMLElement): Promise<Blob> {
+  const pdf = await renderToPdf(el);
+  return pdf.output('blob');
+}
+
+// 파일명 규칙: {전화번호}_{이름}_{날짜(YYYY-MM-DD)}.pdf
+export function contractPdfFilename(phone: string, name: string, date: string): string {
+  const digits = (phone ?? '').replace(/\D/g, '');
+  const safeName = (name ?? '').replace(/[\\/:*?"<>|]/g, '').trim();
+  const safeDate = (date ?? '').slice(0, 10);
+  return `${[digits, safeName, safeDate].filter(Boolean).join('_')}.pdf`;
 }

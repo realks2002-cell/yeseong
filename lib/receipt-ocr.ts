@@ -1,53 +1,93 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { google } from '@ai-sdk/google';
+import { generateObject } from 'ai';
+import { z } from 'zod';
 
-// 영수증 OCR — Storage의 영수증 이미지를 Claude 비전으로 분석해
-//   상점명/금액/날짜를 추출하고 yeseong_site_photos 행에 저장한다.
-//   ANTHROPIC_API_KEY 미설정 시 분석을 건너뛴다 (행은 pending 유지).
+// 영수증 OCR — Storage의 영수증 이미지를 Gemini 비전으로 분석해
+//   상호명/사업자번호/금액/날짜/품목을 추출하고 yeseong_site_photos 행에 저장한다.
+//   GOOGLE_GENERATIVE_AI_API_KEY 미설정 시 분석을 건너뛴다 (행은 pending 유지).
 
 const BUCKET = 'site-photos';
-const MODEL = 'claude-haiku-4-5';
-const API_URL = 'https://api.anthropic.com/v1/messages';
+const MODEL = 'gemini-2.5-flash';
 
-const PROMPT = `이 사진은 한국 영수증입니다. 다음 정보를 추출해 JSON으로만 답하세요(설명 금지):
-{"store": "상점/가맹점 이름", "amount": 총 결제 금액(숫자만, 콤마 없이), "date": "결제 날짜 YYYY-MM-DD"}
-읽을 수 없거나 영수증이 아니면 해당 값은 null로 하세요.`;
+const PROMPT = `이 사진은 한국의 결제 영수증입니다. 필드를 정확히 읽어 구조화해 주세요.
+- store: 가게 상호명만. 보통 맨 위 큰 글씨이거나 "[매장]" 뒤에 옵니다. 주소·대표자명·전화번호·카드사명("하나체크카드" 등)을 상호로 착각하지 마세요.
+- business_no: "사업자"/"사업자등록번호" 뒤의 XXX-XX-XXXXX 형식 번호(하이픈 포함). 없으면 null.
+- amount: 최종 결제금액(합계/총액/결제대상금액/승인금액). 숫자만.
+- date: 결제일([매출일]/거래일시/구매 등). "26/07/03"처럼 두 자리 연도는 20XX로 해석. 결제 연도이므로 미래나 2000년대 초 같은 비현실적 값이 되지 않게 하세요.
+- items: 상품명 표의 각 품목(품명·단가·수량·금액). 품목 표가 없으면 빈 배열.
+- 확실히 못 읽는 값은 null(items는 빈 배열). 영수증이 아니면 모든 값 null.`;
+
+const ReceiptSchema = z.object({
+  store: z.string().nullable().describe('가게 상호명. 주소·대표자·카드사명 제외. 못 읽으면 null'),
+  business_no: z.string().nullable().describe('사업자등록번호 XXX-XX-XXXXX. 없으면 null'),
+  amount: z.number().nullable().describe('최종 결제금액(숫자). 못 읽으면 null'),
+  date: z.string().nullable().describe('결제일 YYYY-MM-DD. 두 자리 연도는 20XX. 못 읽으면 null'),
+  items: z
+    .array(
+      z.object({
+        name: z.string().describe('품명'),
+        unit_price: z.number().nullable().describe('단가'),
+        qty: z.number().nullable().describe('수량'),
+        amount: z.number().nullable().describe('금액'),
+      }),
+    )
+    .describe('품목 표의 각 항목. 없으면 빈 배열'),
+});
+
+type OcrItem = {
+  name: string;
+  unit_price: number | null;
+  qty: number | null;
+  amount: number | null;
+};
 
 type OcrParsed = {
   store: string | null;
+  business_no: string | null;
   amount: number | null;
   date: string | null;
+  items: OcrItem[];
 };
 
 export type OcrOutcome =
   | { ok: true; parsed: OcrParsed }
   | { ok: false; error: string };
 
-function parseModelJson(text: string): OcrParsed | null {
-  // 모델이 코드블록 등으로 감쌀 수 있어 첫 { ... } 만 추출
-  const m = text.match(/\{[\s\S]*\}/);
-  if (!m) return null;
-  try {
-    const j = JSON.parse(m[0]) as Record<string, unknown>;
-    const store = typeof j.store === 'string' && j.store.trim() ? j.store.trim().slice(0, 100) : null;
-    let amount: number | null = null;
-    if (typeof j.amount === 'number' && Number.isFinite(j.amount) && j.amount >= 0) {
-      amount = Math.round(j.amount);
-    } else if (typeof j.amount === 'string') {
-      const n = Number(j.amount.replace(/[^\d.]/g, ''));
-      if (Number.isFinite(n) && n >= 0) amount = Math.round(n);
-    }
-    const date =
-      typeof j.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(j.date) ? j.date : null;
-    return { store, amount, date };
-  } catch {
-    return null;
+function sanitize(obj: z.infer<typeof ReceiptSchema>): OcrParsed {
+  const store = typeof obj.store === 'string' && obj.store.trim() ? obj.store.trim().slice(0, 100) : null;
+  const business_no =
+    typeof obj.business_no === 'string' && /\d{3}-\d{2}-\d{5}/.test(obj.business_no)
+      ? obj.business_no.match(/\d{3}-\d{2}-\d{5}/)![0]
+      : null;
+  const amount =
+    typeof obj.amount === 'number' && Number.isFinite(obj.amount) && obj.amount >= 0
+      ? Math.round(obj.amount)
+      : null;
+  // 연도가 비현실적(2020 미만/내년 초과)이면 오독으로 보고 버림 → '-'로 표시되어 사람이 채움
+  let date: string | null = null;
+  if (typeof obj.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(obj.date)) {
+    const year = Number(obj.date.slice(0, 4));
+    if (year >= 2020 && year <= new Date().getFullYear() + 1) date = obj.date;
   }
+  const num = (v: number | null): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null;
+  const items: OcrItem[] = (obj.items ?? [])
+    .map((it) => ({
+      name: typeof it.name === 'string' ? it.name.trim().slice(0, 100) : '',
+      unit_price: num(it.unit_price),
+      qty: num(it.qty),
+      amount: num(it.amount),
+    }))
+    .filter((it) => it.name);
+  return { store, business_no, amount, date, items };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function analyzeReceiptPhoto(admin: SupabaseClient<any>, photoId: string): Promise<OcrOutcome> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { ok: false, error: 'ANTHROPIC_API_KEY가 설정되지 않았습니다' };
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return { ok: false, error: 'GOOGLE_GENERATIVE_AI_API_KEY가 설정되지 않았습니다' };
+  }
 
   const { data: row, error: rErr } = await admin
     .from('yeseong_site_photos')
@@ -69,45 +109,40 @@ export async function analyzeReceiptPhoto(admin: SupabaseClient<any>, photoId: s
     const { data: blob, error: dErr } = await admin.storage.from(BUCKET).download(row.storage_path);
     if (dErr || !blob) return fail('이미지 다운로드 실패');
     const b64 = Buffer.from(await blob.arrayBuffer()).toString('base64');
+    const dataUrl = `data:${row.mime_type};base64,${b64}`;
 
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 300,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: row.mime_type, data: b64 },
-              },
-              { type: 'text', text: PROMPT },
-            ],
-          },
-        ],
-      }),
+    const result = await generateObject({
+      model: google(MODEL),
+      schema: ReceiptSchema,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: PROMPT },
+            { type: 'image', image: dataUrl },
+          ],
+        },
+      ],
     });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      return fail(`AI 호출 실패 (${res.status}) ${body.slice(0, 200)}`);
+    const parsed = sanitize(result.object);
+
+    // 사업자번호 캐시로 상호 교정: 같은 매장은 확정 상호를 재사용(오독 자동 교정),
+    //   처음 보는 사업자번호는 이번 OCR 상호로 신규 등록.
+    if (parsed.business_no) {
+      const { data: cached } = await admin
+        .from('yeseong_receipt_vendors')
+        .select('store')
+        .eq('business_no', parsed.business_no)
+        .maybeSingle();
+      if (cached?.store) {
+        parsed.store = cached.store;
+      } else if (parsed.store) {
+        await admin
+          .from('yeseong_receipt_vendors')
+          .upsert({ business_no: parsed.business_no, store: parsed.store });
+      }
     }
-
-    const json = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
-    const text = (json.content ?? [])
-      .filter((c) => c.type === 'text' && c.text)
-      .map((c) => c.text)
-      .join('\n');
-
-    const parsed = parseModelJson(text);
-    if (!parsed) return fail('AI 응답 파싱 실패');
 
     // store/amount/date 전부 null이면 인식 실패로 처리
     if (parsed.store === null && parsed.amount === null && parsed.date === null) {
@@ -120,8 +155,9 @@ export async function analyzeReceiptPhoto(admin: SupabaseClient<any>, photoId: s
         receipt_store: parsed.store,
         receipt_amount: parsed.amount,
         receipt_date: parsed.date,
+        receipt_items: parsed.items.length > 0 ? parsed.items : null,
         ocr_status: 'done',
-        ocr_raw: { model: MODEL, text },
+        ocr_raw: { model: MODEL, business_no: parsed.business_no, parsed: result.object },
       })
       .eq('id', photoId);
     if (uErr) return { ok: false, error: uErr.message };

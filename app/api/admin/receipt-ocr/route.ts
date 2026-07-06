@@ -24,9 +24,9 @@ export async function POST(req: Request) {
   const auth = await requireAdmin();
   if ('error' in auth) return auth.error;
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     return NextResponse.json(
-      { error: 'AI 분석 키(ANTHROPIC_API_KEY)가 설정되지 않았습니다' },
+      { error: 'AI 분석 키(GOOGLE_GENERATIVE_AI_API_KEY)가 설정되지 않았습니다' },
       { status: 503 },
     );
   }
@@ -123,6 +123,21 @@ export async function PATCH(req: Request) {
     .eq('id', photoId)
     .eq('category', 'expense');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 상호를 사람이 확정한 경우 → 사업자번호 캐시에 학습(다음부터 자동 교정)
+  if (typeof update.receipt_store === 'string' && update.receipt_store) {
+    const { data: r } = await admin
+      .from('yeseong_site_photos')
+      .select('ocr_raw')
+      .eq('id', photoId)
+      .single();
+    const businessNo = (r?.ocr_raw as { business_no?: unknown } | null)?.business_no;
+    if (typeof businessNo === 'string' && /\d{3}-\d{2}-\d{5}/.test(businessNo)) {
+      await admin
+        .from('yeseong_receipt_vendors')
+        .upsert({ business_no: businessNo, store: update.receipt_store, updated_at: new Date().toISOString() });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

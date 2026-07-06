@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/auth/admin-guard';
 
-export async function GET() {
+export async function GET(req: Request) {
   const sb = await getServerSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  // status=inactive → 삭제(비활성) 작업자만. 기본은 활성만.
+  const activeOnly = new URL(req.url).searchParams.get('status') !== 'inactive';
 
   const { data, error } = await sb
     .from('yeseong_workers')
@@ -19,7 +22,7 @@ export async function GET() {
       auth_user_id, team_leader_id,
       team_leader:yeseong_site_managers!yeseong_workers_team_leader_id_fkey(id, name)
     `)
-    .eq('is_active', true)
+    .eq('is_active', activeOnly)
     .order('name');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

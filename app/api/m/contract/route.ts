@@ -19,7 +19,7 @@ export async function GET() {
 
   const { data: rows, error } = await admin
     .from('yeseong_worker_contracts')
-    .select('id, status, rendered_body, snapshot, contract_date, contract_end_date, sign_date, signed_at, signature_path')
+    .select('id, status, rendered_body, snapshot, contract_date, contract_end_date, sign_date, signed_at, signature_path, pdf_path')
     .eq('worker_id', workerId)
     .is('attendance_id', null)
     .order('created_at', { ascending: false });
@@ -58,6 +58,7 @@ export async function GET() {
       rendered_body: target.rendered_body,
       signature_data_url: signatureUrl,
       signed_at: target.signed_at,
+      pdf_path: target.pdf_path,
     },
   });
 }

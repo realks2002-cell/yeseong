@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toUserMessage } from '@/lib/errors/message';
 import { useRouter } from 'next/navigation';
-import { PackagePlus, Search, X, Check, ClipboardList } from 'lucide-react';
+import { PackagePlus, Search, X, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getMirrorId, mirrorFetch } from '@/lib/manager/mirror';
@@ -126,10 +126,9 @@ export default function ManagerOrdersPage() {
     setQtyMap({});
     setDeliveryDate('');
     setNote('');
-    setDone(true);
-    setTimeout(() => setDone(false), 2500);
     await load();
     setTab('history');
+    setDone(true);
   };
 
   return (
@@ -160,12 +159,6 @@ export default function ManagerOrdersPage() {
           </button>
         </div>
 
-        {done && (
-          <p className="mt-3 flex items-center gap-1.5 rounded-[5px] bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-700">
-            <Check className="h-4 w-4" />
-            발주 요청이 전송되었습니다. 관리자가 확인 후 발주합니다.
-          </p>
-        )}
         {error && (
           <p className="mt-3 rounded-[5px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{error}</p>
         )}
@@ -328,6 +321,30 @@ export default function ManagerOrdersPage() {
           </div>
         )}
       </div>
+
+      {done && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 sm:items-center"
+          onClick={() => setDone(false)}
+        >
+          <div
+            className="w-full sm:max-w-[400px] rounded-t-[5px] sm:rounded-[5px] bg-white px-7 pt-8 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:pb-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" />
+            <p className="mt-4 text-center text-[22px] font-bold text-zinc-900">제출되었습니다</p>
+            <p className="mt-2 text-center text-sm text-zinc-500">
+              발주 요청이 전송되었습니다.<br />관리자가 확인 후 발주하며, 진행 상태는 요청 이력에서 볼 수 있습니다.
+            </p>
+            <button
+              onClick={() => setDone(false)}
+              className="mt-6 h-[56px] w-full rounded-[5px] bg-navy text-lg font-bold text-white active:scale-[0.99]"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }

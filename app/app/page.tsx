@@ -19,6 +19,23 @@ const APPS = [
   },
 ];
 
+// APK 설치 안내 (삼성 갤럭시 실제 스크린샷) — 글자 없이 이미지 위 "누를 버튼"만 표시.
+//   tap: 각 화면에서 눌러야 할 버튼 위치(이미지 대비 %).
+const INSTALL_STEPS = [
+  { image: '/install1.jpeg', tap: { top: '55%', left: '42%' } },   // 내 파일 → Download 폴더
+  { image: '/install2.jpeg', tap: { top: '30%', left: '45%' } },   // apk 파일
+  { image: '/install3.jpeg', tap: { top: '57%', left: '50%' } },   // 인스톨
+  { image: '/install4.jpeg', tap: { top: '86%', left: '72%' } },   // 설치
+  { image: '/install5.jpeg', tap: { top: '86%', left: '33%' } },   // 무시하고 설치
+  { image: '/install6.jpeg', tap: { top: '80%', left: '50%' } },   // 무시하고 설치(한 번 더)
+  { image: '/install7.jpeg', tap: { top: '77%', left: '50%' } },   // 전송하지 않음
+  { image: '/install8.jpeg', tap: { top: '86%', left: '70%' } },   // 열기
+  { image: '/install9.jpeg', tap: { top: '20%', left: '50%' } },   // 위치권한 배너
+  { image: '/install10.jpeg', tap: { top: '43%', left: '33%' } },  // 권한
+  { image: '/install11.jpeg', tap: { top: '40%', left: '30%' } },  // 위치
+  { image: '/install12.jpeg', tap: { top: '32%', left: '32%' } },  // 항상 허용
+];
+
 const SIGNUP_STEPS = [
   {
     image: '/1y.jpeg',
@@ -123,6 +140,48 @@ export default function AppDownloadPage() {
               </li>
             </ul>
           </div>
+
+          <section className="mt-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="inline-block rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
+                Install Guide
+              </span>
+              <h2 className="mt-4 text-2xl font-bold tracking-tight text-[#091413] md:text-3xl">
+                APK 설치 안내 <span className="text-lg font-semibold text-[#6B7280]">(안드로이드)</span>
+              </h2>
+              <p className="mt-3 text-sm text-[#4B5563] md:text-base">
+                번호 순서대로, 각 화면에서 <span className="font-bold text-orange-600">주황색 원</span> 부분을 누르세요.
+              </p>
+            </div>
+
+            <ol className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+              {INSTALL_STEPS.map((step, idx) => (
+                <li key={step.image} className="flex flex-col items-center">
+                  <div className="relative w-full max-w-[300px] overflow-hidden rounded-[14px] border border-[#D7D7D7] shadow-md">
+                    <img
+                      src={step.image}
+                      alt={`설치 ${idx + 1}단계`}
+                      className="block w-full"
+                    />
+                    {/* 순서 번호 */}
+                    <span className="absolute left-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-sm font-extrabold text-white shadow-md ring-2 ring-white">
+                      {idx + 1}
+                    </span>
+                    {/* 누를 버튼 표시 */}
+                    <span
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2"
+                      style={{ top: step.tap.top, left: step.tap.left }}
+                    >
+                      <span className="relative flex h-11 w-11 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500/50" />
+                        <span className="relative inline-flex h-11 w-11 rounded-full border-[3px] border-orange-500 bg-orange-500/10 shadow-[0_0_0_2px_rgba(255,255,255,0.7)]" />
+                      </span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
 
           <section className="mt-20">
             <div className="mx-auto max-w-2xl text-center">

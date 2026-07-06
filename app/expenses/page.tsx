@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
@@ -25,8 +25,11 @@ type ApiPhoto = {
   receipt_store: string | null;
   receipt_amount: number | null;
   receipt_date: string | null;
+  receipt_items: ReceiptItem[] | null;
   ocr_status: 'pending' | 'done' | 'failed' | null;
 };
+
+type ReceiptItem = { name: string; unit_price: number | null; qty: number | null; amount: number | null };
 
 type Option = { id: string; name: string };
 
@@ -58,6 +61,10 @@ function fmtWon(n: number): string {
   return `${n.toLocaleString('ko-KR')}원`;
 }
 
+function fmtNum(n: number | null): string {
+  return n === null ? '-' : n.toLocaleString('ko-KR');
+}
+
 export default function ExpensesPage() {
   const [ym, setYm] = useState(currentYm());
   const [siteId, setSiteId] = useState('');
@@ -71,6 +78,7 @@ export default function ExpensesPage() {
   const [excelBusy, setExcelBusy] = useState(false);
   const [ocrMsg, setOcrMsg] = useState<string | null>(null);
   const [editing, setEditing] = useState<ApiPhoto | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/worksites?includeArchived=true', { cache: 'no-store' })
@@ -339,8 +347,16 @@ export default function ExpensesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#EAEAEA]">
-                    {rows.map((p, i) => (
-                      <tr key={p.id} className="hover:bg-[#F9FAFB]">
+                    {rows.map((p, i) => {
+                      const items = p.receipt_items ?? [];
+                      const hasItems = items.length > 0;
+                      const open = expandedId === p.id;
+                      return (
+                      <Fragment key={p.id}>
+                      <tr
+                        className={`hover:bg-[#F9FAFB] ${hasItems ? 'cursor-pointer' : ''} ${open ? 'bg-[#F9FAFB]' : ''}`}
+                        onClick={hasItems ? () => setExpandedId(open ? null : p.id) : undefined}
+                      >
                         <td className="px-3 py-2 text-center text-[#9CA3AF] tabular-nums">{i + 1}</td>
                         <td className="px-3 py-2 text-center tabular-nums">
                           {fmtDay(p.eff_date)}
@@ -349,7 +365,12 @@ export default function ExpensesPage() {
                           )}
                         </td>
                         <td className="px-3 py-2 font-medium">
-                          {p.receipt_store ?? <span className="text-[#9CA3AF]">-</span>}
+                          <span className="inline-flex items-center gap-1">
+                            {hasItems && (
+                              <ChevronRight className={`h-3 w-3 text-[#9CA3AF] transition-transform ${open ? 'rotate-90' : ''}`} />
+                            )}
+                            {p.receipt_store ?? <span className="text-[#9CA3AF]">-</span>}
+                          </span>
                         </td>
                         <td className="px-3 py-2 text-right font-bold tabular-nums">
                           {p.receipt_amount !== null ? fmtWon(p.receipt_amount) : <span className="font-normal text-[#9CA3AF]">-</span>}
@@ -362,7 +383,7 @@ export default function ExpensesPage() {
                           )}
                           {p.ocr_status === 'failed' && (
                             <button
-                              onClick={() => reanalyzeOne(p.id)}
+                              onClick={(e) => { e.stopPropagation(); reanalyzeOne(p.id); }}
                               disabled={ocrBusy}
                               title="다시 분석"
                               className="rounded bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
@@ -381,7 +402,7 @@ export default function ExpensesPage() {
                           {p.signed_url ? (
                             <button
                               type="button"
-                              onClick={() => openViewer(p)}
+                              onClick={(e) => { e.stopPropagation(); openViewer(p); }}
                               className="inline-block h-10 w-14 overflow-hidden rounded border border-[#EAEAEA] bg-[#F5F5F5]"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -394,14 +415,14 @@ export default function ExpensesPage() {
                         <td className="px-3 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
-                              onClick={() => setEditing(p)}
+                              onClick={(e) => { e.stopPropagation(); setEditing(p); }}
                               title="직접 수정"
                               className="rounded p-1.5 text-[#447D9B] hover:bg-[#F5F5F5]"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => handleDownload(p)}
+                              onClick={(e) => { e.stopPropagation(); handleDownload(p); }}
                               disabled={!p.signed_url || downloadingId === p.id}
                               title="다운로드"
                               className="rounded p-1.5 text-[#447D9B] hover:bg-[#F5F5F5] disabled:opacity-40"
@@ -415,7 +436,25 @@ export default function ExpensesPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      {open && hasItems && (
+                        <tr className="bg-[#FBFCFD]">
+                          <td colSpan={9} className="px-3 py-2">
+                            <div className="mx-auto max-w-2xl divide-y divide-[#EAEAEA] rounded border border-[#EAEAEA] bg-white">
+                              {items.map((it, k) => (
+                                <div key={k} className="flex items-center justify-between gap-3 px-3 py-1.5 text-[11px]">
+                                  <span className="font-medium text-[#091413]">{it.name}</span>
+                                  <span className="tabular-nums text-[#4B5563]">
+                                    {fmtNum(it.unit_price)} × {fmtNum(it.qty)} = <span className="font-bold text-[#091413]">{fmtNum(it.amount)}</span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
+                      );
+                    })}
                   </tbody>
                   {totals.counted > 0 && (
                     <tfoot className="border-t-2 border-[#D7D7D7] bg-[#F5F5F5] font-bold">

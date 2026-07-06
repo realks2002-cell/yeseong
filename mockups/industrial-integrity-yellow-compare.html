@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>옐로우 비중 비교 — A 최소 vs B 적극</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      primary: '#1a237e', secondary: '#fdd835',
+      surface: '#f4faff', 'surface-c': '#ffffff', error: '#8B0000',
+    } } },
+  };
+</script>
+<style>
+  body { background: #e8eef5; font-family: -apple-system, 'Pretendard', sans-serif; }
+  .phone { width: 360px; min-height: 740px; border-radius: 38px; overflow: hidden;
+    background:#f4faff; box-shadow:0 24px 60px -28px rgba(15,23,42,.45);
+    border:1px solid #d7e3f0; display:flex; flex-direction:column; position:relative; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .band { border-radius: 20px; padding: 22px; }
+  /* 옐로우 버튼 공통 */
+  .btn-y { background:#fdd835; color:#0f172a; }
+  .btn-n { background:#1a237e; color:#fff; }
+</style>
+</head>
+<body class="p-8">
+
+<div class="max-w-6xl mx-auto mb-8">
+  <h1 class="text-2xl font-bold text-[#1a237e]">옐로우 비중 비교 — A(최소) vs B(적극)</h1>
+  <p class="text-sm text-zinc-600 mt-1">네이비는 동일. 차이는 <b>옐로우(#fdd835)를 실행 버튼에 얼마나 쓰느냐</b>입니다. 검토용 미리보기 (코드 미적용).</p>
+  <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+    <div class="rounded-xl bg-white p-4 ring-1 ring-zinc-200">
+      <p class="font-bold text-primary">버전 A — 최소</p>
+      <p class="mt-1 text-zinc-600 text-[13px] leading-relaxed">옐로우는 <b>"모두 승인" 같은 진짜 핵심 1개</b>와 <b>대기 상태 배지</b>에만. 출역 제출·발주 등 일반 실행은 네이비. → 차분하고 옐로우가 "특별 신호"로 작동.</p>
+    </div>
+    <div class="rounded-xl bg-white p-4 ring-1 ring-zinc-200">
+      <p class="font-bold" style="color:#a16207">버전 B — 적극</p>
+      <p class="mt-1 text-zinc-600 text-[13px] leading-relaxed">주요 실행 버튼(1일 제출·발주 요청·모두 승인)을 <b>대부분 옐로우</b>로. → 활기차고 "할 일"이 눈에 확 들어오나, 옐로우 과다로 강조 효과 분산 위험.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 버전 A ===================== -->
+<div class="max-w-[1500px] mx-auto">
+  <div class="sticky top-0 z-50 -mx-2 mb-4 rounded-lg bg-primary px-4 py-2 text-lg font-bold text-white shadow">버전 A · 옐로우 최소</div>
+  <div class="flex flex-wrap gap-8 justify-center items-start mb-14">
+
+    <!-- A: 팀장 출역검토 -->
+    <div>
+      <p class="mb-2 text-center text-sm font-bold text-zinc-500">팀장 · 출역검토</p>
+      <div class="phone">
+        <div class="absolute right-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-zinc-200 shadow-sm"><i data-lucide="user" class="h-6 w-6 text-error"></i></div>
+        <div class="flex-1 overflow-y-auto px-6 pt-14 pb-24">
+          <div class="flex items-center justify-between"><h2 class="text-xl font-bold text-primary">내 출역</h2><span class="text-sm text-zinc-400">6/14 (토)</span></div>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <button class="h-[60px] rounded-[8px] bg-white ring-2 ring-primary/30 text-primary font-bold">0.5 일</button>
+            <!-- A: 1일 = 네이비 -->
+            <button class="h-[60px] rounded-[8px] btn-n font-bold">1 일</button>
+          </div>
+          <h2 class="mt-6 text-xl font-bold text-primary">검토 대기 출역</h2>
+          <div class="mt-3 space-y-2">
+            <div class="flex items-center gap-2 rounded-[8px] bg-white px-3 py-2.5 ring-1 ring-zinc-200">
+              <div class="flex-1"><p class="text-sm font-bold">김작업 <span class="text-[11px] text-zinc-400">(조적)</span></p></div>
+              <p class="text-base font-bold text-primary tabular">1일</p>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] bg-white text-error ring-2 ring-error/25"><i data-lucide="x" class="h-4 w-4"></i></button>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] btn-n"><i data-lucide="check" class="h-4 w-4"></i></button>
+            </div>
+            <div class="flex items-center gap-2 rounded-[8px] bg-white px-3 py-2.5 ring-1 ring-zinc-200">
+              <div class="flex-1"><p class="text-sm font-bold">이미장 <span class="text-[11px] text-zinc-400">(미장)</span></p></div>
+              <p class="text-base font-bold text-primary tabular">0.5일</p>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] bg-white text-error ring-2 ring-error/25"><i data-lucide="x" class="h-4 w-4"></i></button>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] btn-n"><i data-lucide="check" class="h-4 w-4"></i></button>
+            </div>
+          </div>
+          <!-- A: 모두 승인 = 옐로우 (유일한 옐로우 버튼) -->
+          <button class="mt-5 flex h-[58px] w-full items-center justify-center gap-2 rounded-[8px] btn-y text-lg font-bold shadow"><i data-lucide="check-check" class="h-6 w-6"></i> 모두 승인 (2건)</button>
+        </div>
+        <div class="border-t border-zinc-200 bg-white grid grid-cols-5 text-zinc-400">
+          <div class="flex flex-col items-center gap-0.5 py-2"><div class="h-9 w-12 flex items-center justify-center rounded-full bg-primary text-white"><i data-lucide="clipboard-check" class="h-5 w-5"></i></div><span class="text-[11px] font-bold text-primary">출역검토</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="wallet" class="h-6 w-6"></i><span class="text-[11px]">급여</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package-plus" class="h-6 w-6"></i><span class="text-[11px]">발주</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="camera" class="h-6 w-6"></i><span class="text-[11px]">현장증빙</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package" class="h-6 w-6"></i><span class="text-[11px]">성과</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A: 작업자 출역(홈) -->
+    <div>
+      <p class="mb-2 text-center text-sm font-bold text-zinc-500">작업자 · 출역</p>
+      <div class="phone">
+        <div class="absolute right-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-zinc-200 shadow-sm"><i data-lucide="user" class="h-6 w-6 text-error"></i></div>
+        <div class="flex-1 overflow-y-auto px-6 pt-14 pb-24">
+          <h1 class="text-[30px] font-bold text-primary">오늘 출역</h1>
+          <p class="mt-1 text-sm text-zinc-500">6월 14일 (토)</p>
+          <div class="mt-4 band bg-white ring-1 ring-zinc-200">
+            <p class="text-sm font-semibold text-zinc-500">현장</p>
+            <p class="text-lg font-bold text-zinc-900">래미안 원펜타스 신축공사</p>
+            <p class="mt-2 text-sm font-semibold text-zinc-500">협력사 · 직종</p>
+            <p class="text-base font-bold text-zinc-700">대한건설 · 조적</p>
+          </div>
+          <p class="mt-6 text-base font-semibold text-zinc-600">오늘 공수를 선택하세요</p>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <button class="h-[88px] rounded-[10px] bg-white ring-2 ring-primary/30 flex flex-col items-center justify-center"><span class="text-2xl font-bold text-primary">0.5</span><span class="text-xs text-zinc-400">반나절</span></button>
+            <!-- A: 1일 제출 = 네이비 -->
+            <button class="h-[88px] rounded-[10px] btn-n flex flex-col items-center justify-center"><span class="text-2xl font-bold">1</span><span class="text-xs text-white/70">정상</span></button>
+          </div>
+        </div>
+        <div class="border-t border-zinc-200 bg-white grid grid-cols-4 text-zinc-400">
+          <div class="flex flex-col items-center gap-0.5 py-2"><div class="h-9 w-12 flex items-center justify-center rounded-full bg-primary text-white"><i data-lucide="home" class="h-5 w-5"></i></div><span class="text-[11px] font-bold text-primary">출역</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="wallet" class="h-6 w-6"></i><span class="text-[11px]">급여</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package" class="h-6 w-6"></i><span class="text-[11px]">성과</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="camera" class="h-6 w-6"></i><span class="text-[11px]">현장증빙</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A: 발주 -->
+    <div>
+      <p class="mb-2 text-center text-sm font-bold text-zinc-500">팀장 · 발주</p>
+      <div class="phone">
+        <div class="flex-1 overflow-y-auto px-5 pt-14 pb-24">
+          <h1 class="text-[28px] font-bold text-primary flex items-center gap-2"><i data-lucide="package-plus" class="h-6 w-6"></i>자재 발주</h1>
+          <div class="mt-4 flex rounded-[8px] bg-zinc-100 p-1">
+            <button class="flex-1 h-9 rounded-[6px] bg-white text-sm font-bold text-primary shadow-sm">발주 요청</button>
+            <button class="flex-1 h-9 rounded-[6px] text-sm font-bold text-zinc-500">요청 이력</button>
+          </div>
+          <div class="mt-3 overflow-hidden rounded-[8px] bg-white ring-1 ring-zinc-200">
+            <div class="grid grid-cols-[1.1fr_1fr_76px] gap-2 border-b bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-500"><span>품목</span><span>규격</span><span class="text-center">수량</span></div>
+            <div class="grid grid-cols-[1.1fr_1fr_76px] items-center gap-2 px-3 py-3" style="background:rgba(26,35,126,.05)">
+              <p class="text-sm font-bold">시멘트</p><p class="text-xs text-zinc-600">40kg</p>
+              <input value="20" class="h-9 w-[64px] rounded-[6px] border border-primary text-center font-bold text-primary tabular" />
+            </div>
+          </div>
+          <div class="mt-4 space-y-2 rounded-[8px] p-3" style="background:rgba(26,35,126,.06);border:1px solid rgba(26,35,126,.2)">
+            <p class="text-sm font-bold text-primary">선택한 자재 1개</p>
+            <!-- A: 발주 요청 = 네이비 -->
+            <button class="h-[50px] w-full rounded-[8px] btn-n text-base font-bold">발주 요청 (1개 품목)</button>
+          </div>
+        </div>
+        <div class="border-t border-zinc-200 bg-white grid grid-cols-5 text-zinc-400">
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="clipboard-check" class="h-6 w-6"></i><span class="text-[11px]">출역검토</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="wallet" class="h-6 w-6"></i><span class="text-[11px]">급여</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><div class="h-9 w-12 flex items-center justify-center rounded-full bg-primary text-white"><i data-lucide="package-plus" class="h-5 w-5"></i></div><span class="text-[11px] font-bold text-primary">발주</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="camera" class="h-6 w-6"></i><span class="text-[11px]">현장증빙</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package" class="h-6 w-6"></i><span class="text-[11px]">성과</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== 버전 B ===================== -->
+<div class="max-w-[1500px] mx-auto">
+  <div class="sticky top-0 z-50 -mx-2 mb-4 rounded-lg px-4 py-2 text-lg font-bold text-zinc-900 shadow" style="background:#fdd835">버전 B · 옐로우 적극</div>
+  <div class="flex flex-wrap gap-8 justify-center items-start mb-14">
+
+    <!-- B: 팀장 출역검토 -->
+    <div>
+      <p class="mb-2 text-center text-sm font-bold text-zinc-500">팀장 · 출역검토</p>
+      <div class="phone">
+        <div class="absolute right-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-zinc-200 shadow-sm"><i data-lucide="user" class="h-6 w-6 text-error"></i></div>
+        <div class="flex-1 overflow-y-auto px-6 pt-14 pb-24">
+          <div class="flex items-center justify-between"><h2 class="text-xl font-bold text-primary">내 출역</h2><span class="text-sm text-zinc-400">6/14 (토)</span></div>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <button class="h-[60px] rounded-[8px] bg-white ring-2 ring-primary/30 text-primary font-bold">0.5 일</button>
+            <!-- B: 1일 = 옐로우 -->
+            <button class="h-[60px] rounded-[8px] btn-y font-bold">1 일</button>
+          </div>
+          <h2 class="mt-6 text-xl font-bold text-primary">검토 대기 출역</h2>
+          <div class="mt-3 space-y-2">
+            <div class="flex items-center gap-2 rounded-[8px] bg-white px-3 py-2.5 ring-1 ring-zinc-200">
+              <div class="flex-1"><p class="text-sm font-bold">김작업 <span class="text-[11px] text-zinc-400">(조적)</span></p></div>
+              <p class="text-base font-bold text-primary tabular">1일</p>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] bg-white text-error ring-2 ring-error/25"><i data-lucide="x" class="h-4 w-4"></i></button>
+              <!-- B: 개별 승인도 옐로우 -->
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] btn-y"><i data-lucide="check" class="h-4 w-4"></i></button>
+            </div>
+            <div class="flex items-center gap-2 rounded-[8px] bg-white px-3 py-2.5 ring-1 ring-zinc-200">
+              <div class="flex-1"><p class="text-sm font-bold">이미장 <span class="text-[11px] text-zinc-400">(미장)</span></p></div>
+              <p class="text-base font-bold text-primary tabular">0.5일</p>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] bg-white text-error ring-2 ring-error/25"><i data-lucide="x" class="h-4 w-4"></i></button>
+              <button class="h-8 w-8 inline-flex items-center justify-center rounded-[6px] btn-y"><i data-lucide="check" class="h-4 w-4"></i></button>
+            </div>
+          </div>
+          <button class="mt-5 flex h-[58px] w-full items-center justify-center gap-2 rounded-[8px] btn-y text-lg font-bold shadow"><i data-lucide="check-check" class="h-6 w-6"></i> 모두 승인 (2건)</button>
+        </div>
+        <div class="border-t border-zinc-200 bg-white grid grid-cols-5 text-zinc-400">
+          <div class="flex flex-col items-center gap-0.5 py-2"><div class="h-9 w-12 flex items-center justify-center rounded-full bg-primary text-white"><i data-lucide="clipboard-check" class="h-5 w-5"></i></div><span class="text-[11px] font-bold text-primary">출역검토</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="wallet" class="h-6 w-6"></i><span class="text-[11px]">급여</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package-plus" class="h-6 w-6"></i><span class="text-[11px]">발주</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="camera" class="h-6 w-6"></i><span class="text-[11px]">현장증빙</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package" class="h-6 w-6"></i><span class="text-[11px]">성과</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: 작업자 출역(홈) -->
+    <div>
+      <p class="mb-2 text-center text-sm font-bold text-zinc-500">작업자 · 출역</p>
+      <div class="phone">
+        <div class="absolute right-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-zinc-200 shadow-sm"><i data-lucide="user" class="h-6 w-6 text-error"></i></div>
+        <div class="flex-1 overflow-y-auto px-6 pt-14 pb-24">
+          <h1 class="text-[30px] font-bold text-primary">오늘 출역</h1>
+          <p class="mt-1 text-sm text-zinc-500">6월 14일 (토)</p>
+          <div class="mt-4 band bg-white ring-1 ring-zinc-200">
+            <p class="text-sm font-semibold text-zinc-500">현장</p>
+            <p class="text-lg font-bold text-zinc-900">래미안 원펜타스 신축공사</p>
+            <p class="mt-2 text-sm font-semibold text-zinc-500">협력사 · 직종</p>
+            <p class="text-base font-bold text-zinc-700">대한건설 · 조적</p>
+          </div>
+          <p class="mt-6 text-base font-semibold text-zinc-600">오늘 공수를 선택하세요</p>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <button class="h-[88px] rounded-[10px] bg-white ring-2 ring-primary/30 flex flex-col items-center justify-center"><span class="text-2xl font-bold text-primary">0.5</span><span class="text-xs text-zinc-400">반나절</span></button>
+            <!-- B: 1일 제출 = 옐로우 -->
+            <button class="h-[88px] rounded-[10px] btn-y flex flex-col items-center justify-center"><span class="text-2xl font-bold">1</span><span class="text-xs text-zinc-700">정상</span></button>
+          </div>
+        </div>
+        <div class="border-t border-zinc-200 bg-white grid grid-cols-4 text-zinc-400">
+          <div class="flex flex-col items-center gap-0.5 py-2"><div class="h-9 w-12 flex items-center justify-center rounded-full bg-primary text-white"><i data-lucide="home" class="h-5 w-5"></i></div><span class="text-[11px] font-bold text-primary">출역</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="wallet" class="h-6 w-6"></i><span class="text-[11px]">급여</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package" class="h-6 w-6"></i><span class="text-[11px]">성과</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="camera" class="h-6 w-6"></i><span class="text-[11px]">현장증빙</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: 발주 -->
+    <div>
+      <p class="mb-2 text-center text-sm font-bold text-zinc-500">팀장 · 발주</p>
+      <div class="phone">
+        <div class="flex-1 overflow-y-auto px-5 pt-14 pb-24">
+          <h1 class="text-[28px] font-bold text-primary flex items-center gap-2"><i data-lucide="package-plus" class="h-6 w-6"></i>자재 발주</h1>
+          <div class="mt-4 flex rounded-[8px] bg-zinc-100 p-1">
+            <button class="flex-1 h-9 rounded-[6px] bg-white text-sm font-bold text-primary shadow-sm">발주 요청</button>
+            <button class="flex-1 h-9 rounded-[6px] text-sm font-bold text-zinc-500">요청 이력</button>
+          </div>
+          <div class="mt-3 overflow-hidden rounded-[8px] bg-white ring-1 ring-zinc-200">
+            <div class="grid grid-cols-[1.1fr_1fr_76px] gap-2 border-b bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-500"><span>품목</span><span>규격</span><span class="text-center">수량</span></div>
+            <div class="grid grid-cols-[1.1fr_1fr_76px] items-center gap-2 px-3 py-3" style="background:rgba(26,35,126,.05)">
+              <p class="text-sm font-bold">시멘트</p><p class="text-xs text-zinc-600">40kg</p>
+              <input value="20" class="h-9 w-[64px] rounded-[6px] border border-primary text-center font-bold text-primary tabular" />
+            </div>
+          </div>
+          <div class="mt-4 space-y-2 rounded-[8px] p-3" style="background:rgba(26,35,126,.06);border:1px solid rgba(26,35,126,.2)">
+            <p class="text-sm font-bold text-primary">선택한 자재 1개</p>
+            <!-- B: 발주 요청 = 옐로우 -->
+            <button class="h-[50px] w-full rounded-[8px] btn-y text-base font-bold">발주 요청 (1개 품목)</button>
+          </div>
+        </div>
+        <div class="border-t border-zinc-200 bg-white grid grid-cols-5 text-zinc-400">
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="clipboard-check" class="h-6 w-6"></i><span class="text-[11px]">출역검토</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="wallet" class="h-6 w-6"></i><span class="text-[11px]">급여</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><div class="h-9 w-12 flex items-center justify-center rounded-full bg-primary text-white"><i data-lucide="package-plus" class="h-5 w-5"></i></div><span class="text-[11px] font-bold text-primary">발주</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="camera" class="h-6 w-6"></i><span class="text-[11px]">현장증빙</span></div>
+          <div class="flex flex-col items-center gap-0.5 py-2"><i data-lucide="package" class="h-6 w-6"></i><span class="text-[11px]">성과</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="max-w-3xl mx-auto rounded-xl bg-white p-5 ring-1 ring-zinc-200 text-sm text-zinc-700">
+  <p class="font-bold text-primary mb-2">두 버전 공통 (옐로우와 무관하게 동일)</p>
+  <ul class="list-disc pl-5 space-y-1">
+    <li>메인/타이틀/활성 탭 = 네이비 #1a237e</li>
+    <li>프로필 아이콘 · 반려(X) = 딥레드 #8B0000</li>
+    <li>대기 상태 배지 = 옐로우 (두 버전 모두)</li>
+    <li>배경 #f4faff · 카드 #ffffff</li>
+  </ul>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
