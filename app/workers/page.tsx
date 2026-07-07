@@ -1,14 +1,144 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WorkerForm, type Worker, type WorkerInput, type TeamLeaderOption } from '@/components/worker-form';
 import { WorkerDocumentsModal, type DocSubject } from '@/components/worker-documents-modal';
-import { WAGE_TYPES } from '@/lib/constants/trades';
 import { formatRrnDisplay } from '@/lib/crypto/rrn';
 import { formatPhone } from '@/lib/auth/phone-email';
-import { Search, UserPlus, Pencil, Trash2, X, Download, RotateCcw } from 'lucide-react';
+import { Search, UserPlus, Pencil, Trash2, X, Download, RotateCcw, ListFilter } from 'lucide-react';
+
+// ── 컬럼 필터 정의: 지정 7개 컬럼에 엑셀식 값 필터 ─────────────
+const FILTER_COLS = [
+  { key: 'name', label: '성명' },
+  { key: 'leader', label: '팀장' },
+  { key: 'grade', label: '구분' },
+  { key: 'trade', label: '직종' },
+  { key: 'app', label: '앱' },
+  { key: 'defaultWage', label: '기본일당' },
+  { key: 'wageType', label: '급여형태' },
+] as const;
+
+// 각 컬럼에서 필터/그룹 기준이 되는 원시 값(테이블 표시 규칙과 일치)
+function colValue(key: string, w: Worker): string {
+  switch (key) {
+    case 'name': return w.name ?? '';
+    case 'leader': return w.skill_grade === '팀장' ? '팀장' : (w.team_leader_name ?? '없음');
+    case 'grade': return w.skill_grade ?? '미설정';
+    case 'trade': return w.default_trade ?? '미설정';
+    case 'app': return w.auth_user_id ? '가입' : '미가입';
+    case 'defaultWage': return w.default_wage ? String(w.default_wage) : '미설정';
+    case 'wageType': return w.wage_type ?? '미설정';
+    default: return '';
+  }
+}
+
+function colDisplay(key: string, v: string): string {
+  if (key === 'defaultWage' && v !== '미설정') return `${Number(v).toLocaleString()}원`;
+  return v;
+}
+
+function sortOptions(key: string, arr: string[]): string[] {
+  return [...arr].sort((a, b) => {
+    const aEmpty = a === '미설정' || a === '없음';
+    const bEmpty = b === '미설정' || b === '없음';
+    if (aEmpty !== bEmpty) return aEmpty ? 1 : -1; // 미설정/없음은 뒤로
+    if (key === 'defaultWage' && !aEmpty && !bEmpty) return Number(a) - Number(b);
+    return a.localeCompare(b, 'ko');
+  });
+}
+
+function HeaderFilter({
+  label, colKey, options, selected, onChange, isOpen, onOpen, onClose,
+}: {
+  label: string;
+  colKey: string;
+  options: string[];
+  selected: ReadonlySet<string> | undefined;
+  onChange: (s: Set<string> | undefined) => void;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const [q, setQ] = useState('');
+  const active = selected !== undefined;
+
+  function handleOpen() {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ left: r.left, top: r.bottom + 4 });
+    setQ('');
+    onOpen();
+  }
+  // undefined = 필터 없음(전부 표시). Set = 그 값만 통과(빈 Set이면 아무것도 안 보임).
+  function toggle(o: string) {
+    let next: Set<string> | undefined;
+    if (selected === undefined) { next = new Set(options); next.delete(o); }
+    else if (selected.has(o)) { next = new Set(selected); next.delete(o); }
+    else { next = new Set(selected); next.add(o); }
+    if (next && next.size === options.length) next = undefined; // 전부 선택 = 필터 없음
+    onChange(next);
+  }
+  const shown = q ? options.filter((o) => colDisplay(colKey, o).toLowerCase().includes(q.toLowerCase())) : options;
+
+  return (
+    <div className="inline-flex items-center justify-center gap-1">
+      <span>{label}</span>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => (isOpen ? onClose() : handleOpen())}
+        className={'rounded p-0.5 transition ' + (active ? 'text-[#447D9B]' : 'text-[#B0B0B0] hover:text-[#6B7280]')}
+        aria-label={`${label} 필터`}
+      >
+        <ListFilter className="h-3 w-3" />
+      </button>
+      {isOpen && pos && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onClose} />
+          <div
+            className="fixed z-50 w-52 rounded-[5px] border border-[#D7D7D7] bg-white p-1.5 text-left shadow-lg"
+            style={{ left: Math.max(8, Math.min(pos.left, (typeof window !== 'undefined' ? window.innerWidth : 9999) - 220)), top: pos.top }}
+          >
+            {options.length >= 8 && (
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="검색"
+                className="mb-1 h-7 w-full rounded-[5px] border border-[#D7D7D7] px-2 text-[11px] font-normal outline-none focus:border-[#447D9B]"
+              />
+            )}
+            <div className="mb-1 flex items-center justify-between px-1">
+              <div className="flex gap-2">
+                <button type="button" onClick={() => onChange(undefined)} className="text-[10px] text-[#447D9B] hover:underline">전체 선택</button>
+                <button type="button" onClick={() => onChange(new Set())} className="text-[10px] text-[#6B7280] hover:underline">전체 해제</button>
+              </div>
+              {active && <span className="text-[10px] font-normal text-[#9CA3AF]">{selected?.size ?? 0}개</span>}
+            </div>
+            <div className="max-h-56 overflow-auto">
+              {shown.length === 0 ? (
+                <p className="px-1 py-2 text-center text-[10px] font-normal text-[#9CA3AF]">값 없음</p>
+              ) : (
+                shown.map((o) => {
+                  const checked = selected === undefined || selected.has(o);
+                  return (
+                    <label key={o} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 hover:bg-[#F5F5F5]">
+                      <input type="checkbox" checked={checked} onChange={() => toggle(o)} className="h-3.5 w-3.5 accent-[#447D9B]" />
+                      <span className="truncate text-[11px] font-normal text-[#091413]">{colDisplay(colKey, o)}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function WorkersPage() {
   const [list, setList] = useState<Worker[] | null>(null);
@@ -18,7 +148,8 @@ export default function WorkersPage() {
   const [editing, setEditing] = useState<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [wageTypeFilter, setWageTypeFilter] = useState<string>('');
+  const [colFilters, setColFilters] = useState<Record<string, Set<string>>>({});
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false); // 삭제(비활성) 작업자 보기
   const [downloading, setDownloading] = useState(false);
   const [savingLeaderId, setSavingLeaderId] = useState<string | null>(null);
@@ -30,12 +161,10 @@ export default function WorkersPage() {
     const lower = raw.toLowerCase();
     const digits = raw.replace(/\D/g, '');
     return list.filter((w) => {
-      if (wageTypeFilter) {
-        if (wageTypeFilter === '__none__') {
-          if (w.wage_type) return false;
-        } else if (w.wage_type !== wageTypeFilter) {
-          return false;
-        }
+      // 컬럼 필터(선택된 값이 있으면 그 값만 통과)
+      for (const c of FILTER_COLS) {
+        const sel = colFilters[c.key];
+        if (sel && !sel.has(colValue(c.key, w))) return false;
       }
       if (!raw) return true;
       if (w.name?.toLowerCase().includes(lower)) return true;
@@ -49,7 +178,36 @@ export default function WorkersPage() {
       }
       return false;
     });
-  }, [list, query, wageTypeFilter]);
+  }, [list, query, colFilters]);
+
+  // 각 컬럼의 고유값(필터 드롭다운 옵션) — 전체 목록 기준
+  const facets = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const c of FILTER_COLS) {
+      const s = new Set<string>();
+      (list ?? []).forEach((w) => s.add(colValue(c.key, w)));
+      out[c.key] = sortOptions(c.key, [...s]);
+    }
+    return out;
+  }, [list]);
+
+  const activeColCount = FILTER_COLS.filter((c) => colFilters[c.key] !== undefined).length;
+
+  const fCol = (key: string, label: string) => (
+    <HeaderFilter
+      label={label}
+      colKey={key}
+      options={facets[key] ?? []}
+      selected={colFilters[key]}
+      onChange={(s) => setColFilters((p) => {
+        if (s === undefined) { const n = { ...p }; delete n[key]; return n; }
+        return { ...p, [key]: s };
+      })}
+      isOpen={openFilter === key}
+      onOpen={() => setOpenFilter(key)}
+      onClose={() => setOpenFilter(null)}
+    />
+  );
 
   async function load() {
     setError(null);
@@ -155,7 +313,7 @@ export default function WorkersPage() {
 
   return (
     <AdminShell>
-      <div className="w-full p-6">
+      <div className="flex h-svh w-full flex-col p-6">
         <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">작업자 마스터</h1>
@@ -218,27 +376,15 @@ export default function WorkersPage() {
               </button>
             )}
           </div>
-          <select
-            value={wageTypeFilter}
-            onChange={(e) => setWageTypeFilter(e.target.value)}
-            aria-label="급여형태 필터"
-            className="h-8 rounded-[5px] border border-[#D7D7D7] bg-white px-2.5 text-xs text-[#091413] outline-none focus:border-[#447D9B] focus:ring-2 focus:ring-[#447D9B]/20"
-          >
-            <option value="">급여형태 (전체)</option>
-            {WAGE_TYPES.map((w) => (
-              <option key={w} value={w}>{w}</option>
-            ))}
-            <option value="__none__">미설정</option>
-          </select>
-          {wageTypeFilter && (
+          {activeColCount > 0 && (
             <button
               type="button"
-              onClick={() => setWageTypeFilter('')}
+              onClick={() => { setColFilters({}); setOpenFilter(null); }}
               className="inline-flex items-center gap-1 rounded-[5px] border border-[#D7D7D7] bg-white px-2 py-1 text-xs text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#091413]"
-              aria-label="급여형태 필터 해제"
+              aria-label="컬럼 필터 초기화"
             >
               <X className="h-3 w-3" />
-              해제
+              필터 초기화 ({activeColCount})
             </button>
           )}
           <button
@@ -258,23 +404,23 @@ export default function WorkersPage() {
 
         {error && <p className="mb-4 rounded-[5px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-        <Card className="overflow-hidden p-0">
-          <div className="overflow-auto max-h-[calc(100svh-14rem)]">
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+          <div className="flex-1 overflow-auto">
             <table className="w-full border-separate border-spacing-0 text-[11px] whitespace-nowrap [&_th]:border-r [&_th]:border-r-[#EAEAEA] [&_td]:border-r [&_td]:border-r-[#EAEAEA] [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
               <thead className="sticky top-0 z-10 bg-[#F5F5F5] text-[#6B7280]">
                 <tr className="text-center">
                   <th className="w-10 border-b border-[#D7D7D7] px-3 py-2.5 font-medium">#</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">성명</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">팀장</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">구분</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">직종</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('name', '성명')}</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('leader', '팀장')}</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('grade', '구분')}</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('trade', '직종')}</th>
                   <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">연락처</th>
                   <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">주민번호</th>
                   <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">계좌</th>
                   <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">주소</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">앱</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">기본일당</th>
-                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">급여형태</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('app', '앱')}</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('defaultWage', '기본일당')}</th>
+                  <th className="border-b border-[#D7D7D7] px-3 py-2.5 font-medium">{fCol('wageType', '급여형태')}</th>
                   <th className="w-20 border-b border-[#D7D7D7] px-3 py-2.5 font-medium"></th>
                 </tr>
               </thead>
