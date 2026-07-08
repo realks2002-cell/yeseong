@@ -30,7 +30,7 @@ type StatusFilter = 'approved' | 'rejected';
 const STATUS_LABEL: Record<Row['approval_status'], string> = {
   pending: '대기',
   approved: '승인',
-  rejected: '미승인',
+  rejected: '반려',
 };
 
 const STATUS_STYLE: Record<Row['approval_status'], string> = {
@@ -60,7 +60,7 @@ export default function AttendanceReviewPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('rejected');
-  // 미승인 / 승인 탭마다 검색·기간 독립 유지
+  // 반려 / 승인 탭마다 검색·기간 독립 유지
   const [filtersByTab, setFiltersByTab] = useState<Record<StatusFilter, TabFilters>>({
     rejected: { ...DEFAULT_FILTERS },
     approved: { ...DEFAULT_FILTERS },
@@ -173,7 +173,7 @@ export default function AttendanceReviewPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <FilterChip active={statusFilter === 'rejected'} onClick={() => setStatusFilter('rejected')}>미승인</FilterChip>
+          <FilterChip active={statusFilter === 'rejected'} onClick={() => setStatusFilter('rejected')}>반려</FilterChip>
           <FilterChip active={statusFilter === 'approved'} onClick={() => setStatusFilter('approved')}>승인</FilterChip>
           <div className="ml-auto flex items-center gap-2 text-sm">
             <label className="text-[#6B7280]">기간</label>
@@ -250,7 +250,7 @@ export default function AttendanceReviewPage() {
               </Button>
               <Button size="sm" variant="outline" onClick={rejectSelected} disabled={busy}>
                 <X className="h-3.5 w-3.5" />
-                선택 미승인
+                선택 반려
               </Button>
             </div>
           </div>
@@ -342,8 +342,8 @@ export default function AttendanceReviewPage() {
                               onClick={() => rejectOne(r.id)}
                               disabled={busy}
                               className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-40"
-                              aria-label="미승인"
-                              title="미승인"
+                              aria-label="반려"
+                              title="반려"
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
@@ -396,7 +396,7 @@ function ReasonModal({ count, onCancel, onSubmit }: { count: number; onCancel: (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
       <div className="w-full max-w-md rounded-[5px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="border-b border-[#D7D7D7] px-6 py-4">
-          <h2 className="text-lg font-semibold">미승인 사유 ({count}건)</h2>
+          <h2 className="text-lg font-semibold">반려 사유 ({count}건)</h2>
         </div>
         <div className="p-6">
           <textarea
@@ -414,7 +414,7 @@ function ReasonModal({ count, onCancel, onSubmit }: { count: number; onCancel: (
             onClick={() => { setSubmitting(true); onSubmit(reason); }}
             disabled={submitting}
           >
-            미승인 처리
+            반려 처리
           </Button>
         </div>
       </div>
