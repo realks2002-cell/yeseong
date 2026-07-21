@@ -58,6 +58,11 @@ const STATUS_TEXT: Record<MapWorker['status'], string> = {
   unknown: '위치 미확인',
 };
 
+// 마커 클릭/포커스 시 정보창 부제
+function infoSub(w: MapWorker): string {
+  return `${STATUS_TEXT[w.status]} · ${w.distanceM != null ? `${Math.round(w.distanceM)}m` : '거리 미상'} · ${fmtTime(w.lastSeen)}`;
+}
+
 // 마커 핀 — 색 점만 (이름은 클릭 시 메모로 표시)
 function makePin(color: string): HTMLElement {
   const dot = document.createElement('div');
@@ -117,11 +122,29 @@ export function AttendanceMapModal({
   onClose,
 }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const infoRef = useRef<google.maps.InfoWindow | null>(null);
+  const markersRef = useRef<Map<string, { pos: google.maps.LatLngLiteral; marker: google.maps.marker.AdvancedMarkerElement; w: MapWorker }>>(new Map());
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teams, setTeams] = useState<RosterTeam[] | null>(null);
 
   const plotted = workers.filter((w) => w.lat != null && w.lng != null);
+  const statusById = new Map(workers.map((w) => [w.id, w.status] as const));
+  const plottedIds = new Set(plotted.map((w) => w.id));
+
+  // 명단에서 이름 클릭 → 지도를 그 마커로 이동 + 정보창
+  const focusWorker = (id: string) => {
+    const map = mapInstanceRef.current;
+    const entry = markersRef.current.get(id);
+    if (!map || !entry) return;
+    map.panTo(entry.pos);
+    map.setZoom(18);
+    if (infoRef.current) {
+      infoRef.current.setContent(makeMemo(entry.w.name, infoSub(entry.w)));
+      infoRef.current.open({ map, anchor: entry.marker });
+    }
+  };
 
   // 현장 배치 팀 명단 로드
   useEffect(() => {
@@ -163,8 +186,10 @@ export function AttendanceMapModal({
       fullscreenControl: true,
     });
 
+    mapInstanceRef.current = map;
     const bounds = new google.maps.LatLngBounds();
     const info = new google.maps.InfoWindow();
+    infoRef.current = info;
 
     // 현장 geofence 원 (중심 마커는 원과 중복이라 생략)
     if (hasSite) {
@@ -183,6 +208,7 @@ export function AttendanceMapModal({
     }
 
     // 작업자 마커 (겹치는 위치는 부채꼴로 분리해 모두 보이게)
+    const markers = new Map<string, { pos: google.maps.LatLngLiteral; marker: google.maps.marker.AdvancedMarkerElement; w: MapWorker }>();
     for (const w of spreadOverlaps(plotted)) {
       const pos = { lat: w.dLat, lng: w.dLng };
       const marker = new google.maps.marker.AdvancedMarkerElement({
@@ -193,23 +219,29 @@ export function AttendanceMapModal({
         gmpClickable: true,
       });
       marker.addListener('click', () => {
-        const sub = `${STATUS_TEXT[w.status]} · ${w.distanceM != null ? `${Math.round(w.distanceM)}m` : '거리 미상'} · ${fmtTime(w.lastSeen)}`;
-        info.setContent(makeMemo(w.name, sub));
+        info.setContent(makeMemo(w.name, infoSub(w)));
         info.open({ map, anchor: marker });
       });
+      markers.set(w.id, { pos, marker, w });
       bounds.extend(pos);
     }
+    markersRef.current = markers;
 
-    // 화면 맞춤
-    if (!bounds.isEmpty()) {
-      if (hasSite) {
-        // 원 반경이 보이도록 최소 영역 확보
-        const r = radius / 111320; // m → 대략 도(deg)
-        bounds.extend({ lat: (siteLat as number) + r, lng: siteLng as number });
-        bounds.extend({ lat: (siteLat as number) - r, lng: siteLng as number });
-      }
+    // 열릴 때: 현장이 있으면 현장 중심으로, 반경 원이 적당히 크게 보이게 맞춘다.
+    //   (작업자 위치에 맞추지 않음 — 멀리 이탈한 사람은 명단에서 이름을 눌러 이동)
+    if (hasSite) {
+      const sitePos = { lat: siteLat as number, lng: siteLng as number };
+      const factor = 1.5; // 반경 대비 여유 — 원이 화면의 대부분을 채우되 약간의 주변 맥락 유지
+      const dLat = (radius * factor) / 111320;
+      const dLng = (radius * factor) / (111320 * Math.cos((siteLat as number) * (Math.PI / 180)));
+      const b = new google.maps.LatLngBounds();
+      b.extend({ lat: (siteLat as number) + dLat, lng: (siteLng as number) + dLng });
+      b.extend({ lat: (siteLat as number) - dLat, lng: (siteLng as number) - dLng });
+      map.fitBounds(b);
+      map.setCenter(sitePos);
+    } else if (!bounds.isEmpty()) {
       map.fitBounds(bounds, 64);
-      if (plotted.length + (hasSite ? 1 : 0) === 1) map.setZoom(17);
+      if (plotted.length === 1) map.setZoom(17);
     }
     // 모달은 열릴 때 1회 초기화 (폴링 재렌더로 지도 재생성/깜빡임 방지)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -300,22 +332,42 @@ export function AttendanceMapModal({
                       </span>
                     </div>
                     <ul className="space-y-1">
-                      {t.members.map((m) => (
-                        <li key={m.id} className="flex items-center justify-between gap-2 text-[12px]">
-                          <span className="flex min-w-0 items-center gap-1 text-[#091413]">
-                            <span className="truncate font-medium">{m.name}</span>
-                            {m.is_leader && (
-                              <span className="shrink-0 rounded bg-[#273F4F] px-1 py-0.5 text-[9px] font-semibold text-white">팀장</span>
-                            )}
-                            {m.trade && <span className="shrink-0 text-[10px] text-[#9CA3AF]">{m.trade}</span>}
-                          </span>
-                          {m.attended ? (
-                            <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">출역</span>
-                          ) : (
-                            <span className="shrink-0 rounded bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] font-semibold text-[#9CA3AF]">미출역</span>
-                          )}
-                        </li>
-                      ))}
+                      {t.members.map((m) => {
+                        const locatable = plottedIds.has(m.id);
+                        const isOut = statusById.get(m.id) === 'out';
+                        return (
+                          <li key={m.id}>
+                            <button
+                              type="button"
+                              onClick={() => locatable && focusWorker(m.id)}
+                              disabled={!locatable}
+                              title={locatable ? '지도에서 위치 보기' : '위치 기록 없음'}
+                              className={
+                                'flex w-full items-center justify-between gap-2 rounded px-1 py-0.5 text-left text-[12px] ' +
+                                (locatable ? 'cursor-pointer hover:bg-[#F5F5F5]' : 'cursor-default')
+                              }
+                            >
+                              <span className="flex min-w-0 items-center gap-1 text-[#091413]">
+                                <span className="truncate font-medium">{m.name}</span>
+                                {m.is_leader && (
+                                  <span className="shrink-0 rounded bg-[#273F4F] px-1 py-0.5 text-[9px] font-semibold text-white">팀장</span>
+                                )}
+                                {m.trade && <span className="shrink-0 text-[10px] text-[#9CA3AF]">{m.trade}</span>}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-1">
+                                {isOut && (
+                                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-[#ea580c]">이탈중</span>
+                                )}
+                                {m.attended ? (
+                                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">출역</span>
+                                ) : (
+                                  <span className="rounded bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] font-semibold text-[#9CA3AF]">미출역</span>
+                                )}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))
