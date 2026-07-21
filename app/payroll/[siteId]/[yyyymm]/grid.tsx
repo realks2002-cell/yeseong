@@ -499,11 +499,14 @@ export function PayrollGrid({ siteId, siteName, yearMonth }: Props) {
                             )}
                           </td>
                           <td rowSpan={2} className="border-l border-b border-l-[#EAEAEA] border-b-[#D7D7D7] bg-white px-2 py-2 text-center text-[12px]">
+                            {volumeAmount > 0 && (
+                              <div className="mb-1 tabular-nums font-semibold text-[#091413]">{volumeAmount.toLocaleString()}</div>
+                            )}
                             <button
                               onClick={() => setVolumeSlot(s)}
-                              className="tabular-nums text-[12px] font-medium text-[#091413] hover:text-[#447D9B] hover:underline"
+                              className="inline-flex items-center justify-center rounded-[5px] border border-[#447D9B] px-2.5 py-1 text-[11px] font-semibold text-[#447D9B] transition hover:bg-[#447D9B] hover:text-white"
                             >
-                              {volumeAmount > 0 ? volumeAmount.toLocaleString() : <span className="font-normal text-[#9CA3AF]">입력</span>}
+                              입력/수정
                             </button>
                           </td>
                         </>
