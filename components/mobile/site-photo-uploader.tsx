@@ -10,7 +10,7 @@ import { Camera, Image as ImageIcon, Plus, Loader2, ImageOff, CheckCircle2 } fro
 import { ActionSheet } from '@/components/mobile/action-sheet';
 import { MemoInputSheet } from '@/components/mobile/memo-input-sheet';
 import { PhotoViewer, type Photo } from '@/components/photo-viewer';
-import { pickPhoto } from '@/lib/capacitor/photo-picker';
+import { pickPhotos } from '@/lib/capacitor/photo-picker';
 import { compressImage } from '@/lib/image/compress';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 
@@ -165,12 +165,20 @@ function CategoryCard({
   );
 }
 
+// 영수증(expense)만 한 번에 여러 장 허용. 안전·자재 사진은 기존대로 1장씩.
+//   보관함 다중 선택만 여러 장, 카메라 촬영은 1장씩.
+const MAX_BATCH = 3;
+
 function UploadButton({ category, onUploaded }: { category: Category; onUploaded: () => void }) {
+  const maxBatch = category === 'expense' ? MAX_BATCH : 1;
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [memoOpen, setMemoOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
+  // 이번 배치로 선택·압축된 사진들과 장별 메모 수집 진행 상태
+  const [pending, setPending] = useState<Blob[]>([]);
+  const [memoIdx, setMemoIdx] = useState(-1); // 메모를 받는 중인 사진 index(-1=없음)
+  const [memos, setMemos] = useState<(string | null)[]>([]);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [done, setDone] = useState(false);
   const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -181,12 +189,15 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
   const pick = async (source: 'camera' | 'gallery') => {
     setErr(null);
     try {
-      const raw = await pickPhoto(source);
-      if (!raw) return;
+      const raws = await pickPhotos(source, maxBatch);
+      if (raws.length === 0) return;
       setBusy(true);
-      const compressed = await compressImage(raw, { maxSide: 1600, quality: 0.8 });
-      setPendingBlob(compressed);
-      setMemoOpen(true);
+      const compressed = await Promise.all(
+        raws.map((r) => compressImage(r, { maxSide: 1600, quality: 0.8 })),
+      );
+      setPending(compressed);
+      setMemos([]);
+      setMemoIdx(0); // 첫 장 메모 입력 시작
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -194,58 +205,86 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
     }
   };
 
-  const submit = async (memo: string | null) => {
-    if (!pendingBlob) return;
-    const blob = pendingBlob;
-    setMemoOpen(false);
-    setPendingBlob(null);
+  // 사진 1장 업로드(발급→PUT→finalize)
+  const uploadOne = async (blob: Blob, memo: string | null) => {
+    const urlRes = await fetch('/api/m/site-photos/upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, mime_type: 'image/jpeg' }),
+    });
+    const urlJson = await urlRes.json();
+    if (!urlRes.ok) throw new Error(urlJson.error || '업로드 URL 발급 실패');
+
+    const sb = getBrowserSupabase();
+    const { error: putErr } = await sb.storage
+      .from(BUCKET)
+      .uploadToSignedUrl(urlJson.storage_path, urlJson.token, blob, { contentType: 'image/jpeg' });
+    if (putErr) throw new Error(putErr.message);
+
+    const finRes = await fetch('/api/m/site-photos/finalize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category,
+        storage_path: urlJson.storage_path,
+        mime_type: 'image/jpeg',
+        file_size: blob.size,
+        memo,
+      }),
+    });
+    if (!finRes.ok) {
+      const j = await finRes.json().catch(() => ({}));
+      throw new Error(j.error || '저장 실패');
+    }
+  };
+
+  const uploadAll = async (blobs: Blob[], memoList: (string | null)[]) => {
     setBusy(true);
     setErr(null);
+    let uploaded = 0;
     try {
-      const urlRes = await fetch('/api/m/site-photos/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, mime_type: 'image/jpeg' }),
-      });
-      const urlJson = await urlRes.json();
-      if (!urlRes.ok) throw new Error(urlJson.error || '업로드 URL 발급 실패');
-
-      const sb = getBrowserSupabase();
-      const { error: putErr } = await sb.storage
-        .from(BUCKET)
-        .uploadToSignedUrl(urlJson.storage_path, urlJson.token, blob, { contentType: 'image/jpeg' });
-      if (putErr) throw new Error(putErr.message);
-
-      const finRes = await fetch('/api/m/site-photos/finalize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category,
-          storage_path: urlJson.storage_path,
-          mime_type: 'image/jpeg',
-          file_size: blob.size,
-          memo,
-        }),
-      });
-      if (!finRes.ok) {
-        const j = await finRes.json().catch(() => ({}));
-        throw new Error(j.error || '저장 실패');
+      for (let i = 0; i < blobs.length; i++) {
+        setProgress({ done: i, total: blobs.length });
+        await uploadOne(blobs[i], memoList[i] ?? null);
+        uploaded++;
       }
       onUploaded();
       setDone(true);
       if (doneTimer.current) clearTimeout(doneTimer.current);
       doneTimer.current = setTimeout(() => setDone(false), 2500);
     } catch (e) {
-      setErr((e as Error).message);
+      if (uploaded > 0) onUploaded(); // 일부라도 저장됐으면 목록 갱신
+      setErr(
+        `${(e as Error).message}${uploaded > 0 ? ` (${uploaded}/${blobs.length}장만 저장됨)` : ''}`,
+      );
     } finally {
       setBusy(false);
+      setProgress(null);
+      setPending([]);
+      setMemos([]);
     }
   };
 
-  const cancelMemo = () => {
-    setMemoOpen(false);
-    setPendingBlob(null);
+  // 장별 메모 저장 → 다음 장으로, 마지막이면 일괄 업로드 시작
+  const saveMemo = (memo: string | null) => {
+    const collected = [...memos, memo];
+    if (memoIdx + 1 < pending.length) {
+      setMemos(collected);
+      setMemoIdx(memoIdx + 1);
+    } else {
+      setMemoIdx(-1);
+      void uploadAll(pending, collected);
+    }
   };
+
+  // 메모 시트 닫기 = 이번 배치 전체 취소(아직 업로드 전)
+  const cancelMemo = () => {
+    setMemoIdx(-1);
+    setPending([]);
+    setMemos([]);
+  };
+
+  const memoOpen = memoIdx >= 0 && memoIdx < pending.length;
 
   return (
     <>
@@ -258,7 +297,7 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
         {busy ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            처리 중…
+            처리 중…{progress ? ` (${progress.done + 1}/${progress.total})` : ''}
           </>
         ) : (
           <>
@@ -286,16 +325,22 @@ function UploadButton({ category, onUploaded }: { category: Category; onUploaded
         onClose={() => setSheetOpen(false)}
         title="사진 가져오기"
         items={[
-          { label: '카메라로 촬영', icon: Camera, onClick: () => pick('camera') },
-          { label: '사진 보관함에서 선택', icon: ImageIcon, onClick: () => pick('gallery') },
+          { label: maxBatch > 1 ? '카메라로 촬영 (1장)' : '카메라로 촬영', icon: Camera, onClick: () => pick('camera') },
+          {
+            label: maxBatch > 1 ? `사진 보관함에서 선택 (최대 ${maxBatch}장)` : '사진 보관함에서 선택',
+            icon: ImageIcon,
+            onClick: () => pick('gallery'),
+          },
         ]}
       />
 
       <MemoInputSheet
+        key={memoIdx}
         open={memoOpen}
-        thumbnailBlob={pendingBlob}
+        thumbnailBlob={memoOpen ? pending[memoIdx] : null}
         placeholder={CATEGORY_PLACEHOLDER[category]}
-        onSave={submit}
+        stepLabel={pending.length > 1 ? `${memoIdx + 1} / ${pending.length}` : undefined}
+        onSave={saveMemo}
         onCancel={cancelMemo}
       />
     </>

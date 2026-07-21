@@ -69,6 +69,12 @@ function fmtNum(n: number | null): string {
   return n === null ? '-' : n.toLocaleString('ko-KR');
 }
 
+// OCR 분석을 시도했는지(완료/실패). 시도 후에도 상호가 비면 '미확인'으로 안내,
+//   아직 미분석/대기면 '-'(분석 전).
+function isAnalyzed(status: ApiPhoto['ocr_status']): boolean {
+  return status === 'done' || status === 'failed';
+}
+
 export default function ExpensesPage() {
   const [ym, setYm] = useState(currentYm());
   const [siteId, setSiteId] = useState('');
@@ -392,7 +398,11 @@ export default function ExpensesPage() {
                             {expandable && (
                               <ChevronRight className={`h-3 w-3 text-[#9CA3AF] transition-transform ${open ? 'rotate-90' : ''}`} />
                             )}
-                            {p.receipt_store ?? <span className="text-[#9CA3AF]">-</span>}
+                            {p.receipt_store
+                              ? p.receipt_store
+                              : isAnalyzed(p.ocr_status)
+                                ? <span className="font-semibold text-amber-600">미확인</span>
+                                : <span className="text-[#9CA3AF]">-</span>}
                             {flagged && (
                               <span className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white">
                                 <AlertTriangle className="h-2.5 w-2.5" /> 유흥 의심
@@ -565,7 +575,7 @@ export default function ExpensesPage() {
                       <div className="flex items-center justify-between gap-2 px-3 py-2">
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold text-[#091413]">
-                            {p.receipt_store ?? `${p.worker_name} 팀장`}
+                            {p.receipt_store ?? (isAnalyzed(p.ocr_status) ? '미확인' : `${p.worker_name} 팀장`)}
                             {p.receipt_amount !== null && (
                               <span className="ml-1.5 text-[#447D9B] tabular-nums">{fmtWon(p.receipt_amount)}</span>
                             )}

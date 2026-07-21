@@ -11,12 +11,14 @@ export function MemoInputSheet({
   open,
   thumbnailBlob,
   placeholder,
+  stepLabel,
   onSave,
   onCancel,
 }: {
   open: boolean;
   thumbnailBlob: Blob | null;
   placeholder?: string;
+  stepLabel?: string;
   onSave: (memo: string | null) => void;
   onCancel: () => void;
 }) {
@@ -52,7 +54,14 @@ export function MemoInputSheet({
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
       <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white shadow-2xl pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-between px-5 pb-2 pt-4">
-          <h3 className="text-base font-bold text-zinc-900">메모 (선택)</h3>
+          <h3 className="flex items-center gap-2 text-base font-bold text-zinc-900">
+            메모 (선택)
+            {stepLabel && (
+              <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs font-bold text-navy tabular-nums">
+                {stepLabel}
+              </span>
+            )}
+          </h3>
           <button type="button" onClick={onCancel} className="p-1" aria-label="닫기">
             <X className="h-5 w-5 text-zinc-500" />
           </button>

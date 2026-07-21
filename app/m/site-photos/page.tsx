@@ -30,7 +30,7 @@ export default function WorkerSitePhotosPage() {
       </div>
 
       {ready ? (
-        <SitePhotosSection categories={['tbm', 'materials']} />
+        <SitePhotosSection categories={['tbm', 'materials', 'expense']} />
       ) : (
         <div className="flex h-40 items-center justify-center text-zinc-400">로딩…</div>
       )}

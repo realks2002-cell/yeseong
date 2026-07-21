@@ -40,3 +40,40 @@ function webPickPhoto(useCamera: boolean): Promise<Blob | null> {
     input.click();
   });
 }
+
+// 다중 선택 — 카메라는 1장씩(네이티브 촬영은 다중 불가), 보관함만 최대 max장.
+//   결과는 항상 배열. 취소 시 빈 배열.
+export async function pickPhotos(source: PhotoSource, max: number): Promise<Blob[]> {
+  if (source === 'camera' || max <= 1) {
+    const one = await pickPhoto(source);
+    return one ? [one] : [];
+  }
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await Camera.pickImages({ quality: 90, limit: max });
+      const picked = (result?.photos ?? []).slice(0, max);
+      const blobs: Blob[] = [];
+      for (const ph of picked) {
+        if (!ph.webPath) continue;
+        const res = await fetch(ph.webPath);
+        blobs.push(await res.blob());
+      }
+      return blobs;
+    } catch (e) {
+      if (/cancel/i.test((e as Error).message ?? '')) return [];
+      throw e;
+    }
+  }
+  return webPickPhotos(max);
+}
+
+function webPickPhotos(max: number): Promise<Blob[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = () => resolve(input.files ? Array.from(input.files).slice(0, max) : []);
+    input.click();
+  });
+}
