@@ -89,12 +89,12 @@ function Tab({ href, icon, label, active }: { href: string; icon: ReactNode; lab
     <Link
       href={href}
       className={
-        'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors ' +
+        'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] max-[359px]:text-[10px] font-semibold transition-colors ' +
         (active ? 'text-navy' : 'text-zinc-400')
       }
     >
       {icon}
-      <span>{label}</span>
+      <span className="whitespace-nowrap">{label}</span>
     </Link>
   );
 }
@@ -151,7 +151,7 @@ function ManagerHomeTabWithLongPressLogout({ active, mirror }: { active: boolean
         touchAction: 'manipulation',
       }}
       className={
-        'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors overflow-hidden ' +
+        'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] max-[359px]:text-[10px] font-semibold transition-colors overflow-hidden ' +
         (active ? 'text-navy' : 'text-zinc-400')
       }
     >
@@ -220,7 +220,7 @@ function HomeTabWithLongPressLogout({ active }: { active: boolean }) {
       onPointerCancel={cancel}
       onClick={onClick}
       className={
-        'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors overflow-hidden ' +
+        'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] max-[359px]:text-[10px] font-semibold transition-colors overflow-hidden ' +
         (active ? 'text-navy' : 'text-zinc-400')
       }
     >

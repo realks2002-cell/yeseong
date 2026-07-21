@@ -158,13 +158,13 @@ export default function HomePage() {
 
   return (
     <MobileShell showTabs activeTab="home">
-      <div className="px-7 pt-14 pb-4">
+      <div className="px-7 max-[359px]:px-4 pt-14 pb-4">
         <AlwaysLocationPrompt appName="예성건축" onAlways={onAlways} />
-        <p className="text-[24px] font-bold text-zinc-700">{TODAY_LABEL}</p>
-        <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900">
+        <p className="text-[24px] font-bold text-zinc-700 max-[359px]:text-[20px]">{TODAY_LABEL}</p>
+        <h1 className="mt-8 text-[26px] font-bold leading-tight text-zinc-900 max-[359px]:text-[22px]">
           {me.worker.name}님
           {me.worker.default_trade && (
-            <span className="ml-2 text-[20px] font-semibold text-zinc-500">
+            <span className="ml-2 text-[20px] font-semibold text-zinc-500 max-[359px]:text-[16px]">
               ({me.worker.default_trade})
             </span>
           )}
@@ -209,20 +209,20 @@ export default function HomePage() {
 
 function RegisterView({ onPick, onDispatch }: { onPick: (h: Hours) => void; onDispatch: () => void }) {
   return (
-    <section className="mt-4 px-7">
-      <h2 className="text-2xl font-bold text-zinc-900">오늘 근무를 등록해주세요</h2>
+    <section className="mt-4 px-7 max-[359px]:px-4">
+      <h2 className="text-2xl font-bold text-zinc-900 max-[359px]:text-xl">오늘 근무를 등록해주세요</h2>
       <ul className="mt-5 space-y-3">
         {NORMAL_OPTIONS.map((o) => (
           <li key={o.value}>
             <button
               onClick={() => onPick(o.value)}
               className={
-                'flex h-[88px] w-full items-center justify-between rounded-[5px] px-7 ring-2 transition active:scale-[0.99] ' +
+                'flex h-[88px] w-full items-center justify-between rounded-[5px] px-7 max-[359px]:px-4 ring-2 transition active:scale-[0.99] ' +
                 o.cls
               }
             >
-              <span className="text-[34px] font-bold">{o.title}</span>
-              <span className="text-xl font-semibold opacity-90">{o.sub}</span>
+              <span className="text-[34px] font-bold whitespace-nowrap max-[359px]:text-[26px]">{o.title}</span>
+              <span className="text-xl font-semibold opacity-90 whitespace-nowrap max-[359px]:text-base">{o.sub}</span>
             </button>
           </li>
         ))}
@@ -232,7 +232,7 @@ function RegisterView({ onPick, onDispatch }: { onPick: (h: Hours) => void; onDi
         className="mt-3 flex h-[64px] w-full items-center justify-center gap-2 rounded-[5px] bg-white text-zinc-700 ring-2 ring-zinc-200 transition active:scale-[0.99]"
       >
         <MapPin className="h-5 w-5" />
-        <span className="text-lg font-bold">다른 현장 파견 등록</span>
+        <span className="text-lg font-bold whitespace-nowrap max-[359px]:text-sm">다른 현장 파견 등록</span>
       </button>
     </section>
   );
@@ -313,10 +313,10 @@ function HistorySection({
   ];
 
   return (
-    <section className="mt-10 px-7 pb-10">
+    <section className="mt-10 px-7 max-[359px]:px-4 pb-10">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-zinc-900">{m + 1}월 출역</h2>
-        <span className="text-base font-semibold text-zinc-400">합계 {total}일</span>
+        <h2 className="text-xl font-bold text-zinc-900 whitespace-nowrap max-[359px]:text-lg">{m + 1}월 출역</h2>
+        <span className="text-base font-semibold text-zinc-400 whitespace-nowrap shrink-0">합계 {total}일</span>
       </div>
       <div className="mt-4 rounded-[5px] bg-white p-3 ring-1 ring-zinc-200">
         <div className="grid grid-cols-7 text-center text-xs font-semibold text-zinc-400">

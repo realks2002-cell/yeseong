@@ -255,14 +255,14 @@ export default function ManagerHomePage() {
 
   return (
     <MobileShell showTabs activeTab="home" variant="manager">
-      <section className="px-7 pt-14 pb-10">
+      <section className="px-7 max-[359px]:px-4 pt-14 pb-10">
         {!readOnly && <AlwaysLocationPrompt appName="예성건축 팀장" onAlways={onAlways} />}
         {/* 내 출역 — 팀장 본인 출역 제출 */}
         {!readOnly && (
           <div className="mb-7">
-            <div className="flex items-center justify-between pr-12">
-              <h2 className="text-xl font-bold text-zinc-900">내 출역</h2>
-              <span className="text-sm font-semibold text-zinc-400">{TODAY_LABEL}</span>
+            <div className="flex items-center justify-between pr-12 max-[359px]:pr-10">
+              <h2 className="text-xl font-bold text-zinc-900 whitespace-nowrap max-[359px]:text-lg">내 출역</h2>
+              <span className="text-sm font-semibold text-zinc-400 whitespace-nowrap shrink-0">{TODAY_LABEL}</span>
             </div>
             {myAtt && myAtt.approval_status !== 'rejected' ? (
               <div className="mt-3 flex items-center gap-3 rounded-[5px] bg-zinc-50 px-4 py-4 ring-1 ring-zinc-200">
@@ -317,16 +317,16 @@ export default function ManagerHomePage() {
                   className="mt-3 flex h-[56px] w-full items-center justify-center gap-2 rounded-[5px] bg-white text-zinc-700 ring-2 ring-zinc-200 active:scale-[0.99] disabled:opacity-50"
                 >
                   <MapPin className="h-5 w-5" />
-                  <span className="text-base font-bold">다른 현장 파견 등록</span>
+                  <span className="text-base font-bold whitespace-nowrap max-[359px]:text-sm">다른 현장 파견 등록</span>
                 </button>
               </>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-between pr-12">
-          <h2 className="text-xl font-bold text-zinc-900">검토 대기 출역</h2>
-          <span className="text-sm font-semibold text-zinc-400">{items?.length ?? 0}건</span>
+        <div className="flex items-center justify-between pr-12 max-[359px]:pr-10">
+          <h2 className="text-xl font-bold text-zinc-900 whitespace-nowrap max-[359px]:text-lg">검토 대기 출역</h2>
+          <span className="text-sm font-semibold text-zinc-400 whitespace-nowrap shrink-0">{items?.length ?? 0}건</span>
         </div>
 
         {error && <p className="mt-4 text-base font-semibold text-red-800">{error}</p>}
