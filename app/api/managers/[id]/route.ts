@@ -55,7 +55,7 @@ export async function PATCH(
   let newPin: string | null = null;
   if (typeof body?.pin === 'string') {
     const p = body.pin.trim();
-    if (p && !/^\d{4}$/.test(p)) return NextResponse.json({ error: 'PIN은 4자리 숫자' }, { status: 400 });
+    if (p && !/^\d{4}$/.test(p)) return NextResponse.json({ error: '비밀번호는 4자리 숫자' }, { status: 400 });
     newPin = p;
     patch.pin = p || null;
   }

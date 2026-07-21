@@ -49,7 +49,7 @@ export async function GET() {
     '주민번호', '외국인', '국적', '비자',
     '은행', '계좌번호', '예금주',
     '연락처', '주소', '기본일당', '급여형태',
-    '첫 근무일', '앱가입', 'PIN',
+    '첫 근무일', '앱가입', '비밀번호',
   ];
   const headerRow = ws.addRow(headers);
   headerRow.eachCell((cell) => {

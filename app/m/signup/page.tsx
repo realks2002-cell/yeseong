@@ -176,7 +176,7 @@ export default function SignupPage() {
         // 자격증명 오류(실제 PIN 불일치)만 "PIN이 일치하지 않습니다." — 그 외(네트워크 등)는 실제 사유 노출
         const isInvalidCred = error.status === 400 || /invalid|credential/i.test(error.message ?? '');
         if (isInvalidCred) {
-          setLoginError('PIN이 일치하지 않습니다.');
+          setLoginError('비밀번호가 일치하지 않습니다.');
           setTimeout(() => { setLoginPin(''); setLoginError(undefined); }, 1800);
         } else {
           setLoginError(toUserMessage(error, '네트워크 연결을 확인해 주십시오.'));
@@ -390,7 +390,7 @@ export default function SignupPage() {
         {mode === 'login_pin' && (
           <PinStep
             title={<>비밀번호 입력</>}
-            subtitle="앱 비밀번호를 입력하세요"
+            subtitle="예성 앱 비밀번호를 입력하세요 (휴대폰 잠금 비번 아님)"
             value={loginPin}
             onChange={setLoginPin}
             errorMessage={loginError}
@@ -410,8 +410,7 @@ export default function SignupPage() {
 
         {mode === 'signup_pin1' && (
           <PinStep
-            title={<>비밀번호 설정</>}
-            subtitle="앱에서 사용할 간편암호를 입력하세요"
+            title={<>비밀번호 4자리 설정</>}
             value={pin1}
             onChange={setPin1}
             onNext={goNext}
@@ -421,7 +420,7 @@ export default function SignupPage() {
 
         {mode === 'signup_pin2' && (
           <PinStep
-            title={<>비밀번호 확인</>}
+            title={<>비밀번호 4자리 확인</>}
             subtitle="한 번 더 입력하세요"
             value={pin2}
             onChange={setPin2}

@@ -89,7 +89,7 @@ export async function PATCH(req: Request) {
   const userId = typeof body?.user_id === 'string' ? body.user_id : '';
   const pin = typeof body?.pin === 'string' ? body.pin.trim() : '';
   if (!userId) return NextResponse.json({ error: 'user_id required' }, { status: 400 });
-  if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: 'PIN은 숫자 4자리입니다' }, { status: 400 });
+  if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: '비밀번호는 숫자 4자리입니다' }, { status: 400 });
 
   const admin = getServiceSupabase();
   const { data: target, error: gErr } = await admin.auth.admin.getUserById(userId);
@@ -97,7 +97,7 @@ export async function PATCH(req: Request) {
 
   const email = target.user.email ?? '';
   if (!isMobileEmail(email) && !isManagerEmail(email)) {
-    return NextResponse.json({ error: '작업자/팀장 계정만 PIN 재설정이 가능합니다' }, { status: 400 });
+    return NextResponse.json({ error: '작업자/팀장 계정만 비밀번호 재설정이 가능합니다' }, { status: 400 });
   }
 
   const { error: uErr } = await admin.auth.admin.updateUserById(userId, {

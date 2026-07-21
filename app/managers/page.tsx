@@ -490,7 +490,7 @@ function ManagerForm({
     setErr(null);
     if (!name.trim() && !pulled) return setErr('성명을 입력하거나, 작업자 마스터에 등록된 번호를 입력하세요');
     if (phone.replace(/\D/g, '').length < 10) return setErr('전화번호 형식 오류');
-    if (pin && !/^\d{4}$/.test(pin)) return setErr('PIN은 4자리 숫자');
+    if (pin && !/^\d{4}$/.test(pin)) return setErr('비밀번호는 4자리 숫자');
     setSubmitting(true);
     try {
       await onSubmit({
@@ -545,7 +545,7 @@ function ManagerForm({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[#4B5563]">
-              PIN (4자리, 모바일 앱 로그인용)
+              비밀번호 (4자리, 모바일 앱 로그인용)
             </label>
             <input
               value={pin}

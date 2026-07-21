@@ -94,7 +94,7 @@ export async function POST(req: Request) {
   const phone = normalizePhone(phoneRaw);
   if (phone.length < 10) return NextResponse.json({ error: '전화번호 형식 오류' }, { status: 400 });
   if (pin && !/^\d{4}$/.test(pin)) {
-    return NextResponse.json({ error: 'PIN은 4자리 숫자' }, { status: 400 });
+    return NextResponse.json({ error: '비밀번호는 4자리 숫자' }, { status: 400 });
   }
 
   const admin = getServiceSupabase();
